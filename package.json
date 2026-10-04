@@ -1,0 +1,63 @@
+{
+  "name": "tunas-pool",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p functions",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"shared/**/*.ts\" \"tests/**/*.ts\" \"functions/src/**/*.ts\" \"scripts/**/*.ts\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-tunas-pool \"vitest run -c vitest.rules.config.ts\"",
+    "emulators": "firebase emulators:start --project demo-tunas-pool --import=.emulator-data --export-on-exit",
+    "functions:build": "npm --prefix functions run build",
+    "admin:claim": "tsx scripts/set-admin-claim.ts"
+  },
+  "dependencies": {
+    "@fontsource/alfa-slab-one": "^5.3.0",
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@tanstack/react-query": "^5.104.1",
+    "firebase": "^12.19.0",
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router-dom": "^7.18.4",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "autoprefixer": "^10.6.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "firebase-admin": "^14.5.0",
+    "firebase-tools": "^15.32.1",
+    "globals": "^17.13.0",
+    "jsdom": "^30.1.2",
+    "postcss": "^8.5.28",
+    "prettier": "^3.9.9",
+    "tailwindcss": "^3.4.19",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.0",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  }
+}

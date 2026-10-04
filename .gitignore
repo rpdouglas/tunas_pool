@@ -1,0 +1,26 @@
+# dependencies & build output
+node_modules
+dist
+coverage
+functions/lib
+functions/node_modules
+
+# env & secrets
+.env.local
+.env.*.local
+*service-account*.json
+serviceAccount*.json
+
+# firebase
+.firebase
+firebase-debug.log*
+ui-debug.log
+firestore-debug.log
+.emulator-data
+
+# editor / os
+.DS_Store
+*.log
+
+# drop folder used by scaffold.sh
+_drop

@@ -1,0 +1,11 @@
+dist
+coverage
+functions/lib
+_drop
+docs
+CLAUDE.md
+README.md
+src/styles
+tailwind.preset.cjs
+firestore.rules
+storage.rules

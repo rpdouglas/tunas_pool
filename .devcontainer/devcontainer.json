@@ -1,0 +1,26 @@
+{
+  "name": "Tunas Pool",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": { "version": "17", "installMaven": "false" }
+  },
+  "forwardPorts": [5173, 4000, 5000, 5001, 8080, 9099, 9199],
+  "portsAttributes": {
+    "5173": { "label": "Vite dev server" },
+    "4000": { "label": "Emulator UI" },
+    "5000": { "label": "Hosting emulator" },
+    "8080": { "label": "Firestore emulator" },
+    "9099": { "label": "Auth emulator" }
+  },
+  "postCreateCommand": "npm install && npm --prefix functions install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "vitest.explorer"
+      ]
+    }
+  }
+}

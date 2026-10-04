@@ -1,0 +1,193 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function playerPath(playerId) {
+      return /databases/$(database)/documents/players/$(playerId);
+    }
+
+    function ownsPlayer(playerId) {
+      return signedIn()
+        && exists(playerPath(playerId))
+        && get(playerPath(playerId)).data.claimedByUid == request.auth.uid;
+    }
+
+    function weekPath(year, weekId) {
+      return /databases/$(database)/documents/seasons/$(year)/weeks/$(weekId);
+    }
+
+    function weekIsOpen(year, weekId) {
+      let w = get(weekPath(year, weekId)).data;
+      return w.status == 'open' && request.time < w.lockAt;
+    }
+
+    function weekIsRevealed(year, weekId) {
+      return get(weekPath(year, weekId)).data.revealed == true;
+    }
+
+    function isPaymentMethod(v) { return v in ['cash', 'etransfer']; }
+    function isPaymentIntent(v) { return v in ['will_do', 'already_did']; }
+
+    // ---------- players (roster + self-serve profiles) ----------
+    match /players/{playerId} {
+      // PII (phone, email, notes): owner and admin only.
+      allow read: if isAdmin() || ownsPlayer(playerId);
+
+      // Self-serve: playerId must equal the caller's uid, claimed by that uid.
+      allow create: if
+        (signedIn()
+          && playerId == request.auth.uid
+          && request.resource.data.claimedByUid == request.auth.uid
+          && request.resource.data.origin == 'self'
+          && request.resource.data.keys().hasOnly([
+               'displayName', 'phone', 'email', 'claimedByUid', 'origin',
+               'usualPayment', 'active', 'createdAt', 'updatedAt'])
+          && request.resource.data.displayName is string
+          && request.resource.data.displayName.size() > 0
+          && request.resource.data.displayName.size() <= 60)
+        ||
+        // Admin roster: unclaimed, admin-origin.
+        (isAdmin()
+          && request.resource.data.claimedByUid == null
+          && request.resource.data.origin == 'admin');
+
+      // Owner may edit contact info only. Admin may edit anything except the link.
+      allow update: if
+        (ownsPlayer(playerId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['displayName', 'phone', 'email', 'usualPayment', 'updatedAt']))
+        ||
+        (isAdmin()
+          && request.resource.data.claimedByUid == resource.data.claimedByUid);
+
+      allow delete: if false; // deactivate via `active`; merges handled by functions
+
+      match /stats/{doc} {
+        allow read: if isAdmin() || ownsPlayer(playerId);
+        allow write: if false; // functions only
+      }
+    }
+
+    // ---------- claims ----------
+    match /claims/{claimId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.requesterUid == request.auth.uid);
+
+      // Players may only create their own pending claim via the callable
+      // `requestClaim`. Direct client creates are denied so the function can
+      // rate limit and compute `suggestedPlayerId`.
+      allow create, update, delete: if false;
+    }
+
+    // ---------- pool config ----------
+    match /config/{doc} {
+      // Public-safe fields only. Keep secrets out of this collection.
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---------- audit log ----------
+    match /auditLog/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // functions only
+    }
+
+    // ---------- seasons ----------
+    match /seasons/{year} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+
+      // ----- weeks -----
+      match /weeks/{weekId} {
+        // Drafts are admin-only. Everyone signed in can read open/locked/final.
+        allow read: if isAdmin() || (signedIn() && resource.data.status != 'draft');
+
+        // Admin may build/edit a week only while it is a draft (or create it).
+        // Opening, locking, results, and winner go through callables.
+        allow create: if isAdmin() && request.resource.data.status == 'draft';
+        allow update: if isAdmin()
+          && resource.data.status == 'draft'
+          && request.resource.data.status == 'draft'
+          && request.resource.data.revealed == false;
+        allow delete: if isAdmin() && resource.data.status == 'draft';
+
+        // ----- entries (one per person per week; doc ID = playerId) -----
+        match /entries/{playerId} {
+          // Names, payment declaration, and paid badge are not secret. Picks are.
+          allow read: if signedIn();
+
+          allow create: if ownsPlayer(playerId)
+            && weekIsOpen(year, weekId)
+            && request.resource.data.playerId == playerId
+            && request.resource.data.enteredBy == 'self'
+            && request.resource.data.source == 'web'
+            && request.resource.data.paymentStatus == 'unpaid'
+            && request.resource.data.lateOverride == null
+            && isPaymentMethod(request.resource.data.paymentMethod)
+            && isPaymentIntent(request.resource.data.paymentIntent)
+            && request.resource.data.displayName is string
+            && request.resource.data.displayName.size() > 0
+            && request.resource.data.displayName.size() <= 60
+            && request.resource.data.keys().hasOnly([
+                 'playerId', 'displayName', 'paymentMethod', 'paymentIntent',
+                 'paymentStatus', 'enteredBy', 'source', 'paperPhotoPath',
+                 'lateOverride', 'picksSubmittedAt', 'createdAt', 'updatedAt']);
+
+          // Player edits: only their declaration and name, only while open.
+          allow update: if ownsPlayer(playerId)
+            && weekIsOpen(year, weekId)
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['displayName', 'paymentMethod', 'paymentIntent',
+                           'picksSubmittedAt', 'updatedAt'])
+            && isPaymentMethod(request.resource.data.paymentMethod)
+            && isPaymentIntent(request.resource.data.paymentIntent);
+
+          // Players can withdraw before lock. Admin deletes go through a callable.
+          allow delete: if ownsPlayer(playerId) && weekIsOpen(year, weekId);
+
+          // ----- private picks + tiebreaker -----
+          match /private/{doc} {
+            allow read: if isAdmin()
+              || ownsPlayer(playerId)
+              || weekIsRevealed(year, weekId);
+
+            allow create, update: if doc == 'picks'
+              && ownsPlayer(playerId)
+              && weekIsOpen(year, weekId)
+              && request.resource.data.keys().hasOnly(['picks', 'tiebreakerTotal', 'updatedAt'])
+              && request.resource.data.picks is map
+              && request.resource.data.picks.size() <= 15
+              && request.resource.data.tiebreakerTotal is int
+              && request.resource.data.tiebreakerTotal >= 0
+              && request.resource.data.tiebreakerTotal <= 200;
+
+            allow delete: if doc == 'picks'
+              && ownsPlayer(playerId)
+              && weekIsOpen(year, weekId);
+          }
+        }
+      }
+
+      // ----- standings (function-written) -----
+      match /standings/{playerId} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
+    }
+
+    // ---------- default deny ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

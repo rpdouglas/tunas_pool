@@ -1,0 +1,155 @@
+/* ==========================================================================
+   tokens.css — Tunas Pick 'Em design tokens (Baltimore Ravens palette)
+   Single source of truth for color, type, shape, and motion.
+   Colors are space-separated RGB channels so Tailwind can apply opacity:
+     rgb(var(--purple-700) / 0.5)   or   bg-purple-700/50
+
+   OFFICIAL = Baltimore Ravens team color (purple, black, metallic gold, red)
+   DERIVED  = tint/shade or UI color added for the website
+   LAYOUT   = structure, shapes, and devices come from the Week 4 paper sheet
+   ========================================================================== */
+
+:root {
+  /* ---- Purple (brand structure) ---------------------------------------- */
+  --purple-50:  240 239 251;  /* DERIVED */
+  --purple-100: 225 222 247;  /* DERIVED */
+  --purple-200: 195 189 239;  /* DERIVED */
+  --purple-300: 152 142 225;  /* DERIVED */
+  --purple-400: 107  94 201;  /* DERIVED */
+  --purple-500:  67  53 177;  /* DERIVED  emphasis text, focus ring        */
+  --purple-600:  48  35 149;  /* DERIVED */
+  --purple-700:  36  23 115;  /* OFFICIAL #241773  BRAND PURPLE            */
+  --purple-800:  24  16  86;  /* DERIVED  Game Day background              */
+  --purple-900:  17  11  61;  /* DERIVED */
+  --purple-950:   9   5  36;  /* DERIVED  hard shadows                     */
+
+  /* ---- Gold (brand accent) ---------------------------------------------- */
+  --gold-50:  250 245 229;    /* DERIVED */
+  --gold-100: 245 233 194;    /* DERIVED */
+  --gold-200: 235 213 142;    /* DERIVED */
+  --gold-300: 222 190  84;    /* DERIVED  gold text on dark                */
+  --gold-400: 217 175  38;    /* DERIVED  UI gold: buttons, ribbon (black text = 10.1:1) */
+  --gold-500: 193 153  21;    /* DERIVED  button hover                     */
+  --gold-600: 158 124  12;    /* OFFICIAL #9E7C0C  METALLIC GOLD (3.9:1 on white: graphics and LARGE text only) */
+  --gold-700: 118  93  10;    /* DERIVED  small gold text on white (6.3:1) */
+  --gold-800:  85  67   7;    /* DERIVED  text on gold tints               */
+  --gold-900:  57  44   5;    /* DERIVED  hard shadow under gold buttons   */
+
+  /* ---- Red (urgency + errors only) -------------------------------------- */
+  --red-50:  253 236 239;     /* DERIVED */
+  --red-100: 252 217 223;     /* DERIVED */
+  --red-200: 249 180 191;     /* DERIVED */
+  --red-300: 241 126 146;     /* DERIVED */
+  --red-400: 233  73 100;     /* DERIVED */
+  --red-500: 228  17  52;     /* DERIVED */
+  --red-600: 214  15  49;     /* DERIVED */
+  --red-700: 198  12  48;     /* OFFICIAL #C60C30  Ravens red              */
+  --red-800: 153  10  34;     /* DERIVED  error and urgent text            */
+  --red-900: 110   7  24;     /* DERIVED */
+
+  /* ---- Black + neutrals ------------------------------------------------- */
+  --black:       0   0   0;   /* OFFICIAL #000000                           */
+  --white:     255 255 255;
+  --neutral-50:  247 246 250; /* DERIVED  admin page background (purple-tinted) */
+  --neutral-100: 239 238 246; /* DERIVED  muted row fill                   */
+  --neutral-200: 226 224 235; /* DERIVED */
+  --neutral-300: 204 202 216; /* DERIVED  subtle borders                   */
+  --neutral-400: 163 161 179; /* DERIVED  dividers                         */
+  --neutral-500: 109 107 130; /* DERIVED  secondary text 5.2:1             */
+  --neutral-600:  90  88 112; /* DERIVED  muted text 6.9:1                 */
+  --neutral-700:  59  57  80; /* DERIVED */
+  --neutral-900:  16  16  16; /* DERIVED  body ink                         */
+
+  /* ---- Status ------------------------------------------------------------ */
+  --success-50:  227 244 232; /* DERIVED  (no green in the Ravens palette) */
+  --success-300: 143 208 162;
+  --success-600:  27 127  59; /* white on this = 5.07:1 */
+  --success-800:  20 103  45; /* on success-50 = 6.1:1  */
+  /* Warning IS gold: pending/unpaid uses the brand accent tints */
+  --warning-50:  var(--gold-50);
+  --warning-300: var(--gold-300);
+  --warning-800: var(--gold-800);
+
+  /* ======================================================================
+     Semantic aliases — components use THESE, not the raw ramps
+     ====================================================================== */
+  --bg-gameday:       var(--purple-800);   /* gradients to black in .bg-gameday */
+  --bg-backoffice:    var(--neutral-50);
+  --surface:          var(--white);
+  --surface-muted:    var(--neutral-100);
+  --surface-tint:     var(--purple-100);
+
+  --text:             var(--neutral-900);
+  --text-muted:       var(--neutral-600);
+  --text-on-dark:     var(--white);
+  --text-emphasis:    var(--purple-500);
+  --text-accent:      var(--gold-700);     /* gold text on white */
+  --text-accent-dark: var(--gold-300);     /* gold text on purple/black */
+
+  --border-strong:    var(--purple-700);
+  --border-subtle:    var(--neutral-300);
+  --divider:          var(--neutral-400);
+
+  --action-primary:         var(--gold-400);
+  --action-primary-hover:   var(--gold-500);
+  --action-primary-text:    var(--black);   /* text ON the gold button */
+  --action-secondary:       var(--purple-700);
+  --action-secondary-hover: var(--purple-800);
+
+  --urgent:           var(--red-700);      /* lock, deadline, errors */
+  --urgent-text:      var(--red-800);
+
+  --focus-inner:      var(--white);
+  --focus-outer:      var(--purple-500);
+
+  /* ---- Type ------------------------------------------------------------- */
+  --font-display: 'Alfa Slab One', Rockwell, 'Rockwell Extra Bold', Georgia, serif;
+  --font-heading: 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', Arial, sans-serif;
+  --font-body:    'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+
+  /* ---- Shape ------------------------------------------------------------ */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
+  --border-w: 2px;
+  --border-w-heavy: 3px;
+
+  /* ---- Elevation: hard "sticker" shadows, not soft grey ----------------- */
+  --shadow-sticker:       0 3px 0 0 rgb(var(--purple-950));
+  --shadow-sticker-gold:  0 3px 0 0 rgb(var(--gold-900));
+  --shadow-panel:         0 4px 0 0 rgb(var(--black) / 0.35);
+  --shadow-raised:        0 8px 20px -4px rgb(var(--black) / 0.5);
+
+  /* ---- Motion ----------------------------------------------------------- */
+  --dur-press: 120ms;
+  --dur-state: 200ms;
+  --dur-reveal: 600ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ---- Touch ------------------------------------------------------------ */
+  --touch-min: 48px;
+}
+
+/* ---- Large-text mode (Settings > Text size). Default 100%. ------------- */
+html[data-text-size='large']  { font-size: 112.5%; }
+html[data-text-size='xlarge'] { font-size: 125%; }
+
+/* ---- Focus: two-tone ring, visible on white AND on purple/black -------- */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgb(var(--focus-inner)),
+    0 0 0 5px rgb(var(--focus-outer));
+}
+
+/* ---- Reduced motion ---------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
