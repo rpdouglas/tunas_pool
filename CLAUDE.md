@@ -7,7 +7,7 @@
 
 A mobile-first website that replaces the paper "Tunas Weekly Football Pool Pick 'Em" sheet.
 
-- Players pick one winner for each of the 14 Sunday NFL games plus Monday Night Football (15 picks), and enter an MNF total-points tiebreaker.
+- Players pick one winner for each Sunday NFL game (up to 14; fewer in bye weeks) plus Monday Night Football (up to 15 picks), and enter an MNF total-points tiebreaker.
 - Players choose a payment method: **Cash** or **e-Transfer**, and **Will do** or **Already did**.
 - The admin (Ryan) confirms payments, enters picks on behalf of players (seniors who use paper), enters results, and publishes the weekly winner.
 - The pool runs **year over year**. Season standings and all-time history attach to a permanent `playerId`.

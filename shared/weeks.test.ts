@@ -114,9 +114,26 @@ describe('weekProblems', () => {
     expect(weekProblems(ready(), before('2026-10-06T12:00:00Z'))).toEqual([]);
   });
 
-  it('needs 14 Sunday games and one Monday night game', () => {
+  it('allows a short week: fewer than 14 Sunday games is fine (byes, Thursday games)', () => {
     const week = { ...ready(), games: ready().games.slice(1) };
-    expect(weekProblems(week, 0)).toContain('The sheet needs 14 Sunday games. This week has 13.');
+    expect(week.games.filter((g) => g.slot === 'sunday')).toHaveLength(13);
+    expect(weekProblems(week, before('2026-10-06T12:00:00Z'))).toEqual([]);
+  });
+
+  it('needs 1 to 14 Sunday games and one Monday night game', () => {
+    const mnfOnly = { ...ready(), games: ready().games.slice(14) };
+    expect(weekProblems(mnfOnly, 0)).toContain('The sheet needs at least one Sunday game.');
+    const extra: GameDraft = {
+      ...ready().games[0],
+      id: 'g15',
+      order: 15,
+      away: 'Panthers',
+      home: 'Chiefs',
+    };
+    const tooMany = { ...ready(), games: [...ready().games, extra] };
+    expect(weekProblems(tooMany, 0)).toContain(
+      'The sheet has room for 14 Sunday games. This week has 15.',
+    );
     const noMnf = { ...ready(), games: ready().games.slice(0, 14) };
     expect(weekProblems(noMnf, 0)).toContain(
       'The sheet needs exactly one Monday night game. This week has 0.',

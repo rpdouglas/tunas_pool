@@ -255,7 +255,7 @@ service cloud.firestore {
 ### Notes on the rules
 
 - **Pick values** (`'home' | 'away'`) and that each key is a real `gameId` can't be fully validated in rules without loops. The `submitEntry` flow validates shape on the client and `onResultsWritten` ignores unknown keys. If stricter validation is wanted later, move submission into a callable.
-- **Completeness (all 15 picks)** is enforced in the UI. A missing pick scores as a loss.
+- **Completeness (a pick for every game, up to 15)** is enforced in the UI. A missing pick scores as a loss.
 - **Self-serve profile ordering:** the client must create `players/{uid}` **before** its first entry write. Entry rules call `ownsPlayer()`, which needs the profile to exist.
 - **Admin entry edits:** the admin cannot write entries or picks directly from the client. Use `adminUpsertEntry` while open, or `adminLateOverride` (reason required) after lock.
 - **`claimedByUid` is never client-writable.** The owner-update rule limits affected keys, and the admin-update rule requires the field to be unchanged.

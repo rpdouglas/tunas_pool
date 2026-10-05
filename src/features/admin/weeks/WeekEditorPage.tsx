@@ -394,8 +394,8 @@ function WeekEditor({ year, week, previous, message, setMessage }: WeekEditorPro
             ) : readiness.length === 0 ? (
               <p className="text-body">
                 <span aria-hidden="true">✓ </span>
-                {sundayGames.length} Sunday games and the Monday night game. The lock is before the
-                first kickoff.
+                {sundayGames.length} Sunday {sundayGames.length === 1 ? 'game' : 'games'} and the
+                Monday night game. The lock is before the first kickoff.
               </p>
             ) : (
               <ul className="flex flex-col gap-1 text-body">
