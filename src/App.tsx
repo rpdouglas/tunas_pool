@@ -9,6 +9,8 @@ const HistoryPage = lazy(() => import('./features/claims/HistoryPage'));
 const WeekPage = lazy(() => import('./features/leaderboard/WeekPage'));
 const StandingsPage = lazy(() => import('./features/leaderboard/StandingsPage'));
 const PlayerPage = lazy(() => import('./features/leaderboard/PlayerPage'));
+const SheetPage = lazy(() => import('./features/print/SheetPage'));
+const ResultsSheetPage = lazy(() => import('./features/print/ResultsSheetPage'));
 const Styleguide = lazy(() => import('./pages/Styleguide'));
 import NotFound from './pages/NotFound';
 import { AdminLayout } from './features/admin/AdminLayout';
@@ -41,6 +43,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/picks/:year/:weekId" element={<EntryPage />} />
         <Route path="/week/:year/:weekId" element={<WeekPage />} />
+        <Route path="/sheet/:year/:weekId" element={<SheetPage />} />
+        <Route path="/sheet/:year/:weekId/results" element={<ResultsSheetPage />} />
         <Route path="/standings" element={<StandingsPage />} />
         <Route path="/player/:playerId" element={<PlayerPage />} />
         <Route path="/account" element={<SaveAccount />} />

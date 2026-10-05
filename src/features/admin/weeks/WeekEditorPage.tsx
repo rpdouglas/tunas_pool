@@ -285,6 +285,11 @@ function WeekEditor({ year, week, previous, message, setMessage }: WeekEditorPro
         >
           All weeks
         </Link>
+        {week && (
+          <Link to={`/sheet/${year}/${week.id}`} className="min-h-touch py-3 text-body underline">
+            Print the paper sheet
+          </Link>
+        )}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-heading text-h2">

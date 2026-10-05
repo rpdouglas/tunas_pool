@@ -1,9 +1,13 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { confirmationCode } from '@shared/confirmation';
+import { picksInMessage } from '@shared/messages';
 import { formatPoolDateTime } from '@shared/time';
 import { Button } from '../../components/ui/Button';
 import { Countdown } from '../../components/ui/Countdown';
 import { Panel } from '../../components/ui/Panel';
+import { ShareCard } from '../../components/ui/ShareCard';
+import { shareText } from '../../lib/share';
 import type { WeekView } from '../../lib/weekModel';
 import type { MyEntry } from './entryData';
 
@@ -34,6 +38,18 @@ export function Receipt({ year, week, mine, open, isGuest, justSubmitted, onEdit
   const picks = mine.picks?.picks ?? {};
   const payment = mine.payment;
   const fee = `$${(week.entryFeeCents / 100).toFixed(0)}`;
+  const [shareNote, setShareNote] = useState<string | null>(null);
+
+  async function share() {
+    const outcome = await shareText(picksInMessage(entry.displayName, week));
+    setShareNote(
+      outcome === 'copied'
+        ? 'Copied. Paste it wherever you like.'
+        : outcome === 'failed'
+          ? "Couldn't share from this browser. A screenshot of the card works too."
+          : null,
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -121,6 +137,22 @@ export function Receipt({ year, week, mine, open, isGuest, justSubmitted, onEdit
           )}
         </div>
       </Panel>
+
+      {/* Opt-in sharing (PERSONAS: Kayla). The card never shows a pick or anything about payment. */}
+      <ShareCard
+        displayName={entry.displayName}
+        weekNumber={week.weekNumber}
+        lockLabel={formatPoolDateTime(new Date(week.lockAtMs))}
+        locked={!open}
+      />
+      <Button variant="secondary" onClick={share}>
+        Share that you're in
+      </Button>
+      {shareNote && (
+        <p role="status" className="text-center text-body text-ink-inverse">
+          {shareNote}
+        </p>
+      )}
     </div>
   );
 }

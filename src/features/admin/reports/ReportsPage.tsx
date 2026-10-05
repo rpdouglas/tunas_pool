@@ -149,7 +149,7 @@ function WeekCard({ week }: { week: ReportWeek }) {
         {week.biggestUpset &&
           fact(
             'Biggest upset',
-            `${week.biggestUpset.winner} over ${week.biggestUpset.loser} (${week.biggestUpset.count} picked it)`,
+            `${week.biggestUpset.winner} over ${week.biggestUpset.loser} (${week.biggestUpset.count === 0 ? 'nobody' : week.biggestUpset.count} picked it)`,
           )}
       </dl>
       {week.unpaidNames.length > 0 && (

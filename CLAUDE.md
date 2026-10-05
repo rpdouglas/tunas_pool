@@ -80,6 +80,7 @@ npm run emulators      # firebase emulators:start (auth, firestore, functions, s
 npm run test           # Vitest
 npm run test:rules     # rules tests and the functions' integration tests (Firestore emulator)
 npm run test:a11y      # axe, fonts, and 375px checks on /styleguide and the sign-in pages (Playwright)
+npm run test:smoke     # every screen once at 375px against the emulators, about a minute (D-082)
 # The four test:e2e:* flows below are parked (D-066): run them only when asked.
 npm run test:e2e:emulator  # full browser flows against running emulators + dev server (see the script header)
 npm run test:e2e:mock-week # the Phase 1 gate: 12 players, payments, results, winner, payout (needs the Functions emulator)
@@ -115,9 +116,11 @@ Deployment targets (see `DECISIONS.md` D-015):
 6. Update docs, then update `ACTIVE_CYCLE.md` with status and anything learned.
 7. Use subagents for parallelizable work (for example: rules tests, UI components, function stubs). Review diffs before merging.
 
-**Definition of done:** typechecks clean, tests pass, rules tests cover new paths, the functions' integration tests cover new callables, docs updated, and works on a 375px viewport (`test:a11y` covers the styleguide).
+**Definition of done:** typechecks clean, tests pass, rules tests cover new paths, the functions' integration tests cover new callables, docs updated, and the smoke run passes with the changed screens looked at (375px).
 
-**Browser end-to-end runs are parked (D-066).** Do not write a new `test:e2e:*` flow for a sprint or re-run the existing ones as part of finishing a task. They need the emulators, a dev server, and several browser pages at once, which the Codespace cannot hold reliably, and chasing its "Page crashed" failures cost more time than the runs saved. The scripts stay in the repo. Run one only when Ryan asks, and if a page crashes, say so and move on.
+**Browser check: one quick smoke run (D-082).** At the end of a task that adds or changes a screen, run `npm run test:smoke` once. It seeds a small season into the emulators, serves the built site, opens each screen at 375px, checks it loads, fits, and throws no script error, and saves screenshots to `test-results/smoke/`. It takes about a minute. Look at the screenshots of the screens you touched, and add a `visit(...)` line for any new screen. If it fails, fix what it found; if a page crashes for no reason in the code, say so and move on rather than debugging the machine.
+
+The four long `test:e2e:*` flows stay parked (D-066): do not write new ones or run them as part of finishing a task. They need a dev server and many pages at once, which the Codespace cannot hold. Run one only when Ryan asks.
 
 ## 8. Hard "never" list
 

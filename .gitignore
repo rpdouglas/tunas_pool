@@ -27,5 +27,6 @@ _drop
 
 # playwright
 dist-a11y
+dist-smoke
 test-results
 playwright-report

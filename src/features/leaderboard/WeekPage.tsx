@@ -132,6 +132,12 @@ export default function WeekPage() {
     <GameDayPage title={title}>
       {picker}
       <Revealed week={week.data} entries={entries.data ?? []} myPlayerId={profile.data?.playerId} />
+      <Link
+        to={`/sheet/${year}/${weekId}/results`}
+        className="inline-flex min-h-touch items-center justify-center text-body text-ink-inverse underline"
+      >
+        Print these results
+      </Link>
       {back}
     </GameDayPage>
   );

@@ -1,11 +1,55 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 7: Season standings and stats** · Phase 3 (Reveal and standings) · Started: 2026-10-05
+**Sprint 8: Print sheet, reminders, and sharing** · Phase 4 (Polish and automation) · Started: 2026-10-05
 
 ## Goal
-The season adds up on its own: standings across the finished weeks, a page for each player's season, every past week one tap away, and a report the commissioner can check the money against.
+The paper sheet comes off the site so it always matches the week, the commissioner can nudge the people who aren't in or haven't paid in one tap, and a player can tell their friends they're in without giving anything away.
 
 ## Persona check
+- **Primary persona:** Rosalie (the paper sheet and printed results) and the Commissioner (reminders). Secondary: Kayla (sharing), Jen (privacy), Troy (payment wording), Bernie (a text is how he hears from the pool).
+- **Rosalie Inclusion Test:** the sheet is built from the same week as the entry screens, numbered in the same order, with a Large print switch. The week's results print on one page for the counter. Neither needs her to touch a screen.
+- **Commissioner Counter Test:** a reminder is one tap from the list he is already looking at. It opens his own text app with the words filled in, so he sees what goes out and sends it himself. No new tab.
+- **Privacy test (Jen, Rosalie):** the payment message goes to one person, names nobody else, and reads as a check, not a demand ("If you've already paid, just let me know"). The group message names nobody at all. Nothing is ever sent automatically (D-027).
+- **Border Test (Troy):** the payment message offers cash and e-Transfer equally.
+- **Kayla rule:** the share card and its message carry a display name, the week, and "picks are in". Never a pick, a phone, an email, or payment, before or after the lock. Sharing is always a button she taps.
+- **Snoop test:** the printed results show nothing until picks are revealed.
+- **Dale Deadline Test:** nothing is added to the form. The share card sits under the receipt, after the picks are safely in.
+- **Responsible-Play Check:** no message mentions owing, tabs, or catching up. One entry, one fee.
+
+## Tasks
+- [x] Message wording as shared, tested code: the entry reminder, the group reminder, the payment note, "picks are in", and the pool invitation (`shared/messages.ts`, 7 tests)
+- [x] Paper sheet (`/sheet/:year/:weekId`) with Large print, and printed results (`/sheet/:year/:weekId/results`). Linked from the week editor, the home screen, and the week page
+- [x] Reminders: "Text a reminder" and "Copy a reminder for the group chat" on the roster; "Text about payment" in the payments queue. While picks are open only
+- [x] Sharing: the share card and "Share that you're in" on the receipt; "Share this pool" on the home screen
+- [x] Styleguide entry for the share card; `test:a11y` passes (18 checks)
+- [x] Docs: DECISIONS D-078 to D-081, DESIGN_SYSTEM §6, PROJECT_PLAN, DATA_MODEL §5
+- [→] Saturday reminder email: carried over (D-079). It needs an email-sending service set up in the Firebase project
+- [x] Browser smoke run at 375px (`npm run test:smoke`, 21 screens, D-082)
+- [ ] Print a sheet and a results page on paper from a real printer: they have been seen on screen, not on paper
+- [ ] Send yourself one reminder text from an iPhone and from an Android phone, to see the message arrive filled in
+- [ ] Confirm the provisional decisions D-078 to D-080 with the commissioner
+
+## Acceptance (from PROJECT_PLAN.md)
+None is written for Sprint 8 in the plan. The working test: the commissioner prints a week's sheet that matches the site game for game, texts a reminder from the roster in one tap, and a player shares that they're in without a pick showing.
+
+## Notes / learned
+- **Browser checks are back, in a small form** (D-082): `npm run test:smoke` opens 21 screens at 375px in about 70 seconds. It passed, and it is the first time the Sprint 6, 7, and 8 screens were seen in a browser. Looking at its screenshots found two things: the home screen named one of two tied players as "the" season leader (it now says they are tied), and the paper sheet's Phone line was squeezed to nothing (Name, Phone, and the tiebreaker total each have their own line now).
+- Also verified with typecheck, lint, 168 unit tests, the production build, and `test:a11y`. No functions or rules changed, so `test:rules` was not re-run. The sheet has been seen on screen but **not printed on paper**.
+- The `sms:` link format with the message filled in (`sms:+1…?&body=…`) is the common form for both iPhone and Android, but it is written from knowledge, not tried on a phone.
+- Reminders and the payment note are offered only while picks are open. After the lock a reminder to enter is too late, and a payment note would be asking for money toward a week that is already decided.
+- The "branding pass" in the plan (mascot placement, empty and loading states) was largely done with the brand artwork between Sprints 3 and 4. Nothing more was done here.
+- The Back Office menu is still seven tabs on two lines. Reminders were deliberately not made an eighth.
+
+---
+
+## Sprint 7 (released 2026-10-05, PR #25; follow-ups open)
+
+**Sprint 7: Season standings and stats** · Phase 3 (Reveal and standings) · Started: 2026-10-05
+
+### Goal
+The season adds up on its own: standings across the finished weeks, a page for each player's season, every past week one tap away, and a report the commissioner can check the money against.
+
+### Persona check
 - **Primary persona:** Dale (the regular, who wants to see how his season is going). Secondary: Gerald (numbers he can check), the Commissioner (reports), Jen and Kayla (what others see of them), a guest (Bernie's first weeks online).
 - **Slump rule:** the standings are a record, not a chase. No streaks (D-023), no "games back", and the page says each week is still its own pot. The home screen shows the leader in one line and nothing about how far anyone is behind.
 - **Gerald Trust Test:** standings count only final weeks and are worked out from the entries each time, so they follow a correction or a merge. The tests check them against totals added up by hand. Each player's page lists every finished week with a link to that week's picks.
@@ -15,7 +59,7 @@ The season adds up on its own: standings across the finished weeks, a page for e
 - **Rosalie Inclusion Test:** roster players are on the standings without a login.
 - **Dale Deadline Test / Border / Responsible-Play:** nothing is added before the lock. No money features change. The unpaid list is admin only and is never a tab: unpaid entries still cannot win.
 
-## Tasks
+### Tasks
 - [x] Shared logic: standings, places, win rate, best week, all-time stats (`shared/standings.ts`, 10 tests with hand-added totals); the season report and CSV export (`shared/reports.ts`, 8 tests)
 - [x] Functions: `recomputeStandings`, `recomputeAllTime`, `seasonReport` (`functions/src/season.ts`); the refresh after publish, correction, claim, unlink, and merge; `adminRecomputeStandings` and `adminSeasonReport`. 5 integration tests
 - [x] Rules tests: two new matrix rows (50, 51), 54 rules tests in all. No rule changed
@@ -27,10 +71,10 @@ The season adds up on its own: standings across the finished weeks, a page for e
 - [ ] Look at the new pages on a real phone (browser runs are parked, D-066)
 - [ ] Confirm the provisional decisions D-073, D-075, D-077 with the commissioner
 
-## Acceptance (from PROJECT_PLAN.md)
+### Acceptance (from PROJECT_PLAN.md)
 Standings match a hand-checked spreadsheet for at least three real weeks of data.
 
-## Notes / learned
+### Notes / learned
 - **Verified with the fast checks only** (D-066): typecheck, lint, 161 unit tests, 110 rules and function tests in the emulator, and the production build. No screen in this sprint has been opened in a browser.
 - The acceptance test cannot be run yet: the real season has no final week. The unit tests stand in for it with three weeks added up by hand, and the Reports CSV is the tool for the real check once weeks 1 to 4 are published.
 - With seven tabs the Back Office menu is two full lines at 375px. It is due a rethink (a "More" menu, or icons) before another tab is added.

@@ -31,16 +31,20 @@ export function useStandings(year: string, signedIn: boolean) {
   });
 }
 
-/** The top of the standings, for the home screen: one small read. */
-export function useSeasonLeader(year: string, signedIn: boolean) {
+/**
+ * The top of the standings, for the home screen: one small read. More than one row when players
+ * are level on correct picks, so the home screen never names one of them as "the" leader.
+ */
+export function useSeasonLeaders(year: string, signedIn: boolean) {
   return useQuery({
-    queryKey: ['seasonLeader', year],
+    queryKey: ['seasonLeaders', year],
     enabled: signedIn,
-    queryFn: async (): Promise<StandingRow | null> => {
+    queryFn: async (): Promise<StandingRow[]> => {
       const snap = await getDocs(
-        query(collection(db, 'seasons', year, 'standings'), orderBy('wins', 'desc'), limit(1)),
+        query(collection(db, 'seasons', year, 'standings'), orderBy('wins', 'desc'), limit(4)),
       );
-      return snap.empty ? null : toRow(snap.docs[0].id, snap.docs[0].data() as Standing);
+      const rows = rankStandings(snap.docs.map((d) => toRow(d.id, d.data() as Standing)));
+      return rows.filter((r) => r.wins === rows[0].wins);
     },
   });
 }
