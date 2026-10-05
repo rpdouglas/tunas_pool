@@ -70,7 +70,7 @@ export interface Claim {
   requesterUid: string;
   requesterEmail: string | null;
   claimedName: string;
-  claimedPhone: string;
+  claimedPhone: string | null; // E.164, or null when left blank
   status: ClaimStatus;
   suggestedPlayerId: string | null;
   resolvedPlayerId: string | null;

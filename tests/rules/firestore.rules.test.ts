@@ -568,3 +568,86 @@ describe('Sprint 3: results, records, and the winner stay function-written', () 
     await assertFails(getDoc(doc(env.authenticatedContext('bob').firestore(), `${weekPath(LOCKED_WEEK)}/entries/p1/payment/current`)));
   });
 });
+
+describe('Sprint 5: asking to claim a profile reveals nothing', () => {
+  const ROSTER = 'players/rosalie';
+  const rosterEntry = `${weekPath(OPEN_WEEK)}/entries/rosalie`;
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, ROSTER), {
+        displayName: 'Rosalie M.', phone: '+16135550144', email: null, claimedByUid: null,
+        origin: 'admin', usualPayment: 'cash', notes: 'Large print', active: true,
+        createdAt: Timestamp.now(), updatedAt: Timestamp.now(),
+      });
+      await setDoc(doc(db, rosterEntry), entryData('rosalie', { enteredBy: 'admin', source: 'paper' }));
+      await setDoc(doc(db, `${rosterEntry}/payment/current`), paymentData());
+      await setDoc(doc(db, `${rosterEntry}/private/picks`), {
+        picks: { g01: 'home' }, tiebreakerTotal: 41, updatedAt: Timestamp.now(),
+      });
+      for (const [id, status] of [['c1', 'pending'], ['c2', 'rejected']] as const) {
+        await setDoc(doc(db, `claims/${id}`), {
+          requesterUid: 'snoop', requesterEmail: 'snoop@example.com', claimedName: 'Rosalie M.',
+          claimedPhone: '+16135550144', status, suggestedPlayerId: null, resolvedPlayerId: null,
+          createdAt: Timestamp.now(),
+        });
+      }
+    });
+  });
+
+  it('#44 a pending or rejected claimant cannot read the profile they named, its picks, or its payment', async () => {
+    const snoop = env.authenticatedContext('snoop', { email: 'snoop@example.com' }).firestore();
+    await assertFails(getDoc(doc(snoop, ROSTER)));
+    await assertFails(getDocs(query(collection(snoop, 'players'), where('phone', '==', '+16135550144'))));
+    await assertFails(getDocs(query(collection(snoop, 'players'), where('displayName', '==', 'Rosalie M.'))));
+    await assertFails(getDoc(doc(snoop, `${rosterEntry}/private/picks`)));
+    await assertFails(getDoc(doc(snoop, `${rosterEntry}/payment/current`)));
+    await assertFails(getDoc(doc(snoop, `${ROSTER}/stats/allTime`)));
+    // And cannot write as that player.
+    await assertFails(updateDoc(doc(snoop, rosterEntry), { displayName: 'Mine now', picksSubmittedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(snoop, ROSTER), { phone: '+16135550199' }));
+  });
+
+  it('#45 a player reads their own claims by query; not all claims, not another login\'s, and cannot approve their own', async () => {
+    const snoop = env.authenticatedContext('snoop').firestore();
+    const mine = await assertSucceeds(
+      getDocs(query(collection(snoop, 'claims'), where('requesterUid', '==', 'snoop'))),
+    );
+    expect(mine.size).toBe(2);
+    await assertFails(getDocs(collection(snoop, 'claims')));
+    await assertFails(getDocs(query(collection(snoop, 'claims'), where('status', '==', 'pending'))));
+    const alice = env.authenticatedContext('alice').firestore();
+    await assertFails(getDocs(query(collection(alice, 'claims'), where('requesterUid', '==', 'snoop'))));
+    await assertFails(getDoc(doc(alice, 'claims/c1')));
+    await assertFails(updateDoc(doc(snoop, 'claims/c1'), { status: 'approved', resolvedPlayerId: 'rosalie' }));
+    await assertFails(setDoc(doc(snoop, 'claims/c9'), { requesterUid: 'snoop', claimedName: 'Rosalie M.', status: 'pending' }));
+    await assertSucceeds(getDocs(collection(admin(), 'claims')));
+  });
+
+  it('#46 only the link decides: once approved the login owns the profile and its entries, and unlinking takes that away', async () => {
+    const kid = env.authenticatedContext('kid').firestore();
+    await assertFails(getDoc(doc(kid, ROSTER)));
+    // What adminApproveClaim does, with the Admin SDK.
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), ROSTER), { claimedByUid: 'kid' }));
+    await assertSucceeds(getDoc(doc(kid, ROSTER)));
+    const found = await assertSucceeds(
+      getDocs(query(collection(kid, 'players'), where('claimedByUid', '==', 'kid'))),
+    );
+    expect(found.docs.map((d) => d.id)).toEqual(['rosalie']);
+    await assertSucceeds(getDoc(doc(kid, `${rosterEntry}/private/picks`)));
+    await assertSucceeds(getDoc(doc(kid, `${rosterEntry}/payment/current`)));
+    await assertSucceeds(
+      updateDoc(doc(kid, rosterEntry), { displayName: 'Rosalie M.', picksSubmittedAt: serverTimestamp() }),
+    );
+    // The owner still cannot hand the profile to someone else, or mark it paid.
+    await assertFails(updateDoc(doc(kid, ROSTER), { claimedByUid: 'snoop' }));
+    await assertFails(updateDoc(doc(kid, `${rosterEntry}/payment/current`), { paymentStatus: 'paid' }));
+    // What adminUnlinkClaim does.
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), ROSTER), { claimedByUid: null }));
+    await assertFails(getDoc(doc(kid, ROSTER)));
+    await assertFails(getDoc(doc(kid, `${rosterEntry}/private/picks`)));
+    await assertFails(updateDoc(doc(kid, rosterEntry), { displayName: 'Rosalie M.', picksSubmittedAt: serverTimestamp() }));
+  });
+});
+

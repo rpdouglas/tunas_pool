@@ -76,17 +76,17 @@ Storage: `paperSheets/{year}/{weekId}/{playerId}.jpg`, admin only.
 
 | Field | Type | Notes |
 |---|---|---|
-| `requesterUid` | string | Must equal `request.auth.uid` on create. |
+| `requesterUid` | string | The login that asked. Written by `requestClaim`; clients cannot create claims. |
 | `requesterEmail` | string \| null | From the auth token, for the admin to see. |
 | `claimedName` | string | What the player typed. |
-| `claimedPhone` | string | What the player typed. |
+| `claimedPhone` | string \| null | What the player typed, normalized to E.164. Null when left blank. |
 | `status` | `'pending' \| 'approved' \| 'rejected'` | Client creates only `'pending'`. |
-| `suggestedPlayerId` | string \| null | Function-suggested best match (phone, then name). |
-| `resolvedPlayerId` | string \| null | Set on approval. |
-| `decidedBy` / `decidedAt` / `decisionNote` | string / Timestamp / string | Function-written. |
+| `suggestedPlayerId` | null | Always null. The claimant can read this document, so the match is never stored: `adminListClaims` works it out for the admin each time (D-061). |
+| `resolvedPlayerId` | string \| null | Set on approval. Cleared if the link is undone. |
+| `decidedBy` / `decidedAt` / `decisionNote` | string / Timestamp / string | Function-written. The note is optional, up to 200 characters, and the claimant sees it with a rejection. |
 | `createdAt` | Timestamp | |
 
-A claim never exposes the matched profile to the claimant. Only the admin sees `suggestedPlayerId`, via a callable.
+A claim never exposes the matched profile to the claimant: the document holds only what they typed and the decision. Only the admin sees the likely matches, through `adminListClaims`. A player reads their own claims with `where('requesterUid', '==', uid)`.
 
 ### 3.4 `seasons/{year}`
 
@@ -221,17 +221,17 @@ type GameResult = 'home' | 'away' | 'tie';
 | `adminPreviewWinner(year, weekId)` | Read-only: standings, the pot, and the winner "if the games ended now" with a plain-words explanation, from the entries' own picks and payments (`shared/scoring.ts`). The same code publishes the winner. |
 | `adminPublishWinner(year, weekId, expectedPlayerIds)` | Needs a `locked` week with a result for every game and the Monday night total. Recomputes the winner from the picks and payments at that moment. If it differs from `expectedPlayerIds` (what the admin reviewed), nothing is published. Writes `winner`, sets `status='final'`, writes each entry's `record`. Audit logged as `week.winnerPublished`. Season standings and all-time stats are computed in Sprint 7 from the final weeks, not here. |
 | `adminMarkPayout(year, weekId, sent)` | Record that the payout was sent, or undo it. Only once the winner is published. Audit logged as `week.payout`. |
-| `adminListClaims()` | Returns pending claims with `suggestedPlayerId`. |
-| `adminApproveClaim(claimId, playerId)` | Link `claimedByUid`, merge if needed. |
-| `adminRejectClaim(claimId, note?)` | Reject with a friendly note. |
-| `adminUnlinkClaim(playerId)` | Undo a wrong approval. |
-| `adminMergePlayers(fromId, intoId)` | Manual merge, for example duplicate guests. |
+| `adminListClaims()` | The pending claims, oldest first. Each has what the player typed, their email, the website profile their login already has (if any, with weeks played), and up to five likely roster matches, best first: same phone, then same name, then a similar name (`shared/claims.ts`), each with weeks played and whether it is already linked. `suggestedPlayerId` is the best match that can still be claimed. A match that is already linked is shown but cannot be approved, and `sharedSuggestion` marks two requests pointing at one profile. Only roster profiles (`origin: 'admin'`) are offered. |
+| `adminApproveClaim(claimId, playerId)` | Link the claimant's login to a roster profile by setting `claimedByUid`. The claim must be pending, and the profile must be a live roster profile with no login. If the claimant's login already has a website profile, it is merged into the roster profile in the same transaction (see `adminMergePlayers`). Sets the claim to `approved` with `resolvedPlayerId`. Audit logged as `claim.approved`, plus `player.merged` when a merge happened. Never automatic (D-004). |
+| `adminRejectClaim(claimId, note?)` | Set a pending claim to `rejected`, with an optional friendly note the claimant sees. Links nothing. Audit logged as `claim.rejected`. |
+| `adminUnlinkClaim(playerId)` | Undo a wrong approval: clear `claimedByUid` on a roster profile, so that login can no longer see or change it. Entries are untouched. The approved claim becomes `rejected` with a standing note. Refused for a profile made on the website. Entries that a merge moved onto the profile stay there (D-063). Audit logged as `claim.unlinked`. |
+| `adminMergePlayers(fromId, intoId)` | Two profiles are one person. Every entry of `fromId` (with its picks and payment) is rewritten under `intoId` and the old documents deleted, since entries are keyed by player. A published winner naming `fromId` is repointed. `fromId` is kept as a record with `mergedInto`, `active: false`, and no login. If only `fromId` had a login, it moves to `intoId`. **Refused if both entered the same week** (D-062). Cannot be undone. Audit logged as `player.merged` with the weeks moved. Season standings and all-time stats are computed from the final weeks in Sprint 7, so there is nothing else to repoint yet. |
 
 **Player-callable (signed-in)**
 
 | Function | Purpose |
 |---|---|
-| `requestClaim(claimedName, claimedPhone)` | Creates a pending claim and computes `suggestedPlayerId`. Rate limited. |
+| `requestClaim(claimedName, claimedPhone?)` | Creates a pending claim holding what the player typed. Always answers `{ status: 'pending' }`, whoever they name. Needs a saved account, not a guest login (D-060). Refused if the login is already linked to a roster profile, already has a request waiting, or has asked three times in 24 hours. |
 | `adoptGuestProfile(guestIdToken)` | Called after a guest saves their account with an email that already has an account, so the app signed in to that account instead. Verifies the guest's anonymous ID token, then moves the guest's profile to the caller by setting `claimedByUid` (the `playerId` and its entries do not change). If the caller already has a profile, returns `needs_admin` and changes nothing; the admin merges with `adminMergePlayers`. Audit logged as `player.guestMoved`. |
 
 **Triggers and schedules**

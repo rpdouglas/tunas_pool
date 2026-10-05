@@ -80,9 +80,11 @@ npm run emulators      # firebase emulators:start (auth, firestore, functions, s
 npm run test           # Vitest
 npm run test:rules     # rules tests and the functions' integration tests (Firestore emulator)
 npm run test:a11y      # axe, fonts, and 375px checks on /styleguide and the sign-in pages (Playwright)
+# The four test:e2e:* flows below are parked (D-066): run them only when asked.
 npm run test:e2e:emulator  # full browser flows against running emulators + dev server (see the script header)
 npm run test:e2e:mock-week # the Phase 1 gate: 12 players, payments, results, winner, payout (needs the Functions emulator)
 npm run test:e2e:paper-entry # Sprint 4: roster, a paper sheet with a photo, a late entry (needs the Functions and Storage emulators)
+npm run test:e2e:claims    # Sprint 5: ask to link, approve, history, unlink, reject, merge (needs the Functions emulator)
 npm run typecheck      # tsc --noEmit across web + functions
 npm run build          # production build
 firebase deploy --project prod --only functions:tunaspool   # CI does this after the site deploy when functions changed; or the "Deploy functions" workflow
@@ -113,7 +115,9 @@ Deployment targets (see `DECISIONS.md` D-015):
 6. Update docs, then update `ACTIVE_CYCLE.md` with status and anything learned.
 7. Use subagents for parallelizable work (for example: rules tests, UI components, function stubs). Review diffs before merging.
 
-**Definition of done:** typechecks clean, tests pass, rules tests cover new paths, docs updated, works on a 375px viewport, and works in the emulator end to end.
+**Definition of done:** typechecks clean, tests pass, rules tests cover new paths, the functions' integration tests cover new callables, docs updated, and works on a 375px viewport (`test:a11y` covers the styleguide).
+
+**Browser end-to-end runs are parked (D-066).** Do not write a new `test:e2e:*` flow for a sprint or re-run the existing ones as part of finishing a task. They need the emulators, a dev server, and several browser pages at once, which the Codespace cannot hold reliably, and chasing its "Page crashed" failures cost more time than the runs saved. The scripts stay in the repo. Run one only when Ryan asks, and if a page crashes, say so and move on.
 
 ## 8. Hard "never" list
 

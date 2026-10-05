@@ -34,6 +34,10 @@ export function useRoster() {
         .filter((d) => !(d.data() as Player).mergedInto) // a merged profile lives on as the other one
         .map((d) => toRosterPlayer(d.id, d.data() as Player));
     },
+    // Players who enter on the website join the roster on their own, so look again every time the
+    // screen opens, and once a minute while it stays open.
+    refetchOnMount: 'always',
+    refetchInterval: 60_000,
   });
 }
 

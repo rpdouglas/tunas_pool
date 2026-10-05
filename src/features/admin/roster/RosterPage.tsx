@@ -168,6 +168,10 @@ export default function RosterPage() {
                 roster={players}
                 onSaved={onSaved}
                 onCancel={() => setEditing(null)}
+                onLinkChange={(message) => {
+                  setEditing(null);
+                  showToast({ message });
+                }}
               />
             </li>
           ) : (
