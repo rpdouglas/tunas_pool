@@ -41,6 +41,8 @@ Run a full mock week end to end in the emulator and then in production under a t
 - **The first real week could not be opened**: week 5 has 13 Sunday games (two byes and a Thursday game), and the week check insisted on exactly 14. A week now opens with 1 to 14 Sunday games plus Monday night (D-050). Every test sheet had been a full 15, so nothing caught it; `shared/weeks.test.ts` now covers a short week.
 - **Schedule suggestion added mid-sprint** (D-051, was parked): typing 14 matchups by hand each week was the slowest part of setup. The feed refuses a date range, so Sunday and Monday are fetched separately. `npm run test:e2e:emulator` stubs the feed (checks B2a, B2b).
 
+- **A rules test failed at random in CI** (PR #16, a docs-only change): row 34 sent `Timestamp.now()` and expected the rules to refuse it, but a phone time that lands in the same millisecond as `request.time` is accepted, correctly. The "phone made it up" cases in rows 34 and 35 now send a time a minute old. The cause was read from the test and the rule, not reproduced.
+
 ---
 - **Brand artwork added between sprints** (D-052, D-053, `docs/BRAND_ASSETS.md`): checkerboards cut out of the three supplied logos, web-sized WebPs, favicon, iPhone icon and a link-preview image built by `scripts/brand/build-assets.sh`, then used on Home (hero, empty state, footer), the 404 page, a faint watermark on the Game Day background, and `/styleguide`. Lesson: the cut-out step must not remove enclosed light patches on the wordmark (it deleted the white PICK EM lettering), so that pass is helmet-only. Another lesson: a change to `firebase.json` triggers a functions redeploy in CI, so the image cache-header tweak was left out.
 
