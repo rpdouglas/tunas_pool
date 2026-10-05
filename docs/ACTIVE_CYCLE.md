@@ -66,7 +66,7 @@ The season adds up on its own: standings across the finished weeks, a page for e
 - [x] Player: season standings (`/standings`), a player's season (`/player/:playerId`), a week picker on the week page, the season leader on the home screen, all-time stats on "Your history", and the guest prompt
 - [x] Back Office: Reports tab with the week-by-week table, two CSV downloads, and "Recalculate standings"
 - [x] Docs: DATA_MODEL §3.2, §3.8, §5; FIRESTORE_RULES (rows 50, 51); DECISIONS D-073 to D-077; PROJECT_PLAN
-- [→] Google sign-in: carried over (D-077). It needs a real sign-in on the live site to prove
+- [x] Google sign-in, added after Sprint 8 (D-083): "Continue with Google" on the account, claim, and Back Office sign-in screens. The wording is unit tested and the button is in the smoke run. **The sign-in itself has only been proven by Ryan's test on the live site, once that is done**: a Google popup cannot be driven by the checks here
 - [ ] Acceptance: standings checked against a hand-kept spreadsheet for three real weeks. No real week is final yet: weeks 1 to 4 need their sheets and winners first
 - [ ] Look at the new pages on a real phone (browser runs are parked, D-066)
 - [ ] Confirm the provisional decisions D-073, D-075, D-077 with the commissioner

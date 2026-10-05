@@ -9,6 +9,7 @@ import { Panel } from '../../components/ui/Panel';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { friendlyError } from '../../lib/errors';
 import { EmailLinkForm } from '../auth/EmailLinkForm';
+import { GoogleSignInButton } from '../auth/GoogleSignInButton';
 import { useGuestSession } from '../auth/useAuth';
 import { useMyClaims, useMyProfile, useRequestClaim, type MyClaim } from './claimsData';
 
@@ -68,10 +69,12 @@ export default function ClaimPage() {
           <div className="flex flex-col gap-4">
             <Intro />
             <p className="text-body">
-              To link your history, the pool needs an email for your account, so the link still
-              works if you change phones. There's no password.
+              To link your history, save your account with an email or Google first, so the link
+              still works if you change phones. There's no password to remember.
             </p>
             <EmailLinkForm next="/claim" />
+            <p className="text-center text-body text-ink-muted">or</p>
+            <GoogleSignInButton next="/claim" />
           </div>
         </Panel>
       ) : latest?.status === 'pending' ? (

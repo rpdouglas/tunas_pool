@@ -121,7 +121,7 @@ try {
   await kid.getByText('First, save your account').waitFor();
   check(
     'B1 a guest is asked to save their account before asking, in plain words',
-    (await kid.getByText('needs an email for your account').count()) === 1,
+    (await kid.getByText('save your account with an email or Google first').count()) === 1,
   );
   await signInWithEmail(kid, 'kid@family.test', '/claim');
   await kid.getByRole('link', { name: 'Continue' }).click();

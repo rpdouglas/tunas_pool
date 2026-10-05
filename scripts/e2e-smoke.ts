@@ -190,6 +190,7 @@ try {
   await visit(player, 'sheet-results', `/sheet/${YEAR}/wk01/results`, 'Dale D.');
   await visit(player, 'history', '/history', /No weeks yet|weeks? played/);
   await visit(player, 'claim', '/claim', 'First, save your account');
+  await visit(player, 'account', '/account', 'Continue with Google');
   await visit(player, 'entry-form', `/picks/${YEAR}/wk03`, '0 of 15 picked');
   await playerCtx.close();
 

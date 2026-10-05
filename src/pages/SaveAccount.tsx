@@ -1,6 +1,7 @@
 import { GameDayPage } from '../components/layout/GameDayPage';
 import { Panel } from '../components/ui/Panel';
 import { EmailLinkForm } from '../features/auth/EmailLinkForm';
+import { GoogleSignInButton } from '../features/auth/GoogleSignInButton';
 import { useAuth } from '../features/auth/useAuth';
 
 /** Save a guest's picks to an email, or sign in on a new phone. Optional, never a wall. */
@@ -21,13 +22,15 @@ export default function SaveAccount() {
         ) : (
           <div className="flex flex-col gap-4">
             <p className="text-body">
-              Get an email link so you can see your picks on any phone and keep your season record.
-              There's no password.
+              Save your picks to an email or a Google account so you can see them on any phone and
+              keep your season record. There's no password to remember.
             </p>
             <p className="text-body">
               Played on another phone before? Use the same email to sign in here.
             </p>
             <EmailLinkForm next="/" />
+            <p className="text-center text-body text-ink-muted">or</p>
+            <GoogleSignInButton next="/" />
           </div>
         )}
       </Panel>
