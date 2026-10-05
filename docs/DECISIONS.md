@@ -15,11 +15,17 @@ ADR-style log. Add an entry for every non-obvious decision. Status: **Accepted**
 | D-009 | 2026-10-04 | Only paid entries are eligible to win | Provisional |
 | D-010 | 2026-10-04 | Tiebreaker among entries at or above the MNF total: lowest prediction wins | Provisional (confirm against how the pool has been run) |
 | D-011 | 2026-10-04 | Default lock time Saturday 11:59 PM America/Toronto, editable per week | Provisional |
-| D-012 | 2026-10-04 | Cloud Functions region `northamerica-northeast1` (Montreal); create Firestore in Montreal or Toronto | Accepted |
+| D-012 | 2026-10-04 | Cloud Functions region `northamerica-northeast1` (Montreal). ~~Create Firestore in Montreal or Toronto~~: superseded by D-016 | Provisional (revisit region, see D-016) |
 | D-013 | 2026-10-04 | Local emulators use the `demo-tunas-pool` project id so no real Firebase login is needed for dev and tests | Accepted |
 | D-014 | 2026-10-04 | Ravens red `#C60C30` kept for urgency and errors only; revisit if the commissioner prefers purple, black, and gold only | Provisional |
+| D-015 | 2026-10-04 | Production runs in the existing, shared Firebase project `lilypad-strategy-design` (alias `prod`) rather than a dedicated one. The pool is isolated by its own Hosting site `tunaspool` and its own named Firestore database `db-tunaspool`, both pinned in `firebase.json`. Auth users, custom claims (including `admin`), and the default Storage bucket are shared with the project's other apps; Ryan accepted this. The functions codebase is named `tunaspool` so deploys cannot prune other apps' functions | Accepted |
+| D-016 | 2026-10-04 | Firestore database `db-tunaspool` was created in `nam5` (US multi-region), not Montreal or Toronto as D-012 planned. Location cannot be changed without recreating the database. Player data is therefore stored in the US | Accepted as built (confirm residency is acceptable) |
+| D-017 | 2026-10-04 | Soft-launch domain is the Firebase default `https://tunaspool.web.app` (PROJECT_PLAN §7 item 8) | Accepted |
+| D-018 | 2026-10-04 | All code reaches Firestore through `FIRESTORE_DATABASE_ID` in `shared/config.ts`; bare `getFirestore()` is not allowed because `(default)` belongs to other apps | Accepted |
 
 ## Open (no default yet)
+- Functions region now that Firestore is in `nam5`: stay in Montreal (D-012) or move to a US region next to the data. Must be settled before the first Firestore trigger is written, since a trigger's region is tied to the database location
+- Storage in the shared project: `storage.rules` ends in deny-all and would replace the rules on the shared default bucket. Use a dedicated bucket for paper-sheet photos, or merge rules with the other apps. Do not deploy `storage` until decided
 - Legal and regulatory check for running the pool (blocks public launch)
 - e-Transfer address for `config/pool`
 - How US-side players pay and receive winnings (see docs/PERSONAS.md §6)

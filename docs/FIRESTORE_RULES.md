@@ -2,6 +2,8 @@
 
 Security rules, rationale, and the test matrix. The code block below is the source for `firestore.rules`. Keep them in sync.
 
+These rules deploy to the named database `db-tunaspool` only (`firestore.database` in `firebase.json`). The project's `(default)` database belongs to other apps and must not receive them (`DECISIONS.md` D-015). The rules use the `{database}` wildcard, so nothing in the rules text depends on the database name.
+
 ## 1. Design summary
 
 - **Admin:** custom claim `admin == true`.

@@ -3,6 +3,7 @@ import { connectAuthEmulator, getAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
 import { connectStorageEmulator, getStorage } from 'firebase/storage';
+import { FIRESTORE_DATABASE_ID } from '@shared/config';
 
 export const FUNCTIONS_REGION = 'northamerica-northeast1';
 
@@ -16,7 +17,7 @@ const app = initializeApp({
 });
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app, FIRESTORE_DATABASE_ID);
 export const functions = getFunctions(app, FUNCTIONS_REGION);
 export const storage = getStorage(app);
 

@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "demo-tunas-pool"
+    "default": "demo-tunas-pool",
+    "prod": "lilypad-strategy-design"
   }
 }
