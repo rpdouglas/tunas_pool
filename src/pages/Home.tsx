@@ -15,6 +15,7 @@ import { sharePoolMessage } from '@shared/messages';
 import { shareText } from '../lib/share';
 import { useState } from 'react';
 import { WinnerBanner } from '../components/ui/WinnerBanner';
+import { TextSizeControl } from '../components/ui/TextSizeControl';
 
 /**
  * The weekly home screen (D-020): this week at a glance, your status, and the one next step.
@@ -57,11 +58,14 @@ export default function Home() {
         </div>
 
         {current.isPending || (week && mine.isPending && session.user) ? (
-          <Panel>
-            <p role="status" className="text-body">
-              Loading this week…
-            </p>
-          </Panel>
+          // About the height of the week's tiles and panel, so what's below doesn't jump when they arrive.
+          <div className="min-h-[26rem]">
+            <Panel>
+              <p role="status" className="text-body">
+                Loading this week…
+              </p>
+            </Panel>
+          </div>
         ) : current.isError || session.failed ? (
           <Panel>
             <p role="alert" className="text-body">
@@ -255,6 +259,8 @@ export default function Home() {
             </Link>
           )}
         </nav>
+
+        <TextSizeControl onDark />
 
         <PawnShopHelmet className="mx-auto mt-2 w-44" />
       </div>

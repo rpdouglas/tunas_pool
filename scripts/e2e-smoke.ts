@@ -13,6 +13,7 @@
 import { spawn, execSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import AxeBuilder from '@axe-core/playwright';
 import { chromium, type Page } from '@playwright/test';
 import { recomputeAllTime, recomputeStandings } from '../functions/src/season';
 import { ALL_HOME, YEAR, seedEntry, seedWeek, testDb } from '../functions/src/testSupport.int';
@@ -47,6 +48,39 @@ async function visit(page: Page, name: string, path: string, expected: string | 
     );
     await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
     check(name, fits, fits ? '' : 'scrolls sideways at 375px');
+    // The same accessibility rules as test:a11y (WCAG 2.2 AA), on the real screen with data in it.
+    const axe = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+      .analyze();
+    for (const v of axe.violations) {
+      check(
+        `${name}: accessibility`,
+        false,
+        `${v.id}: ${v.help} [${v.nodes.length}] ${v.nodes[0]?.html.slice(0, 110)}`,
+      );
+    }
+    // Large text: the page must still fit when the phone's text size is at the largest setting (Extra large, 125%, DESIGN_SYSTEM §9).
+    await page.addStyleTag({ content: 'html { font-size: 125% !important; }' });
+    const fitsLarge = await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    );
+    if (!fitsLarge) {
+      // Name the thing that sticks out, so the fix doesn't start with a hunt.
+      const culprit = await page.evaluate(() => {
+        const limit = document.documentElement.clientWidth;
+        const wide = [...document.querySelectorAll('body *')].filter(
+          (el) => el.getBoundingClientRect().right > limit + 1,
+        );
+        // The innermost one is the cause; its ancestors are only stretched by it.
+        const el = wide.find(
+          (candidate) => !wide.some((other) => other !== candidate && candidate.contains(other)),
+        );
+        return el
+          ? `<${el.tagName.toLowerCase()} class="${el.className.toString().slice(0, 50)}"> "${(el.textContent ?? '').trim().slice(0, 50)}"`
+          : 'unknown';
+      });
+      check(`${name}: large text`, false, `scrolls sideways with text at 125%: ${culprit}`);
+    }
   } catch (err) {
     await page
       .screenshot({ path: `${SHOTS}/${name}-FAILED.png`, fullPage: true })

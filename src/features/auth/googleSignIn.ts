@@ -6,10 +6,14 @@
  *
  * A popup, not a redirect: the redirect flow needs the sign-in helper served from the app's own
  * domain or Safari and Firefox drop the result, and that is project setup this code can't check.
+ *
+ * The popup helper is passed in here rather than set up with the app, so players who never tap this
+ * button never download it (lib/firebase.ts, D-084).
  */
 import { FirebaseError } from 'firebase/app';
 import {
   GoogleAuthProvider,
+  browserPopupRedirectResolver,
   linkWithPopup,
   signInWithCredential,
   signInWithPopup,
@@ -39,11 +43,11 @@ export async function signInWithGoogle(): Promise<GoogleOutcome> {
   const current = auth.currentUser;
   try {
     if (!current?.isAnonymous) {
-      await signInWithPopup(auth, provider);
+      await signInWithPopup(auth, provider, browserPopupRedirectResolver);
       return 'signed_in';
     }
     try {
-      await linkWithPopup(current, provider);
+      await linkWithPopup(current, provider, browserPopupRedirectResolver);
       return 'linked';
     } catch (err) {
       if (!(err instanceof FirebaseError) || !IN_USE.has(err.code)) throw err;

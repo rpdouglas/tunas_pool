@@ -14,6 +14,7 @@ import { WinnerBanner } from '../../../components/ui/WinnerBanner';
 import { friendlyError } from '../../../lib/errors';
 import type { WeekView } from '../../../lib/weekModel';
 import { useAdminWeek } from '../useAdminWeek';
+import { useResultSuggestion } from '../weeks/scheduleData';
 import { WeekPicker } from '../WeekPicker';
 import {
   useCorrectResults,
@@ -86,6 +87,46 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
   const [reasonError, setReasonError] = useState<string>();
   const correct = useCorrectResults(year, week.id);
   const editable = locked || (final && correcting);
+  const suggest = useResultSuggestion();
+  const [suggestNote, setSuggestNote] = useState<string | null>(null);
+
+  /** Fill in finished games from the scores feed. Nothing is saved: the admin checks, then saves. */
+  async function fillFromFeed() {
+    setSuggestNote(null);
+    try {
+      const found = await suggest.mutateAsync(week.games);
+      const differs: string[] = [];
+      let filled = 0;
+      const next = { ...results };
+      for (const g of games) {
+        const suggested = found.results[g.id];
+        if (!suggested) continue;
+        if (!next[g.id]) {
+          next[g.id] = suggested;
+          filled += 1;
+        } else if (next[g.id] !== suggested) {
+          differs.push(`${g.away} at ${g.home}`); // what was entered by hand stays
+        }
+      }
+      setResults(next);
+      if (found.mnfTotal !== null && total === '') setTotal(String(found.mnfTotal));
+      setConfirming(false);
+      setSuggestNote(
+        [
+          filled > 0
+            ? `Filled in ${filled} ${filled === 1 ? 'game' : 'games'}. Check them, then save.`
+            : 'Nothing new to fill in.',
+          found.notFinal.length > 0 && `Not final yet: ${found.notFinal.join(', ')}.`,
+          differs.length > 0 &&
+            `Your result differs from the feed for ${differs.join(', ')}. Yours was kept.`,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      );
+    } catch {
+      setSuggestNote("Couldn't get the scores right now. Enter the results by hand.");
+    }
+  }
 
   const games = [...week.games].sort((a, b) => a.order - b.order);
   const entered = games.filter((g) => results[g.id]).length;
@@ -193,7 +234,7 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
   const header = (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className="font-heading text-h2">Results</h1>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <StatusBadge status={week.status} />
         <WeekPicker weeks={sel.weeks} value={week.id} onChange={sel.select} />
       </div>
@@ -285,6 +326,19 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
         </p>
       )}
 
+      {editable && (
+        <div className="flex max-w-player flex-col gap-2">
+          <Button variant="ghost" disabled={suggest.isPending} onClick={fillFromFeed}>
+            {suggest.isPending ? 'Getting scores…' : 'Fill in finished games from ESPN'}
+          </Button>
+          {suggestNote && (
+            <p role="status" className="text-body">
+              {suggestNote}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="overflow-hidden rounded-lg">
         <ProgressBar
           done={entered}
@@ -303,10 +357,10 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
                 {kickoffLabel(g)}
                 {g.slot === 'mnf' ? ' · Monday night' : ''}
               </p>
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
                 <button
                   type="button"
-                  className="pick"
+                  className="pick min-w-0 break-words px-1"
                   aria-pressed={result === 'away'}
                   data-state={editable ? undefined : 'locked'}
                   disabled={!editable}
@@ -316,7 +370,7 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
                 </button>
                 <button
                   type="button"
-                  className="pick min-w-16"
+                  className="pick min-w-14 px-1"
                   aria-pressed={result === 'tie'}
                   aria-label={`${g.away} at ${g.home} ended in a tie`}
                   data-state={editable ? undefined : 'locked'}
@@ -327,7 +381,7 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
                 </button>
                 <button
                   type="button"
-                  className="pick"
+                  className="pick min-w-0 break-words px-1"
                   aria-pressed={result === 'home'}
                   data-state={editable ? undefined : 'locked'}
                   disabled={!editable}

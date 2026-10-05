@@ -19,9 +19,26 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <title>Tunas Weekly Football Pool Pick 'Em</title>
+    <script>
+      // The saved Text size, applied before the first paint (src/lib/textSize.ts).
+      try {
+        var size = localStorage.getItem('tunas.textSize');
+        if (size === 'large' || size === 'xlarge') document.documentElement.dataset.textSize = size;
+      } catch (e) {}
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- A first paint that doesn't wait for the app: the Game Day backdrop and the pool's name,
+         styled by the stylesheet alone. React replaces it as soon as it starts (D-084). -->
+    <div id="root">
+      <main class="bg-gameday min-h-screen px-4 pb-16 pt-8">
+        <div class="mx-auto flex max-w-player flex-col items-center gap-3 text-center">
+          <p class="wordmark text-wordmark" aria-hidden="true">Tunas</p>
+          <span class="ribbon text-xl">Weekly Football Pool</span>
+          <p class="pt-6 text-body text-ink-inverse" role="status">Loading…</p>
+        </div>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

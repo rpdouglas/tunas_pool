@@ -42,6 +42,7 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm run test:e2e:paper-entry` | Sprint 4 in a browser: roster, a full paper sheet with a photo, blanks, edit, remove, and a late entry (needs the Functions and Storage emulators; see `scripts/e2e-paper-entry.mjs`) |
 | `npm run test:e2e:claims` | Sprint 5 in a browser: ask to link, approve, history, unlink, reject, merge (needs the Functions emulator; see `scripts/e2e-claims.mjs`) |
 | `npm run emulators` | Firebase emulators (Auth, Firestore, Functions, Hosting, Storage, UI) |
+| `npm run admin:export -- <season>` | Save a season to a JSON file in `backups/` (needs credentials; the file holds phone numbers and payments, see the script) |
 | `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs a project and credentials, see step 6 below) |
 
 ## Firebase setup (one time)
@@ -126,6 +127,20 @@ and Ryan decides when:
    `tunaspool-paper-sheets`.
 
 Storage is not part of the automatic deploy, so a change to `storage.rules` needs step 3 again.
+
+### Backups (D-089)
+
+`npm run admin:export -- 2026` saves a readable copy of a season to `backups/` on this machine. It is not a restore.
+
+The database itself has **no scheduled backups** yet. To turn them on (a change to the shared project, with a small
+storage cost), Ryan runs:
+
+```bash
+gcloud firestore backups schedules create --project lilypad-strategy-design --database=db-tunaspool --recurrence=daily --retention=7d
+gcloud firestore databases update --project lilypad-strategy-design --database=db-tunaspool --delete-protection
+```
+
+The first keeps a daily backup for a week. The second stops the database being deleted by mistake.
 
 ### Emulators in Codespaces
 Rules tests (`npm run test:rules`) run entirely inside the Codespace. Pointing the *browser* app at the emulators

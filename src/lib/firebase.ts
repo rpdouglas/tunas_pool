@@ -1,5 +1,13 @@
 import { initializeApp } from 'firebase/app';
-import { connectAuthEmulator, getAuth } from 'firebase/auth';
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  connectAuthEmulator,
+  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  type Auth,
+} from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
 import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '@shared/config';
@@ -26,7 +34,22 @@ export const app = initializeApp(
       },
 );
 
-export const auth = getAuth(app);
+/**
+ * Auth without the popup-and-redirect helper. `getAuth()` bundles it and fetches Google's sign-in
+ * frame (about 130 KB) on every page load, for every player. Only "Continue with Google" needs it,
+ * and that passes the helper in itself (features/auth/googleSignIn.ts). Same saved-session storage
+ * as `getAuth()`, so nobody is signed out by this (D-084).
+ */
+function createAuth(): Auth {
+  try {
+    return initializeAuth(app, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+    });
+  } catch {
+    return getAuth(app); // already set up (a hot reload in development)
+  }
+}
+export const auth = createAuth();
 export const db = getFirestore(app, FIRESTORE_DATABASE_ID);
 export const functions = getFunctions(app, FUNCTIONS_REGION);
 

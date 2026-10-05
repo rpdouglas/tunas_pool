@@ -1,4 +1,4 @@
-import { readEspnScoreboard, scheduleToText } from './schedule';
+import { readEspnScores, suggestResults, readEspnScoreboard, scheduleToText } from './schedule';
 import { defaultLockAt, parseMatchups, weekProblems } from './weeks';
 
 const SUNDAY = '2026-10-11';
@@ -92,5 +92,75 @@ describe('scheduleToText', () => {
   it('leaves out a team the pool does not know', () => {
     const games = readEspnScoreboard({ events: [event('2026-10-11T17:00Z', 'AFC', 'NFC')] });
     expect(scheduleToText(games, SUNDAY)).toEqual({ text: '', sundayGames: 0, mondayGames: 0 });
+  });
+});
+
+describe('results from the feed', () => {
+  const event = (
+    away: string,
+    awayScore: string,
+    home: string,
+    homeScore: string,
+    completed = true,
+  ) => ({
+    competitions: [
+      {
+        status: { type: { completed } },
+        competitors: [
+          { homeAway: 'home', score: homeScore, team: { shortDisplayName: home } },
+          { homeAway: 'away', score: awayScore, team: { shortDisplayName: away } },
+        ],
+      },
+    ],
+  });
+  const payload = {
+    events: [
+      event('Colts', '30', 'Commanders', '13'),
+      event('Jets', '12', 'Bears', '23'),
+      event('Lions', '20', 'Packers', '20'),
+      event('Falcons', '0', 'Saints', '0', false),
+      { competitions: 'nonsense' },
+      event('Not A Team', '1', 'Bears', '2'),
+    ],
+  };
+  const games = [
+    { id: 'g01', away: 'Colts', home: 'Commanders', slot: 'sunday' },
+    { id: 'g02', away: 'Jets', home: 'Bears', slot: 'sunday' },
+    { id: 'g03', away: 'Lions', home: 'Packers', slot: 'sunday' },
+    { id: 'g04', away: 'Bills', home: 'Dolphins', slot: 'sunday' },
+    { id: 'mnf', away: 'Falcons', home: 'Saints', slot: 'mnf' },
+  ];
+
+  it('reads final scores and skips anything that is not a game between known teams', () => {
+    const scores = readEspnScores(payload);
+    expect(scores.map((s) => `${s.away} at ${s.home}`)).toEqual([
+      'Colts at Commanders',
+      'Jets at Bears',
+      'Lions at Packers',
+      'Falcons at Saints',
+    ]);
+    expect(scores[0]).toMatchObject({ final: true, awayPoints: 30, homePoints: 13 });
+    expect(scores[3].final).toBe(false);
+    expect(readEspnScores(null)).toEqual([]);
+  });
+
+  it('suggests a winner or a tie for each final game, and lists the rest', () => {
+    const suggestion = suggestResults(games, readEspnScores(payload));
+    expect(suggestion.results).toEqual({ g01: 'away', g02: 'home', g03: 'tie' });
+    expect(suggestion.mnfTotal).toBeNull();
+    expect(suggestion.notFinal).toEqual(['Bills at Dolphins', 'Falcons at Saints']);
+  });
+
+  it('adds up Monday night once it is final', () => {
+    const done = { events: [event('Falcons', '27', 'Saints', '23')] };
+    expect(suggestResults(games, readEspnScores(done))).toMatchObject({
+      results: { mnf: 'away' },
+      mnfTotal: 50,
+    });
+  });
+
+  it('does not match a game with home and away the other way round', () => {
+    const swapped = { events: [event('Commanders', '13', 'Colts', '30')] };
+    expect(suggestResults(games, readEspnScores(swapped)).results).toEqual({});
   });
 });

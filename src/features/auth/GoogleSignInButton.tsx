@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FirebaseError } from 'firebase/app';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
+import { isInAppBrowser } from '../../lib/inAppBrowser';
 import {
   GOOGLE_OUTCOME_TEXT,
   googleErrorMessage,
@@ -33,6 +34,18 @@ export function GoogleSignInButton({ next = '/', onDone }: { next?: string; onDo
     } finally {
       setBusy(false);
     }
+  }
+
+  // Google refuses to sign in inside another app's browser, so don't offer a button that can't work.
+  if (!outcome && isInAppBrowser(navigator.userAgent)) {
+    return (
+      <p className="rounded-md bg-surface-tint p-3 text-body">
+        <span aria-hidden="true">ⓘ </span>
+        You're in an app's built-in browser. To sign in with Google, open the pool in Safari or
+        Chrome (tap the menu, then "Open in browser"). The email link works from here: when you open
+        the link, type your email again if it asks.
+      </p>
+    );
   }
 
   if (outcome) {
