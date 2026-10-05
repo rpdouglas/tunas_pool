@@ -1,4 +1,11 @@
-import { addDays, formatClock, toZonedParts, weekdayOf, zonedTimeToUtc } from './time';
+import {
+  addDays,
+  countdownText,
+  formatClock,
+  toZonedParts,
+  weekdayOf,
+  zonedTimeToUtc,
+} from './time';
 
 describe('pool time (America/Toronto)', () => {
   it('converts wall-clock time in Toronto to UTC, in daylight time and standard time', () => {
@@ -26,5 +33,17 @@ describe('pool time (America/Toronto)', () => {
     expect(weekdayOf('2026-10-11')).toBe(0);
     expect(formatClock(0, 5)).toBe('12:05 AM');
     expect(formatClock(20, 15)).toBe('8:15 PM');
+  });
+});
+
+describe('countdownText', () => {
+  const now = 1_000_000_000_000;
+  const at = (ms: number) => countdownText(now + ms, now);
+  it('counts down in days, hours, and minutes', () => {
+    expect(at((26 * 60 + 12) * 60_000)).toBe('1d 02h 12m');
+    expect(at((3 * 60 + 5) * 60_000)).toBe('3h 05m');
+    expect(at(12 * 60_000 + 30_000)).toBe('12m');
+    expect(at(30_000)).toBe('Under a minute');
+    expect(at(0)).toBeNull();
   });
 });

@@ -15,47 +15,14 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  type FirestoreDataConverter,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import type { Game, Week, WeekStatus } from '@shared/types';
+import type { Game, WeekStatus } from '@shared/types';
 import { DEFAULT_ENTRY_FEE_CENTS, MNF_GAME_ID, type GameDraft } from '@shared/weeks';
 import { db, functions } from '../../../lib/firebase';
+import { weekConverter, type WeekView } from '../../../lib/weekModel';
 
-/** A week as the admin screens use it: kickoffs and lock as epoch milliseconds. */
-export interface WeekView {
-  id: string;
-  year: string;
-  weekNumber: number;
-  status: WeekStatus;
-  lockAtMs: number;
-  revealed: boolean;
-  games: GameDraft[];
-  mnfGameId: string;
-  entryFeeCents: number;
-  entryCount: number;
-}
-
-const weekConverter: FirestoreDataConverter<WeekView> = {
-  toFirestore: () => {
-    throw new Error('Write weeks with saveDraftWeek.');
-  },
-  fromFirestore(snapshot) {
-    const w = snapshot.data() as Week;
-    return {
-      id: snapshot.id,
-      year: snapshot.ref.parent.parent!.id,
-      weekNumber: w.weekNumber,
-      status: w.status,
-      lockAtMs: w.lockAt.toDate().getTime(),
-      revealed: w.revealed,
-      games: (w.games ?? []).map((g: Game) => ({ ...g, kickoffMs: g.kickoff.toDate().getTime() })),
-      mnfGameId: w.mnfGameId,
-      entryFeeCents: w.entryFeeCents,
-      entryCount: w.entryCount ?? 0,
-    };
-  },
-};
+export type { WeekView };
 
 const weeksCollection = (year: string) =>
   collection(db, 'seasons', year, 'weeks').withConverter(weekConverter);

@@ -76,6 +76,7 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 - **Server timestamps:** rules require `picksSubmittedAt == request.time` on entry create and update, so submission times can't be backdated. Rules tests first.
 - **Weekly home screen** (the landing page, not the form): lock countdown, your status for this week (picks in, payment pending or confirmed, locked) with a clear next action, and a "Make your picks" or "Edit your picks" button. Status uses icon plus text, never color alone, and no red "unpaid" state (`PERSONAS.md` Week 1 rule). Pot, entry count, last winner, and season leader slots are added in later sprints (D-020).
 - Locked state: read-only.
+- Adopted at sprint start: payment kept private in its own document (D-036), an "I'm 18 or older" check (D-037), first name and last initial with an optional North American phone (D-038), and an admin Pool settings screen for the e-Transfer address (D-039).
 
 **Acceptance:** On a 375px viewport, a new guest goes from the home screen to a submitted entry in under 2 minutes, and the receipt shows a confirmation code and Toronto-time timestamp. Resubmitting edits the same entry. After `lockAt`, the form is read-only and the rules reject writes (verified in the emulator).
 

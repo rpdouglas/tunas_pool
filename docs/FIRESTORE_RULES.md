@@ -55,6 +55,11 @@ service cloud.firestore {
     }
 
     function isPaymentMethod(v) { return v in ['cash', 'etransfer']; }
+
+    // Times the client claims must be the server's (DECISIONS.md D-040).
+    function isNowOrNull(v) { return v == null || v == request.time; }
+
+    function isDisplayName(v) { return v is string && v.size() > 0 && v.size() <= 60; }
     function isPaymentIntent(v) { return v in ['will_do', 'already_did']; }
 
     // ---------- players (roster + self-serve profiles) ----------
@@ -73,10 +78,9 @@ service cloud.firestore {
           && request.resource.data.origin == 'self'
           && request.resource.data.keys().hasOnly([
                'displayName', 'phone', 'email', 'claimedByUid', 'origin',
-               'usualPayment', 'active', 'createdAt', 'updatedAt'])
-          && request.resource.data.displayName is string
-          && request.resource.data.displayName.size() > 0
-          && request.resource.data.displayName.size() <= 60)
+               'usualPayment', 'ageAttestedAt', 'active', 'createdAt', 'updatedAt'])
+          && isDisplayName(request.resource.data.displayName)
+          && isNowOrNull(request.resource.data.get('ageAttestedAt', null)))
         ||
         // Admin roster: unclaimed, admin-origin.
         (isAdmin()
@@ -87,7 +91,10 @@ service cloud.firestore {
       allow update: if
         (ownsPlayer(playerId)
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['displayName', 'phone', 'email', 'usualPayment', 'updatedAt']))
+               .hasOnly(['displayName', 'phone', 'email', 'usualPayment', 'ageAttestedAt', 'updatedAt'])
+          && isDisplayName(request.resource.data.displayName)
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['ageAttestedAt'])
+              || request.resource.data.ageAttestedAt == request.time))
         ||
         (isAdmin()
           && request.resource.data.claimedByUid == resource.data.claimedByUid);
@@ -152,37 +159,59 @@ service cloud.firestore {
 
         // ----- entries (one per person per week; doc ID = playerId) -----
         match /entries/{playerId} {
-          // Names, payment declaration, and paid badge are not secret. Picks are.
+          // Public part: what leaderboards need. No payment details (D-036), no picks.
           allow read: if signedIn();
 
           allow create: if ownsPlayer(playerId)
             && weekIsOpen(year, weekId)
+            && request.resource.data.keys().hasOnly([
+                 'playerId', 'displayName', 'enteredBy', 'source', 'paperPhotoPath',
+                 'lateOverride', 'picksSubmittedAt', 'createdAt', 'updatedAt'])
             && request.resource.data.playerId == playerId
             && request.resource.data.enteredBy == 'self'
             && request.resource.data.source == 'web'
-            && request.resource.data.paymentStatus == 'unpaid'
             && request.resource.data.lateOverride == null
-            && isPaymentMethod(request.resource.data.paymentMethod)
-            && isPaymentIntent(request.resource.data.paymentIntent)
-            && request.resource.data.displayName is string
-            && request.resource.data.displayName.size() > 0
-            && request.resource.data.displayName.size() <= 60
-            && request.resource.data.keys().hasOnly([
-                 'playerId', 'displayName', 'paymentMethod', 'paymentIntent',
-                 'paymentStatus', 'enteredBy', 'source', 'paperPhotoPath',
-                 'lateOverride', 'picksSubmittedAt', 'createdAt', 'updatedAt']);
+            && request.resource.data.get('paperPhotoPath', null) == null
+            && isDisplayName(request.resource.data.displayName)
+            && request.resource.data.picksSubmittedAt == request.time;
 
-          // Player edits: only their declaration and name, only while open.
+          // Player edits: their name and a fresh submission time, only while open.
           allow update: if ownsPlayer(playerId)
             && weekIsOpen(year, weekId)
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['displayName', 'paymentMethod', 'paymentIntent',
-                           'picksSubmittedAt', 'updatedAt'])
-            && isPaymentMethod(request.resource.data.paymentMethod)
-            && isPaymentIntent(request.resource.data.paymentIntent);
+                 .hasOnly(['displayName', 'picksSubmittedAt', 'updatedAt'])
+            && isDisplayName(request.resource.data.displayName)
+            && request.resource.data.picksSubmittedAt == request.time;
 
           // Players can withdraw before lock. Admin deletes go through a callable.
           allow delete: if ownsPlayer(playerId) && weekIsOpen(year, weekId);
+
+          // ----- private payment declaration and status (D-036) -----
+          // Never revealed. paymentStatus, paidAt, and paidBy are function-written.
+          match /payment/{doc} {
+            allow read: if doc == 'current' && (isAdmin() || ownsPlayer(playerId));
+
+            allow create: if doc == 'current'
+              && ownsPlayer(playerId)
+              && weekIsOpen(year, weekId)
+              && request.resource.data.keys().hasOnly([
+                   'paymentMethod', 'paymentIntent', 'paymentStatus', 'updatedAt'])
+              && request.resource.data.paymentStatus == 'unpaid'
+              && isPaymentMethod(request.resource.data.paymentMethod)
+              && isPaymentIntent(request.resource.data.paymentIntent);
+
+            allow update: if doc == 'current'
+              && ownsPlayer(playerId)
+              && weekIsOpen(year, weekId)
+              && request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['paymentMethod', 'paymentIntent', 'updatedAt'])
+              && isPaymentMethod(request.resource.data.paymentMethod)
+              && isPaymentIntent(request.resource.data.paymentIntent);
+
+            allow delete: if doc == 'current'
+              && ownsPlayer(playerId)
+              && weekIsOpen(year, weekId);
+          }
 
           // ----- private picks + tiebreaker -----
           match /private/{doc} {
@@ -198,7 +227,8 @@ service cloud.firestore {
               && request.resource.data.picks.size() <= 15
               && request.resource.data.tiebreakerTotal is int
               && request.resource.data.tiebreakerTotal >= 0
-              && request.resource.data.tiebreakerTotal <= 200;
+              && request.resource.data.tiebreakerTotal <= 200
+              && request.resource.data.updatedAt == request.time;
 
             allow delete: if doc == 'picks'
               && ownsPlayer(playerId)
@@ -229,6 +259,9 @@ service cloud.firestore {
 - **Self-serve profile ordering:** the client must create `players/{uid}` **before** its first entry write. Entry rules call `ownsPlayer()`, which needs the profile to exist.
 - **Admin entry edits:** the admin cannot write entries or picks directly from the client. Use `adminUpsertEntry` while open, or `adminLateOverride` (reason required) after lock.
 - **`claimedByUid` is never client-writable.** The owner-update rule limits affected keys, and the admin-update rule requires the field to be unchanged.
+- **Payment is private (D-036):** the public entry has no payment fields, so leaderboards and the reveal can read entries freely. Method and intent live in `payment/current`, which only the owner and admin can read, before or after the reveal. Players may change method and intent while the week is open; `paymentStatus`, `paidAt`, and `paidBy` are function-written.
+- **Server times (D-040):** `picksSubmittedAt` on the entry and `updatedAt` on the picks must equal `request.time` (the client sends `serverTimestamp()`). The receipt's time and confirmation code come from that value.
+- **Listing weeks:** players must filter by `status in ['open', 'locked', 'final']`. The rule checks each document, so an unfiltered query is rejected because it could include drafts.
 - **Finding your profile:** a login reads its profile with `where('claimedByUid', '==', uid)`, which the player read rule allows because it checks the document's own `claimedByUid`. After `adoptGuestProfile` or an approved claim, the `playerId` is no longer the login's `uid`, so the client must never assume `players/{uid}`. A direct read of a profile that does not exist is denied rather than returned empty, so use the query.
 - **Draft weeks:** an admin edits a draft directly from the client, but the rules keep derived fields out of reach: a new week must start with `revealed: false`, zero counters, and no winner, and draft edits cannot touch `status`, `revealed`, the counters, results, the winner, or `payoutSent`. Status changes go through `adminSetWeekStatus`.
 
@@ -276,8 +309,9 @@ Each row is at least one passing and one failing test.
 | 9 | Owner creates entry while week open | allow |
 | 10 | Owner creates entry at or after `lockAt` | deny |
 | 11 | Owner creates entry when week is `draft`, `locked`, or `final` | deny |
-| 12 | Owner creates entry with `paymentStatus: 'paid'` | deny |
-| 13 | Owner updates `paymentStatus` | deny |
+| 12 | Owner creates `payment/current` with `paymentStatus: 'paid'` | deny |
+| 12b | Owner puts payment fields on the public entry | deny |
+| 13 | Owner updates `paymentStatus` or `paidAt`; changes method or intent while open | deny / allow |
 | 14 | Owner creates an entry for someone else's `playerId` | deny |
 | 15 | Second submit for same `playerId` edits the same doc (no duplicate possible) | allow, one doc |
 | 16 | Owner writes picks while open | allow |
@@ -298,3 +332,7 @@ Each row is at least one passing and one failing test.
 | 30 | Admin writes an entry or picks directly from the client | deny |
 | 31 | Unauthenticated read or write anywhere | deny |
 | 32 | Storage: non-admin reads or writes `paperSheets/*` | deny |
+| 33 | Other player reads `payment/current`, before or after reveal; owner and admin read it | deny / allow |
+| 34 | Client sets `picksSubmittedAt` or picks `updatedAt` to anything but the server time | deny |
+| 35 | `ageAttestedAt` set to anything but the server time | deny |
+| 36 | Player lists weeks filtered to `open`, `locked`, `final`; unfiltered or `draft` | allow / deny |

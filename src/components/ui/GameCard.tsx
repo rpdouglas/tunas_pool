@@ -1,6 +1,8 @@
 import type { Pick } from '@shared/types';
 
 export interface GameCardProps {
+  /** Lets the form jump to this game. */
+  id?: string;
   away: string;
   home: string;
   /** "Sun 1:00 PM", already in pool time. */
@@ -16,6 +18,7 @@ export interface GameCardProps {
  * Tap a team to pick it, tap again to clear. Without `onPick` the card is read-only.
  */
 export function GameCard({
+  id,
   away,
   home,
   kickoffLabel,
@@ -38,7 +41,7 @@ export function GameCard({
   );
 
   return (
-    <li className="flex flex-col gap-2 rounded-md bg-surface p-3">
+    <li id={id} className="flex scroll-mt-28 flex-col gap-2 rounded-md bg-surface p-3">
       <p className="text-center font-heading text-colhead uppercase text-ink-muted">
         {kickoffLabel}
         {venueNote ? <span className="block normal-case">{venueNote}</span> : null}

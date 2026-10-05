@@ -2,7 +2,6 @@ import { initializeApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
-import { connectStorageEmulator, getStorage } from 'firebase/storage';
 import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '@shared/config';
 
 // Builds without web config (CI's verify build and the /styleguide accessibility build) fall back to
@@ -30,7 +29,6 @@ const app = initializeApp(
 export const auth = getAuth(app);
 export const db = getFirestore(app, FIRESTORE_DATABASE_ID);
 export const functions = getFunctions(app, FUNCTIONS_REGION);
-export const storage = getStorage(app);
 
 // Emulator wiring for localhost. NOTE: in a browser-based Codespace, localhost ports are not
 // reachable from the browser tab unless you use VS Code desktop port forwarding. See README.
@@ -38,5 +36,7 @@ if (import.meta.env.VITE_USE_EMULATORS === 'true') {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
   connectFunctionsEmulator(functions, '127.0.0.1', 5001);
-  connectStorageEmulator(storage, '127.0.0.1', 9199);
 }
+
+// Storage (paper-sheet photos) arrives in Sprint 4. Load it on demand there, so the player bundle
+// doesn't carry it: `const { getStorage } = await import('firebase/storage')` (DECISIONS D-029).

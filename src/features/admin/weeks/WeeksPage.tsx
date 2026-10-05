@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { formatPoolDate, formatPoolDateTime } from '@shared/time';
 import { sundayOf } from '@shared/weeks';
-import { currentSeason } from './season';
+import { currentSeason } from '../../../lib/season';
 import { useSeasonWeeks } from './weekData';
 
 /** Admin home for now: this season's weeks. The payments queue becomes home in Sprint 3. */

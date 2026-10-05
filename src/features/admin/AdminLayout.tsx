@@ -1,5 +1,5 @@
 import { signOut } from 'firebase/auth';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { auth } from '../../lib/firebase';
 import { useAuth } from '../auth/useAuth';
 
@@ -13,6 +13,21 @@ export function AdminLayout() {
           <Link to="/admin" className="flex min-h-touch items-center font-heading text-h3">
             Back Office
           </Link>
+          <nav aria-label="Back Office" className="flex items-center gap-1">
+            <NavLink
+              to="/admin"
+              end
+              className="flex min-h-touch items-center px-2 text-body underline-offset-4 aria-[current=page]:underline"
+            >
+              Weeks
+            </NavLink>
+            <NavLink
+              to="/admin/settings"
+              className="flex min-h-touch items-center px-2 text-body underline-offset-4 aria-[current=page]:underline"
+            >
+              Settings
+            </NavLink>
+          </nav>
           <button
             type="button"
             className="min-h-touch px-2 text-body underline"

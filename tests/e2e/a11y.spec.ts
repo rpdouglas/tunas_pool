@@ -36,6 +36,8 @@ for (const { path, ready } of PAGES) {
 
 test('brand fonts load (DESIGN_SYSTEM typography)', async ({ page }) => {
   await page.goto('/styleguide');
+  // The styleguide loads on demand; wait for it, not the loading placeholder.
+  await page.getByRole('heading', { name: 'Styleguide' }).waitFor();
   await page.evaluate(() => document.fonts.ready);
   const loaded = await page.evaluate(() => {
     const families = ['Alfa Slab One', 'Barlow Condensed', 'Barlow'];

@@ -19,6 +19,7 @@ import {
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
   setDoc,
   updateDoc,
   where,
@@ -78,6 +79,7 @@ beforeEach(async () => {
     // An entry with private picks, in the open week and the revealed week
     for (const w of [OPEN_WEEK, REVEALED_WEEK]) {
       await setDoc(doc(db, `${weekPath(w)}/entries/p1`), entryData('p1'));
+      await setDoc(doc(db, `${weekPath(w)}/entries/p1/payment/current`), paymentData());
       await setDoc(doc(db, `${weekPath(w)}/entries/p1/private/picks`), {
         picks: { g01: 'home' }, tiebreakerTotal: 45, updatedAt: Timestamp.now(),
       });
@@ -116,18 +118,19 @@ function entryData(playerId: string, overrides: Record<string, unknown> = {}) {
   return {
     playerId,
     displayName: 'Alice A.',
-    paymentMethod: 'etransfer',
-    paymentIntent: 'will_do',
-    paymentStatus: 'unpaid',
     enteredBy: 'self',
     source: 'web',
     paperPhotoPath: null,
     lateOverride: null,
-    picksSubmittedAt: Timestamp.now(),
+    picksSubmittedAt: serverTimestamp(),
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
     ...overrides,
   };
+}
+
+function paymentData(overrides: Record<string, unknown> = {}) {
+  return { paymentMethod: 'etransfer', paymentIntent: 'will_do', paymentStatus: 'unpaid', updatedAt: Timestamp.now(), ...overrides };
 }
 
 describe('players', () => {
@@ -224,16 +227,29 @@ describe('entries and the lockout', () => {
     }
   });
 
-  it("#12 the owner cannot mark their own entry paid", async () => {
-    const db = env.authenticatedContext('alice').firestore();
+  it('#12 the owner cannot mark their own entry paid', async () => {
+    await seedBob();
+    const db = env.authenticatedContext('bob').firestore();
+    const ref = doc(db, `${weekPath(OPEN_WEEK)}/entries/p2/payment/current`);
+    await assertFails(setDoc(ref, paymentData({ paymentStatus: 'paid' })));
+    await assertSucceeds(setDoc(ref, paymentData()));
+  });
+
+  it('#12b payment details cannot ride on the public entry (D-036)', async () => {
+    await seedBob();
+    const db = env.authenticatedContext('bob').firestore();
     await assertFails(
-      setDoc(doc(db, `${weekPath(OPEN_WEEK)}/entries/p1`), entryData('p1', { paymentStatus: 'paid' })),
+      setDoc(doc(db, `${weekPath(OPEN_WEEK)}/entries/p2`), entryData('p2', { paymentMethod: 'cash' })),
     );
   });
 
-  it('#13 the owner cannot update paymentStatus', async () => {
+  it('#13 the owner can change how they pay, but not paymentStatus', async () => {
     const db = env.authenticatedContext('alice').firestore();
-    await assertFails(updateDoc(doc(db, `${weekPath(OPEN_WEEK)}/entries/p1`), { paymentStatus: 'paid' }));
+    const ref = doc(db, `${weekPath(OPEN_WEEK)}/entries/p1/payment/current`);
+    await assertFails(updateDoc(ref, { paymentStatus: 'paid' }));
+    await assertFails(updateDoc(ref, { paidAt: Timestamp.now() }));
+    await assertSucceeds(updateDoc(ref, { paymentMethod: 'cash', paymentIntent: 'already_did', updatedAt: Timestamp.now() }));
+    await assertFails(updateDoc(doc(db, `${weekPath(LOCKED_WEEK)}/entries/p1/payment/current`), { paymentMethod: 'cash' }));
   });
 
   it("#14 a player cannot create an entry for someone else's playerId", async () => {
@@ -247,7 +263,7 @@ describe('entries and the lockout', () => {
     const db = env.authenticatedContext('alice').firestore();
     const ref = doc(db, `${weekPath(OPEN_WEEK)}/entries/p1`);
     await assertSucceeds(
-      updateDoc(ref, { paymentMethod: 'cash', picksSubmittedAt: Timestamp.now(), updatedAt: Timestamp.now() }),
+      updateDoc(ref, { displayName: 'Ali A.', picksSubmittedAt: serverTimestamp(), updatedAt: Timestamp.now() }),
     );
     let count = 0;
     await env.withSecurityRulesDisabled(async (ctx) => {
@@ -260,7 +276,7 @@ describe('entries and the lockout', () => {
     const db = env.authenticatedContext('alice').firestore();
     await assertSucceeds(
       setDoc(doc(db, `${weekPath(OPEN_WEEK)}/entries/p1/private/picks`), {
-        picks: { g01: 'away', mnf: 'home' }, tiebreakerTotal: 44, updatedAt: Timestamp.now(),
+        picks: { g01: 'away', mnf: 'home' }, tiebreakerTotal: 44, updatedAt: serverTimestamp(),
       }),
     );
   });
@@ -269,7 +285,7 @@ describe('entries and the lockout', () => {
     const db = env.authenticatedContext('alice').firestore();
     await assertFails(
       setDoc(doc(db, `${weekPath(LOCKED_WEEK)}/entries/p1/private/picks`), {
-        picks: { g01: 'away' }, tiebreakerTotal: 40, updatedAt: Timestamp.now(),
+        picks: { g01: 'away' }, tiebreakerTotal: 40, updatedAt: serverTimestamp(),
       }),
     );
   });
@@ -279,7 +295,7 @@ describe('picks validation', () => {
   const picks = (tiebreakerTotal: unknown, n = 15) => ({
     picks: Object.fromEntries(Array.from({ length: n }, (_, i) => [`g${i}`, 'home'])),
     tiebreakerTotal,
-    updatedAt: Timestamp.now(),
+    updatedAt: serverTimestamp(),
   });
   const write = (data: object) =>
     setDoc(doc(env.authenticatedContext('alice').firestore(), `${weekPath(OPEN_WEEK)}/entries/p1/private/picks`), data);
@@ -347,9 +363,10 @@ describe('locked-down collections', () => {
     await assertFails(setDoc(doc(admin(), `${weekPath(OPEN_WEEK)}/entries/p1`), entryData('p1', { enteredBy: 'admin' })));
     await assertFails(
       setDoc(doc(admin(), `${weekPath(OPEN_WEEK)}/entries/p1/private/picks`), {
-        picks: { g01: 'home' }, tiebreakerTotal: 45, updatedAt: Timestamp.now(),
+        picks: { g01: 'home' }, tiebreakerTotal: 45, updatedAt: serverTimestamp(),
       }),
     );
+    await assertFails(setDoc(doc(admin(), `${weekPath(OPEN_WEEK)}/entries/p1/payment/current`), paymentData({ paymentStatus: 'paid' })));
     await assertFails(deleteDoc(doc(admin(), `${weekPath(OPEN_WEEK)}/entries/p1`)));
   });
 
@@ -400,5 +417,46 @@ describe('storage', () => {
     await assertFails(getBytes(ref(player, path)));
     await assertFails(uploadString(ref(player, path), 'photo'));
     await assertFails(uploadString(ref(adminStorage, 'other/file.txt'), 'x'));
+  });
+});
+
+describe('Sprint 2: private payment, server times, age, open weeks', () => {
+  const paymentPath = (w: string) => `${weekPath(w)}/entries/p1/payment/current`;
+
+  it('#33 payment is private to the owner and admin, even after the reveal (D-036)', async () => {
+    await assertSucceeds(getDoc(doc(env.authenticatedContext('alice').firestore(), paymentPath(OPEN_WEEK))));
+    await assertSucceeds(getDoc(doc(admin(), paymentPath(OPEN_WEEK))));
+    await assertFails(getDoc(doc(env.authenticatedContext('bob').firestore(), paymentPath(OPEN_WEEK))));
+    await assertFails(getDoc(doc(env.authenticatedContext('bob').firestore(), paymentPath(REVEALED_WEEK))));
+    await assertSucceeds(getDoc(doc(env.authenticatedContext('bob').firestore(), `${weekPath(OPEN_WEEK)}/entries/p1`)));
+  });
+
+  it('#34 the server stamps submission times, not the phone (D-040)', async () => {
+    await seedBob();
+    const db = env.authenticatedContext('bob').firestore();
+    const entry = doc(db, `${weekPath(OPEN_WEEK)}/entries/p2`);
+    await assertFails(setDoc(entry, entryData('p2', { picksSubmittedAt: Timestamp.fromMillis(Date.now() - 60_000) })));
+    await assertSucceeds(setDoc(entry, entryData('p2')));
+    await assertFails(updateDoc(entry, { picksSubmittedAt: Timestamp.now() }));
+    const picks = doc(db, `${weekPath(OPEN_WEEK)}/entries/p2/private/picks`);
+    await assertFails(setDoc(picks, { picks: { g01: 'home' }, tiebreakerTotal: 40, updatedAt: Timestamp.now() }));
+    await assertSucceeds(setDoc(picks, { picks: { g01: 'home' }, tiebreakerTotal: 40, updatedAt: serverTimestamp() }));
+  });
+
+  it('#35 the age confirmation on a profile is stamped by the server (D-037)', async () => {
+    const carol = env.authenticatedContext('carol').firestore();
+    await assertFails(setDoc(doc(carol, 'players/carol'), profile('carol', { ageAttestedAt: Timestamp.now() })));
+    await assertSucceeds(setDoc(doc(carol, 'players/carol'), profile('carol', { ageAttestedAt: serverTimestamp() })));
+    const alice = env.authenticatedContext('alice').firestore();
+    await assertFails(updateDoc(doc(alice, 'players/p1'), { ageAttestedAt: Timestamp.now() }));
+    await assertSucceeds(updateDoc(doc(alice, 'players/p1'), { ageAttestedAt: serverTimestamp(), updatedAt: Timestamp.now() }));
+  });
+
+  it('#36 players can list open, locked, and final weeks, but not drafts', async () => {
+    const db = env.authenticatedContext('alice').firestore();
+    const weeks = collection(db, `seasons/${YEAR}/weeks`);
+    await assertSucceeds(getDocs(query(weeks, where('status', 'in', ['open', 'locked', 'final']))));
+    await assertFails(getDocs(weeks));
+    await assertFails(getDocs(query(weeks, where('status', '==', 'draft'))));
   });
 });
