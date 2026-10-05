@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Panel } from '../../components/ui/Panel';
 import { auth } from '../../lib/firebase';
 import { EmailLinkForm } from '../auth/EmailLinkForm';
+import { GoogleSignInButton } from '../auth/GoogleSignInButton';
 import { useAuth } from '../auth/useAuth';
 
 /**
@@ -58,6 +59,8 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
       <div className="flex flex-col gap-4">
         <p className="text-body">This area is for the pool admin. Sign in with your admin email.</p>
         <EmailLinkForm next="/admin" buttonLabel="Email me a sign-in link" />
+        <p className="text-center text-body text-ink-muted">or</p>
+        <GoogleSignInButton next="/admin" />
       </div>
     </AdminGate>
   );
