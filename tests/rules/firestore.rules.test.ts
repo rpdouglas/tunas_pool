@@ -460,3 +460,46 @@ describe('Sprint 2: private payment, server times, age, open weeks', () => {
     await assertFails(getDocs(query(weeks, where('status', '==', 'draft'))));
   });
 });
+
+describe('Sprint 3: results, records, and the winner stay function-written', () => {
+  it('#37 players cannot write their own record, or anyone else\'s, but every signed-in user can read it', async () => {
+    await seedBob();
+    const bob = env.authenticatedContext('bob').firestore();
+    await assertFails(
+      setDoc(doc(bob, `${weekPath(OPEN_WEEK)}/entries/p2`), entryData('p2', { record: { wins: 15, losses: 0 } })),
+    );
+    await assertSucceeds(setDoc(doc(bob, `${weekPath(OPEN_WEEK)}/entries/p2`), entryData('p2')));
+    await assertFails(updateDoc(doc(bob, `${weekPath(OPEN_WEEK)}/entries/p2`), { record: { wins: 15, losses: 0 } }));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), `${weekPath(OPEN_WEEK)}/entries/p1`), { record: { wins: 9, losses: 6 } });
+    });
+    await assertSucceeds(getDoc(doc(bob, `${weekPath(OPEN_WEEK)}/entries/p1`)));
+  });
+
+  it('#38 an admin cannot write results, the total, the winner, the payout flag, or the status from the client', async () => {
+    for (const patch of [
+      { results: { g01: 'home' } },
+      { mnfTotal: 46 },
+      { winner: { playerIds: ['p1'] } },
+      { payoutSent: true },
+      { status: 'final' },
+    ]) {
+      await assertFails(updateDoc(doc(admin(), weekPath(DRAFT_WEEK)), patch));
+      await assertFails(updateDoc(doc(admin(), weekPath('lockedOpen')), patch));
+    }
+  });
+
+  it('#39 an admin can read every entry\'s payment record and picks (the payments queue and results screen need them)', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `${weekPath(LOCKED_WEEK)}/entries/p1`), entryData('p1'));
+      await setDoc(doc(ctx.firestore(), `${weekPath(LOCKED_WEEK)}/entries/p1/payment/current`), paymentData());
+      await setDoc(doc(ctx.firestore(), `${weekPath(LOCKED_WEEK)}/entries/p1/private/picks`), {
+        picks: { g01: 'home' }, tiebreakerTotal: 45, updatedAt: Timestamp.now(),
+      });
+    });
+    await assertSucceeds(getDoc(doc(admin(), `${weekPath(LOCKED_WEEK)}/entries/p1/payment/current`)));
+    await assertSucceeds(getDoc(doc(admin(), `${weekPath(LOCKED_WEEK)}/entries/p1/private/picks`)));
+    await assertSucceeds(getDocs(collection(admin(), `${weekPath(LOCKED_WEEK)}/entries`)));
+    await assertFails(getDoc(doc(env.authenticatedContext('bob').firestore(), `${weekPath(LOCKED_WEEK)}/entries/p1/payment/current`)));
+  });
+});

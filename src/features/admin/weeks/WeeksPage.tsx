@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { formatPoolDate, formatPoolDateTime } from '@shared/time';
 import { sundayOf } from '@shared/weeks';
@@ -7,7 +7,8 @@ import { useSeasonWeeks } from './weekData';
 
 /** Admin home for now: this season's weeks. The payments queue becomes home in Sprint 3. */
 export default function WeeksPage() {
-  const year = currentSeason();
+  const season = useSearchParams()[0].get('season');
+  const year = season ?? currentSeason();
   const weeks = useSeasonWeeks(year);
   const list = weeks.data ?? [];
   const nextNumber = list.length ? Math.max(...list.map((w) => w.weekNumber)) + 1 : 1;
@@ -49,6 +50,22 @@ export default function WeeksPage() {
                 </span>
                 <StatusBadge status={w.status} />
               </Link>
+              {w.status !== 'draft' && (
+                <p className="flex gap-1 px-1">
+                  <Link
+                    to={`/admin?${new URLSearchParams({ week: w.id, ...(season ? { season } : {}) })}`}
+                    className="inline-flex min-h-touch items-center px-3 underline"
+                  >
+                    Payments
+                  </Link>
+                  <Link
+                    to={`/admin/results?${new URLSearchParams({ week: w.id, ...(season ? { season } : {}) })}`}
+                    className="inline-flex min-h-touch items-center px-3 underline"
+                  >
+                    Results
+                  </Link>
+                </p>
+              )}
             </li>
           );
         })}

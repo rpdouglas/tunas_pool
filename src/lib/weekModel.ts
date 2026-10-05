@@ -3,7 +3,7 @@
  * the shared week logic never deal with Timestamp classes. Used by admin and player screens.
  */
 import type { FirestoreDataConverter } from 'firebase/firestore';
-import type { Game, Week, WeekStatus } from '@shared/types';
+import type { Game, GameResult, Week, WeekStatus, WeekWinner } from '@shared/types';
 import type { GameDraft } from '@shared/weeks';
 
 export interface WeekView {
@@ -17,6 +17,11 @@ export interface WeekView {
   mnfGameId: string;
   entryFeeCents: number;
   entryCount: number;
+  paidCount: number;
+  results: Record<string, GameResult>;
+  mnfTotal: number | null;
+  winner: WeekWinner | null;
+  payoutSent: boolean;
 }
 
 export const weekConverter: FirestoreDataConverter<WeekView> = {
@@ -36,6 +41,11 @@ export const weekConverter: FirestoreDataConverter<WeekView> = {
       mnfGameId: w.mnfGameId,
       entryFeeCents: w.entryFeeCents,
       entryCount: w.entryCount ?? 0,
+      paidCount: w.paidCount ?? 0,
+      results: w.results ?? {},
+      mnfTotal: w.mnfTotal ?? null,
+      winner: w.winner ?? null,
+      payoutSent: w.payoutSent === true,
     };
   },
 };

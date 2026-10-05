@@ -1,6 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { FirebaseError } from 'firebase/app';
 import type { WeekStatus } from '@shared/types';
 import {
   addDays,
@@ -28,7 +27,8 @@ import { Panel } from '../../../components/ui/Panel';
 import { SectionBar } from '../../../components/ui/SectionBar';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { TextAreaField } from '../../../components/ui/TextAreaField';
-import { upcomingSunday } from '../../../lib/season';
+import { friendlyError } from '../../../lib/errors';
+import { currentSeason, upcomingSunday } from '../../../lib/season';
 import {
   useSaveDraftWeek,
   useSeasonWeeks,
@@ -100,12 +100,6 @@ function cloneFrom(
     lockDate: addDays(sunday, offset),
     lockTime: prevLock.lockTime,
   };
-}
-
-function callableMessage(err: unknown): string {
-  if (err instanceof FirebaseError)
-    return err.message.replace(/^.*?:\s*/, '') || 'Something went wrong.';
-  return err instanceof Error ? err.message : 'Something went wrong. Try again.';
 }
 
 type Message = { tone: 'ok' | 'error'; text: string } | null;
@@ -232,7 +226,7 @@ function WeekEditor({ year, week, previous, message, setMessage }: WeekEditorPro
       setMessage({ tone: 'ok', text: 'Draft saved.' });
       if (!week) navigate(`/admin/weeks/${year}/${id}`, { replace: true });
     } catch (err) {
-      setMessage({ tone: 'error', text: callableMessage(err) });
+      setMessage({ tone: 'error', text: friendlyError(err) });
     }
   }
 
@@ -243,7 +237,7 @@ function WeekEditor({ year, week, previous, message, setMessage }: WeekEditorPro
       await setStatus.mutateAsync({ year, weekId: week.id, status: to });
       setMessage({ tone: 'ok', text: done });
     } catch (err) {
-      setMessage({ tone: 'error', text: callableMessage(err) });
+      setMessage({ tone: 'error', text: friendlyError(err) });
     }
   }
 
@@ -254,7 +248,14 @@ function WeekEditor({ year, week, previous, message, setMessage }: WeekEditorPro
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3">
-        <Link to="/admin" className="min-h-touch py-3 text-body underline">
+        <Link
+          to={
+            year === currentSeason()
+              ? '/admin/weeks'
+              : `/admin/weeks?season=${encodeURIComponent(year)}`
+          }
+          className="min-h-touch py-3 text-body underline"
+        >
           All weeks
         </Link>
       </div>

@@ -1,0 +1,262 @@
+/**
+ * The audited admin actions of the weekly job. The callables in index.ts check who is calling and
+ * pass the database in; everything that decides or writes lives here, so it runs against the
+ * Firestore emulator in tests (functions/src/*.int.test.ts).
+ */
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
+import { HttpsError } from 'firebase-functions/v2/https';
+import type { PublishedWinner, WeekPreview } from '../../shared/adminTypes';
+import type { Game } from '../../shared/types';
+import { auditInTransaction } from './audit';
+import { evaluateWeek, writeEntryRecords, type WeekEvaluation } from './evaluate';
+import { planPaymentChange } from './payments';
+import { sameResults, validateResultsInput } from './results';
+
+const weekPath = (year: string, weekId: string) => `seasons/${year}/weeks/${weekId}`;
+
+export interface WeekRef {
+  year: string;
+  weekId: string;
+  actorUid: string;
+}
+
+export async function setPayment(
+  db: Firestore,
+  input: WeekRef & { playerId: string; status: 'paid' | 'unpaid'; method?: 'cash' | 'etransfer' },
+): Promise<{ changed: boolean; status: string }> {
+  const { year, weekId, playerId, status, method, actorUid } = input;
+  const entryRef = db.doc(`${weekPath(year, weekId)}/entries/${playerId}`);
+  const paymentRef = entryRef.collection('payment').doc('current');
+
+  return db.runTransaction(async (tx) => {
+    const [entry, payment] = await Promise.all([tx.get(entryRef), tx.get(paymentRef)]);
+    if (!entry.exists) throw new HttpsError('not-found', 'That player has no entry this week.');
+    const existing = payment.exists
+      ? {
+          paymentMethod: payment.get('paymentMethod'),
+          paymentIntent: payment.get('paymentIntent'),
+          paymentStatus: payment.get('paymentStatus'),
+        }
+      : null;
+
+    const plan = planPaymentChange(existing, { status, method });
+    if (plan.kind === 'error') throw new HttpsError('failed-precondition', plan.message);
+    if (plan.kind === 'noop')
+      return { changed: false, status: existing?.paymentStatus ?? 'unpaid' };
+
+    const fields: Record<string, unknown> = {
+      paymentMethod: plan.method,
+      paymentIntent: plan.intent,
+      paymentStatus: plan.status,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (plan.status === 'paid') {
+      fields.paidAt = FieldValue.serverTimestamp();
+      fields.paidBy = actorUid;
+    } else {
+      fields.paidAt = FieldValue.delete();
+      fields.paidBy = FieldValue.delete();
+    }
+    if (plan.mode === 'create') tx.set(paymentRef, fields);
+    else tx.update(paymentRef, fields);
+
+    auditInTransaction(tx, db, {
+      actorUid,
+      action: 'payment.set',
+      target: paymentRef.path,
+      before: plan.before ?? { paymentStatus: 'unpaid', paymentMethod: null },
+      after: plan.after,
+      year,
+      weekId,
+    });
+    return { changed: true, status: plan.status };
+  });
+}
+
+export async function enterResults(
+  db: Firestore,
+  input: WeekRef & { results: unknown; mnfTotal: unknown },
+): Promise<{ changed: boolean }> {
+  const { year, weekId, actorUid } = input;
+  const weekRef = db.doc(weekPath(year, weekId));
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(weekRef);
+    if (!snap.exists) throw new HttpsError('not-found', 'That week does not exist.');
+    const week = snap.data()!;
+    if (week.status === 'final') {
+      throw new HttpsError(
+        'failed-precondition',
+        'The winner is already published, so these results are final.',
+      );
+    }
+    if (week.status !== 'locked') {
+      throw new HttpsError('failed-precondition', 'Results can be entered once picks are locked.');
+    }
+
+    const gameIds = (week.games as Game[]).map((g) => g.id);
+    const valid = validateResultsInput(gameIds, input.results, input.mnfTotal ?? null);
+    if (!valid.ok) throw new HttpsError('invalid-argument', valid.message);
+
+    const before = { results: week.results ?? {}, mnfTotal: week.mnfTotal ?? null };
+    if (sameResults(before.results, valid.results) && before.mnfTotal === valid.mnfTotal) {
+      return { changed: false };
+    }
+    tx.update(weekRef, {
+      results: valid.results,
+      mnfTotal: valid.mnfTotal,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    auditInTransaction(tx, db, {
+      actorUid,
+      action: 'week.results',
+      target: weekRef.path,
+      before,
+      after: { results: valid.results, mnfTotal: valid.mnfTotal },
+      year,
+      weekId,
+    });
+    return { changed: true };
+  });
+}
+
+export function summarizeEvaluation(ev: WeekEvaluation): WeekPreview {
+  const paid = ev.contenders.filter((c) => c.paid).length;
+  return {
+    status: ev.status,
+    complete: ev.complete,
+    gamesWithResults: ev.gamesWithResults,
+    totalGames: ev.gameIds.length,
+    mnfTotal: ev.mnfTotal,
+    entryFeeCents: ev.entryFeeCents,
+    entryCount: ev.contenders.length,
+    paidCount: paid,
+    potCents: paid * ev.entryFeeCents,
+    unpaidEligibleToWin: ev.unpaidEligibleToWin,
+    contenders: ev.contenders,
+    winner: ev.winner.ok
+      ? { ok: true as const, outcome: ev.winner.outcome, explanation: ev.explanation }
+      : { ok: false as const, reason: ev.winner.reason },
+  };
+}
+
+export async function previewWinner(
+  db: Firestore,
+  year: string,
+  weekId: string,
+): Promise<WeekPreview> {
+  const evaluation = await evaluateWeek(db, year, weekId);
+  if (!evaluation) throw new HttpsError('not-found', 'That week does not exist.');
+  return summarizeEvaluation(evaluation);
+}
+
+/**
+ * Decide the winner from the entries' own picks and payments right now, and make the week final.
+ * `expectedPlayerIds` is the winner the admin reviewed. If it no longer matches (a payment or a
+ * result changed in between), nothing is published (D-047).
+ */
+export async function publishWinner(
+  db: Firestore,
+  input: WeekRef & { expectedPlayerIds: string[] },
+): Promise<PublishedWinner> {
+  const { year, weekId, actorUid, expectedPlayerIds } = input;
+  const evaluation = await evaluateWeek(db, year, weekId);
+  if (!evaluation) throw new HttpsError('not-found', 'That week does not exist.');
+  if (evaluation.status === 'final') {
+    throw new HttpsError('failed-precondition', 'The winner is already published.');
+  }
+  if (evaluation.status !== 'locked') {
+    throw new HttpsError(
+      'failed-precondition',
+      'Picks must lock before a winner can be published.',
+    );
+  }
+  if (!evaluation.complete) {
+    throw new HttpsError(
+      'failed-precondition',
+      `Enter all ${evaluation.gameIds.length} results and the Monday night total first.`,
+    );
+  }
+  if (!evaluation.winner.ok) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Nobody with a paid entry can win yet. Mark payments first, then publish.',
+    );
+  }
+  const outcome = evaluation.winner.outcome;
+  const sameWinners =
+    expectedPlayerIds.length === outcome.playerIds.length &&
+    outcome.playerIds.every((id) => expectedPlayerIds.includes(id));
+  if (!sameWinners) {
+    throw new HttpsError(
+      'failed-precondition',
+      'The winner changed since you last looked (a payment or result changed). Review it again before publishing.',
+    );
+  }
+
+  const weekRef = db.doc(weekPath(year, weekId));
+  await db.runTransaction(async (tx) => {
+    const fresh = await tx.get(weekRef);
+    if (fresh.get('status') !== 'locked') {
+      throw new HttpsError('failed-precondition', 'This week is no longer waiting for a winner.');
+    }
+    tx.update(weekRef, {
+      winner: { ...outcome, publishedAt: FieldValue.serverTimestamp() },
+      status: 'final',
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    auditInTransaction(tx, db, {
+      actorUid,
+      action: 'week.winnerPublished',
+      target: weekRef.path,
+      before: { status: 'locked', winner: null },
+      after: {
+        status: 'final',
+        winner: {
+          playerIds: outcome.playerIds,
+          displayNames: outcome.displayNames,
+          record: outcome.record,
+          decision: outcome.decision,
+          potCents: outcome.potCents,
+          shareCents: outcome.shareCents,
+          leftoverCents: outcome.leftoverCents,
+        },
+      },
+      year,
+      weekId,
+    });
+  });
+  await writeEntryRecords(db, year, weekId); // so every entry shows its final record
+  return { ...outcome, explanation: evaluation.explanation };
+}
+
+export async function markPayout(
+  db: Firestore,
+  input: WeekRef & { sent: boolean },
+): Promise<{ changed: boolean; payoutSent: boolean }> {
+  const { year, weekId, actorUid, sent } = input;
+  const weekRef = db.doc(weekPath(year, weekId));
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(weekRef);
+    if (!snap.exists) throw new HttpsError('not-found', 'That week does not exist.');
+    if (snap.get('status') !== 'final' || !snap.get('winner')) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Publish the winner before recording the payout.',
+      );
+    }
+    const before = snap.get('payoutSent') === true;
+    if (before === sent) return { changed: false, payoutSent: sent };
+    tx.update(weekRef, { payoutSent: sent, updatedAt: FieldValue.serverTimestamp() });
+    auditInTransaction(tx, db, {
+      actorUid,
+      action: 'week.payout',
+      target: weekRef.path,
+      before: { payoutSent: before },
+      after: { payoutSent: sent },
+      year,
+      weekId,
+    });
+    return { changed: true, payoutSent: sent };
+  });
+}

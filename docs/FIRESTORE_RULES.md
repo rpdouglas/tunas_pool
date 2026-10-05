@@ -260,6 +260,7 @@ service cloud.firestore {
 - **Admin entry edits:** the admin cannot write entries or picks directly from the client. Use `adminUpsertEntry` while open, or `adminLateOverride` (reason required) after lock.
 - **`claimedByUid` is never client-writable.** The owner-update rule limits affected keys, and the admin-update rule requires the field to be unchanged.
 - **Payment is private (D-036):** the public entry has no payment fields, so leaderboards and the reveal can read entries freely. Method and intent live in `payment/current`, which only the owner and admin can read, before or after the reveal. Players may change method and intent while the week is open; `paymentStatus`, `paidAt`, and `paidBy` are function-written.
+- **Function-written entry fields (Sprint 3):** `record` is written only by functions. It is not in the create or update key lists, so a player cannot set it (row 37). Results, the winner, the payout flag, and the status are never client-writable by anyone, admin included (row 38): the audited callables write them.
 - **Server times (D-040):** `picksSubmittedAt` on the entry and `updatedAt` on the picks must equal `request.time` (the client sends `serverTimestamp()`). The receipt's time and confirmation code come from that value.
 - **Listing weeks:** players must filter by `status in ['open', 'locked', 'final']`. The rule checks each document, so an unfiltered query is rejected because it could include drafts.
 - **Finding your profile:** a login reads its profile with `where('claimedByUid', '==', uid)`, which the player read rule allows because it checks the document's own `claimedByUid`. After `adoptGuestProfile` or an approved claim, the `playerId` is no longer the login's `uid`, so the client must never assume `players/{uid}`. A direct read of a profile that does not exist is denied rather than returned empty, so use the query.
@@ -336,3 +337,6 @@ Each row is at least one passing and one failing test.
 | 34 | Client sets `picksSubmittedAt` or picks `updatedAt` to anything but the server time | deny |
 | 35 | `ageAttestedAt` set to anything but the server time | deny |
 | 36 | Player lists weeks filtered to `open`, `locked`, `final`; unfiltered or `draft` | allow / deny |
+| 37 | Player writes `record` on an entry (create or update); any signed-in user reads it | deny / allow |
+| 38 | Admin writes `results`, `mnfTotal`, `winner`, `payoutSent`, or `status` on a week from the client | deny |
+| 39 | Admin reads any entry's `payment/current` and `private/picks` and lists entries; another player reads `payment/current` | allow / deny |

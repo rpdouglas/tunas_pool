@@ -105,10 +105,10 @@ A claim never exposes the matched profile to the claimant. Only the admin sees `
 | `results` | `Record<gameId, 'home' \| 'away' \| 'tie'>` | Admin, via callable. |
 | `mnfTotal` | number \| null | Actual combined MNF points. |
 | `entryFeeCents` | number | Snapshotted from the season at week creation. |
-| `entryCount` | number | Function-written (`onEntryWritten`). Entries this week. Starts at 0. |
-| `paidCount` | number | Function-written (`onEntryWritten`). Entries with `paymentStatus == 'paid'`. Pot = `paidCount × entryFeeCents`. Starts at 0. |
+| `entryCount` | number | Function-written (`onEntryWritten`). Entries this week. Starts at 0. For display; recounted, never incremented (D-048). |
+| `paidCount` | number | Function-written (`onPaymentWritten`). Entries with `paymentStatus == 'paid'`. Displayed pot = `paidCount × entryFeeCents`. Starts at 0. The published pot is recounted at publish time (D-046). |
 | `winner` | `WeekWinner \| null` | Function-written when published. |
-| `payoutSent` | boolean | Admin records that the winner was paid. |
+| `payoutSent` | boolean | Admin records that the winner was paid (`adminMarkPayout`). Who and when are in the audit log (D-042). |
 | `createdAt` / `updatedAt` | Timestamp | |
 
 ```ts
@@ -124,9 +124,14 @@ type Game = {
 
 type WeekWinner = {
   playerIds: string[];       // more than one = split pot
+  displayNames: string[];    // denormalized for banners
   record: { wins: number; losses: number };
-  mnfPrediction: number;     // winning tiebreaker value, shown as "(38 points)"
-  potCents: number;
+  mnfPrediction: number | null; // winning tiebreaker guess, shown as "(38 points)"
+  decision: 'most_wins' | 'tiebreaker' | 'split_pot'; // how it was decided
+  tiedPlayerIds: string[];   // who tied for the most wins before the tiebreaker
+  potCents: number;          // paid entries x entry fee, counted at publish time
+  shareCents: number;        // each winner's share, rounded down
+  leftoverCents: number;     // cents that did not divide evenly, shown to the admin
   publishedAt: Timestamp;
 };
 ```
@@ -144,6 +149,7 @@ Public document, readable by every signed-in player. **No picks, no tiebreaker, 
 | `paperPhotoPath` | string \| null | Storage path, admin only. |
 | `lateOverride` | `{ reason: string; by: string; at: Timestamp } \| null` | Set only by the override callable. |
 | `picksSubmittedAt` | Timestamp | Server time of the latest submit or edit (rules require `request.time`, D-040). Basis of the confirmation code (§10). |
+| `record` | `{ wins, losses }` | **Function-written** (`onResultsWritten`, and again at publish). The entry's record so far, so leaderboards need no one's picks. Absent until results exist. Never client-writable. |
 | `createdAt` / `updatedAt` | Timestamp | |
 
 ### 3.6b `.../entries/{playerId}/payment/current`
@@ -180,7 +186,7 @@ Readable by the owner and admin. Readable by everyone once `week.revealed == tru
 
 `at`, `actorUid`, `action` (enum below), `target` (path), `before`, `after`, `reason` (required for overrides), `year`, `weekId`.
 
-Actions: `payment.set`, `entry.adminUpsert`, `entry.lateOverride`, `entry.delete`, `week.status`, `week.results`, `week.winnerPublished`, `week.correction`, `claim.approved`, `claim.rejected`, `claim.unlinked`, `player.merged`, `player.guestMoved`.
+Actions: `payment.set`, `entry.adminUpsert`, `entry.lateOverride`, `entry.delete`, `week.status`, `week.results`, `week.winnerPublished`, `week.payout`, `week.correction`, `claim.approved`, `claim.rejected`, `claim.unlinked`, `player.merged`, `player.guestMoved`.
 
 ---
 
@@ -205,20 +211,21 @@ type GameResult = 'home' | 'away' | 'tie';
 
 | Function | Purpose |
 |---|---|
-| `adminSetPayment(year, weekId, playerId, status)` | Mark paid or unpaid on `payment/current`. Audit logged. |
+| `adminSetPayment(year, weekId, playerId, status, method?)` | Mark paid or unpaid on `payment/current`, with `paidAt` and `paidBy`. If the player never said how they'd pay, `method` is required and the payment is created as paid. Marking paid settles "will do" as "already did". A repeat tap changes nothing and writes no audit entry. Audit logged as `payment.set` with before and after. |
+| `adminListEntries(year, weekId)` | The payments queue in one round trip: each entry with name, phone, email (admin only), declared payment, status, record, and possible duplicates. Duplicates come from `shared/duplicates.ts`: same phone, same email, same name, or a very similar name. Flags only, never a block (D-022, D-045). |
 | `adminUpsertEntry(year, weekId, playerId, entryFields, picksDoc)` | Enter or edit picks for a player. Allowed while open. Rejects after lock. |
 | `adminLateOverride(year, weekId, playerId, entryFields, picksDoc, reason)` | Post-lock entry or edit. `reason` required. Sets `lateOverride`. |
 | `adminDeleteEntry(year, weekId, playerId, reason)` | Remove an entry. |
 | `adminSetWeekStatus(year, weekId, status)` | `draft → open` (only when `weekProblems` in `shared/weeks.ts` is empty, judged by the server clock), `open → draft` (only while the week has no entries), `open → locked` (lock early; also sets `revealed: true`). Audit logged as `week.status` with before and after. `final` is reached through results and the winner, not this callable. |
-| `adminEnterResults(year, weekId, results, mnfTotal)` | Save results and recompute the leaderboard. Re-runs after Final are flagged as `week.correction`. |
-| `adminPublishWinner(year, weekId)` | Compute the winner, write `winner`, update standings and stats. |
-| `adminMarkPayout(year, weekId, sent)` | Record that the payout was sent. |
+| `adminEnterResults(year, weekId, results, mnfTotal)` | Replace the week's results (home, away, or tie per game) and the Monday night total. Only while the week is `locked`; refused once `final` (D-047, corrections arrive in Sprint 6). Unchanged input writes nothing. Audit logged as `week.results`. The records are written by `onResultsWritten`. |
+| `adminPreviewWinner(year, weekId)` | Read-only: standings, the pot, and the winner "if the games ended now" with a plain-words explanation, from the entries' own picks and payments (`shared/scoring.ts`). The same code publishes the winner. |
+| `adminPublishWinner(year, weekId, expectedPlayerIds)` | Needs a `locked` week with all 15 results and the Monday night total. Recomputes the winner from the picks and payments at that moment. If it differs from `expectedPlayerIds` (what the admin reviewed), nothing is published. Writes `winner`, sets `status='final'`, writes each entry's `record`. Audit logged as `week.winnerPublished`. Season standings and all-time stats are computed in Sprint 7 from the final weeks, not here. |
+| `adminMarkPayout(year, weekId, sent)` | Record that the payout was sent, or undo it. Only once the winner is published. Audit logged as `week.payout`. |
 | `adminListClaims()` | Returns pending claims with `suggestedPlayerId`. |
 | `adminApproveClaim(claimId, playerId)` | Link `claimedByUid`, merge if needed. |
 | `adminRejectClaim(claimId, note?)` | Reject with a friendly note. |
 | `adminUnlinkClaim(playerId)` | Undo a wrong approval. |
 | `adminMergePlayers(fromId, intoId)` | Manual merge, for example duplicate guests. |
-| `getDuplicateFlags(year, weekId)` | Entries sharing phone, email, or normalized name, plus similar names (fuzzy match). Flags for a human check only, never a block. No device or IP signals (`DECISIONS.md` D-022). |
 
 **Player-callable (signed-in)**
 
@@ -231,9 +238,10 @@ type GameResult = 'home' | 'away' | 'tie';
 
 | Function | Purpose |
 |---|---|
-| `lockWeeks` (scheduled, every minute near lock) | At `lockAt`: set `status='locked'` and `revealed=true`. |
-| `onEntryWritten` (Sprint 3) | Recompute the week's `entryCount` on any entry create or delete, and `paidCount` on any `payment/current` write. |
-| `onResultsWritten` | Recompute per-entry wins and the weekly leaderboard. |
+| `lockWeeks` (scheduled, every minute) | For every `open` week whose `lockAt` has passed: set `status='locked'` and `revealed=true`, audit log it as `system:lockWeeks`, and recount the week. Safe to repeat. Uses the collection-group index on `weeks` (`status`, `lockAt`). The rules already reject late entry writes on their own, so the worst case is picks revealing up to a minute after the lock. |
+| `onEntryWritten` | Recount `entryCount` and `paidCount` when an entry is created or deleted (not on edits). |
+| `onPaymentWritten` | Recount when a `payment/current` is created or its `paymentStatus` changes. |
+| `onResultsWritten` | When a week's `results` or `mnfTotal` change, write each entry's `record`. Ignores every other change to the week (status, counters). |
 | `sendSaturdayReminder` (scheduled, Phase 4) | Email reminder to players who haven't entered and have an email on file. Guests have none, so the admin reminder list (Sprint 8) is the main path. |
 
 ---
@@ -257,7 +265,7 @@ draft --(admin opens)--> open --(lockAt, automatic, or admin locks early)--> loc
 
 ## 7. Scoring and tiebreaker
 
-**Record:** one win per correct pick across all 15 games. The record is shown as `wins - losses`, for example `11 - 4`.
+**Record:** one win per correct pick across all 15 games. The record is shown as `wins - losses`, for example `11 – 4`. A pick that is missing, or wrong, is a loss. **A tied game is not a win for anyone** (`config.pool.tieGameRule`, default `no_win`, D-008) and counts toward losses, so every record adds up to the games decided (D-046). The pool setting can also be `win_for_all` or `half_win`; `shared/scoring.ts` supports all three.
 
 **Eligibility:** only `paymentStatus == 'paid'` entries count toward the pot. Whether unpaid entries are *eligible to win* is `config.pool.unpaidEligibleToWin` (see open decisions; default `false`).
 
@@ -272,7 +280,11 @@ draft --(admin opens)--> open --(lockAt, automatic, or admin locks early)--> loc
 
 Example from the paper sheet: actual total 46. Player A predicts 58 (met or exceeded), Player B predicts 45 (below). Player A wins.
 
-**Pot:** `paid entries × entryFeeCents`. Displayed live in the admin payments queue.
+**Pot:** `paid entries × entryFeeCents`. Displayed live in the admin payments queue and on the results screen. When the winner is published the pot is **recounted from the payments at that moment**, not read from `week.paidCount` (D-046).
+
+**Split pots:** the pot is divided evenly among the winners and each share is rounded down to the cent. Any leftover cents (`leftoverCents`) are shown to the admin, never hidden.
+
+**Where this lives:** `shared/scoring.ts` (`scorePicks`, `pickWinners`, `explainOutcome`). The admin preview and the published winner both come from it, with unit tests for the paper-sheet example (46: a guess of 58 beats 45), the all-below case, a split pot with leftover cents, and unpaid entries.
 
 ---
 
@@ -281,6 +293,9 @@ Example from the paper sheet: actual total 46. Player A predicts 58 (met or exce
 - `payment` collection group: `paymentStatus ASC, updatedAt DESC` (payments queue)
 - `payment` collection group: `paymentMethod ASC, paymentStatus ASC`
 - `weeks`: `status ASC, weekNumber DESC` (players' current-week lookup, filtered to open, locked, and final)
+- `weeks` collection group: `status ASC, lockAt ASC` (the `lockWeeks` scheduler)
+
+The two `payment` collection-group indexes above are not used yet: the payments queue reads one week at a time through `adminListEntries`. They are kept for the Sprint 7 reports.
 - `claims`: `status ASC, createdAt DESC`
 - `players`: `phone ASC` (duplicate flags), `displayName ASC` (roster search)
 - `auditLog`: `at DESC`

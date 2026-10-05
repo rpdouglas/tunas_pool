@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { formatMoney } from '@shared/scoring';
 import { formatPoolDateTime } from '@shared/time';
 import { Countdown } from '../components/ui/Countdown';
 import { Panel } from '../components/ui/Panel';
@@ -60,6 +61,12 @@ export default function Home() {
             <Panel title="This week">
               <div className="flex flex-col gap-4">
                 <Countdown lockAtMs={week.lockAtMs} />
+
+                <p className="text-body" data-testid="week-totals">
+                  <strong>{week.entryCount}</strong>{' '}
+                  {week.entryCount === 1 ? 'player is' : 'players are'} in. Pot{' '}
+                  <strong>{formatMoney(week.paidCount * week.entryFeeCents)}</strong> so far.
+                </p>
 
                 <ul className="flex flex-col gap-2 text-body" aria-label="Your status">
                   <li>

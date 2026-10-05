@@ -33,8 +33,8 @@ jobs:
 
   # Production deploy. Runs only after `verify` passes on a push to main, never on pull requests.
   # Targets are pinned in firebase.json / .firebaserc (site tunaspool, database db-tunaspool).
-  # Not deployed here: functions (added when they do something) and storage (the bucket is shared
-  # with other apps, see docs/DECISIONS.md D-015).
+  # Functions are deployed here too when they changed (D-041). Not deployed here: storage (the bucket
+  # is shared with other apps, see docs/DECISIONS.md D-015).
   deploy:
     needs: verify
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -46,6 +46,8 @@ jobs:
       FIREBASE_WEB_APP_ID: 1:793264910505:web:fcee5faedc9853eebdf9b8
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # so the functions step can see what this push changed
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -57,3 +59,18 @@ jobs:
       - run: node scripts/write-web-env.mjs prod "$FIREBASE_WEB_APP_ID"
       - run: npm run build
       - run: npx firebase deploy --project prod --only hosting,firestore:rules,firestore:indexes --non-interactive --force
+
+      # Functions follow the site, and only when this push changed them (DECISIONS.md D-041). Only the
+      # tunaspool codebase is deployed, so other apps' functions in the shared project are never
+      # touched. If the comparison fails for any reason, deploy: a needless deploy is harmless.
+      - id: functions-changed
+        run: |
+          if git diff --quiet "${{ github.event.before }}" "${{ github.sha }}" -- functions shared firebase.json 2>/dev/null; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.functions-changed.outputs.changed == 'true'
+        run: npm --prefix functions ci
+      - if: steps.functions-changed.outputs.changed == 'true'
+        run: npx firebase deploy --project prod --only functions:tunaspool --non-interactive --force

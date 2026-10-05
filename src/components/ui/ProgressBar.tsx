@@ -3,12 +3,22 @@ export interface ProgressBarProps {
   total: number;
   /** Jump to the next game without a pick. Omit when everything is picked. */
   onNext?: () => void;
+  /** What is being counted: "picked" on the entry form, "results in" on the results screen. */
+  noun?: string;
+  /** Accessible name of the bar. */
+  ariaLabel?: string;
 }
 
 /** Sticky "9 of 15 picked" bar (DESIGN_SYSTEM §6). Tap it to jump to the next unpicked game. */
-export function ProgressBar({ done, total, onNext }: ProgressBarProps) {
+export function ProgressBar({
+  done,
+  total,
+  onNext,
+  noun = 'picked',
+  ariaLabel = 'Picks made',
+}: ProgressBarProps) {
   const complete = done >= total;
-  const label = complete ? `All ${total} picked` : `${done} of ${total} picked`;
+  const label = complete ? `All ${total} ${noun}` : `${done} of ${total} ${noun}`;
   return (
     <div className="progress-bar">
       <div className="mx-auto flex max-w-player items-center gap-3 px-4 py-2">
@@ -20,7 +30,7 @@ export function ProgressBar({ done, total, onNext }: ProgressBarProps) {
           <div
             className="progress-track"
             role="progressbar"
-            aria-label="Picks made"
+            aria-label={ariaLabel}
             aria-valuemin={0}
             aria-valuemax={total}
             aria-valuenow={done}

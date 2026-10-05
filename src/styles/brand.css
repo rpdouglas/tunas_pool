@@ -258,6 +258,7 @@
   }
   .stat-tile .stat-value { font-weight: 800; font-size: 4rem; line-height: 0.9; }
   /* Official gold passes 3:1 for LARGE text only; the 4rem numeral qualifies */
+  .stat-tile.is-compact .stat-value { font-size: 2.25rem; line-height: 1; }
   .stat-tile .stat-value.is-accent { color: rgb(var(--gold-600)); }
 
   /* ---- Inputs ------------------------------------------------------------- */

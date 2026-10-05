@@ -84,17 +84,18 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 - Back Office surface (`DESIGN_SYSTEM.md` §7): admin shell, Payments queue row, and Toast components.
 - Admin shell with a payments queue as the home screen: name, phone, declared payment, one-tap **Paid** with undo, filters, and a live pot.
 - `adminSetPayment` callable with audit log.
-- Entries list with duplicate flags (`getDuplicateFlags`): same phone, same email, same normalized name, and similar names (fuzzy match, for example "Bob Smith" and "Robert Smith", or one typo). Flags only, never auto-block (D-022).
+- Entries list with duplicate flags (returned by `adminListEntries`, D-045): same phone, same email, same normalized name, and similar names (fuzzy match, for example "Bob Smith" and "Robert Smith", or one typo). Flags only, never auto-block (D-022).
 - Week counters `entryCount` and `paidCount`, maintained by an `onEntryWritten` trigger (D-025). Rules test: an admin draft edit cannot set them from the client.
 - Home screen gains the live pot (`paidCount × entryFeeCents`) and the number of players entered.
 - `lockWeeks` scheduled function: at `lockAt`, set `status='locked'` and `revealed=true`.
 - Results screen: tap the winner per game (including "tie"), enter the MNF total.
 - `adminEnterResults`, `onResultsWritten` (per-entry wins), and `adminPublishWinner` implementing the scoring and tiebreaker in `DATA_MODEL.md` §7.
 - Winner banner and a payout-sent toggle.
-- Decide whether functions deploy automatically on merge or stay on the manual **Deploy functions** workflow added in Sprint 1 (D-035). Region `us-central1` (D-028).
+- Functions deploy automatically after the site deploy when `functions/`, `shared/`, or `firebase.json` changed (D-041); the manual **Deploy functions** workflow stays for re-runs. Region `us-central1` (D-028).
+- Also built: `adminListEntries` (the queue in one round trip), `adminPreviewWinner` (standings and the winner before publishing), `onPaymentWritten`, and an `expectedPlayerIds` check so a winner is only published if it is the one the admin reviewed (D-047).
 - Unit tests for the scoring and tiebreaker, including the paper-sheet example (actual 46: 58 wins over 45), the all-below case, and a split pot.
 
-**Acceptance (Phase 1 gate):** Run a full mock week end to end in the emulator and then in a staging project: 10 or more mixed players, payments confirmed, results entered, winner published with the correct tiebreaker outcome. Admin can do the whole weekly job from a phone.
+**Acceptance (Phase 1 gate):** Run a full mock week end to end in the emulator (`npm run test:e2e:mock-week`: 12 players) and then in production under a separate test season `2026-test`, removed afterward (D-044; there is no staging project): 10 or more mixed players, payments confirmed, results entered, winner published with the correct tiebreaker outcome. Admin can do the whole weekly job from a phone.
 
 ### Phase 2 — Roster, paper, and claims
 
@@ -221,6 +222,8 @@ Defaults are in bold. Do not guess. Confirm with Ryan, or apply the default and 
 - ESPN schedule import.
 - Survivor or confidence-point side pools.
 - Public read-only share page for the weekly winner banner.
+- **Group payments** (one payment covering several entries, PERSONAS Spec Impact Log #2), revisit if marking entries one at a time becomes a chore (D-043).
+- **Payout method** per winner (cash pickup, e-Transfer, other, PERSONAS #4), beyond the Payout sent toggle (D-042).
 - **Hall of Fame** (all-time most weekly wins, highest average, most perfect weeks, most weeks played). Reconsider at Sprint 10, once a full season of data exists. No streak records (D-023). Run "largest pot won" through the Responsible-Play check before including it.
 - Charts for the admin statistics (participation graph, pot history graph). Sprint 7 ships tables.
 
