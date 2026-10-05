@@ -92,7 +92,9 @@ A claim never exposes the matched profile to the claimant: the document holds on
 
 ### 3.4 `seasons/{year}`
 
-`year`, `status` (`'active' | 'archived'`), `entryFeeCents` (default 2000), `createdAt`.
+`year`, `status` (`'active' | 'archived'`), `entryFeeCents` (default 2000), `createdAt`, `archivedAt` (function-written).
+
+A season is created by the admin's screens with its first week. `status` and `archivedAt` change only through `adminSetSeasonStatus`. An archived season stays fully viewable; the one thing it stops is opening a week in it. **There is no roster rollover:** players, logins, claims, and history are not tied to a season, so they carry over untouched (D-090).
 
 ### 3.5 `seasons/{year}/weeks/{weekId}`
 
@@ -196,7 +198,9 @@ Readable by the owner and admin. Readable by everyone once `week.revealed == tru
 
 `at`, `actorUid`, `action` (enum below), `target` (path), `before`, `after`, `reason` (required for overrides), `year`, `weekId`.
 
-Actions: `payment.set`, `entry.adminUpsert`, `entry.lateOverride`, `entry.delete`, `week.status`, `week.results`, `week.winnerPublished`, `week.payout`, `week.correction`, `claim.approved`, `claim.rejected`, `claim.unlinked`, `player.merged`, `player.guestMoved`.
+Actions: `payment.set`, `entry.adminUpsert`, `entry.lateOverride`, `entry.delete`, `week.status`, `week.results`, `week.winnerPublished`, `week.payout`, `week.correction`, `claim.approved`, `claim.rejected`, `claim.unlinked`, `player.merged`, `player.guestMoved`, `season.status`.
+
+The Back Office shows the log in plain words (`shared/auditText.ts`), newest first, with the stored before and after under each entry. Entries written by a one-off script carry an actor that starts `script:`.
 
 ---
 
@@ -233,6 +237,8 @@ type GameResult = 'home' | 'away' | 'tie';
 | `adminPublishWinner(year, weekId, expectedPlayerIds)` | Needs a `locked` week with a result for every game and the Monday night total. Recomputes the winner from the picks and payments at that moment. If it differs from `expectedPlayerIds` (what the admin reviewed), nothing is published. Writes `winner`, sets `status='final'`, writes each entry's `record`. Audit logged as `week.winnerPublished`. Season standings and all-time stats are computed in Sprint 7 from the final weeks, not here. |
 | `adminMarkPayout(year, weekId, sent)` | Record that the payout was sent, or undo it. Only once the winner is published. Audit logged as `week.payout`. |
 | `adminRecomputeStandings(year)` | Work the season's standings and everyone's all-time stats out again from the final weeks. They refresh on their own after `adminPublishWinner`, `adminCorrectResults`, `adminApproveClaim`, `adminUnlinkClaim`, and `adminMergePlayers`; a failure there is logged, not thrown, so this is the way to run it again. Returns how many players are on the standings. |
+| `adminListSeasons()` | Every season, newest first, with its status and how many of its weeks are finished, being played, or in draft. |
+| `adminSetSeasonStatus(year, status)` | Archive a season (`archived`) or reopen it (`active`). Archiving is refused while any week is open or locked. Sets or clears `archivedAt`. Audit logged as `season.status`. `adminSetWeekStatus` refuses to open a week in an archived season. |
 | `adminSeasonReport(year)` | The Reports screen in one round trip (`shared/reports.ts`): for each week that is not a draft, entries, paid and unpaid counts, the pot, the winner and each share, payout sent, new and returning players, average correct picks, the most-picked team, the biggest upset, and the names of unpaid players. Admin only. |
 | `adminListClaims()` | The pending claims, oldest first. Each has what the player typed, their email, the website profile their login already has (if any, with weeks played), and up to five likely roster matches, best first: same phone, then same name, then a similar name (`shared/claims.ts`), each with weeks played and whether it is already linked. `suggestedPlayerId` is the best match that can still be claimed. A match that is already linked is shown but cannot be approved, and `sharedSuggestion` marks two requests pointing at one profile. Only roster profiles (`origin: 'admin'`) are offered. |
 | `adminApproveClaim(claimId, playerId)` | Link the claimant's login to a roster profile by setting `claimedByUid`. The claim must be pending, and the profile must be a live roster profile with no login. If the claimant's login already has a website profile, it is merged into the roster profile in the same transaction (see `adminMergePlayers`). Sets the claim to `approved` with `resolvedPlayerId`. Audit logged as `claim.approved`, plus `player.merged` when a merge happened. Never automatic (D-004). |

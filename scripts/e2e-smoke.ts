@@ -301,6 +301,9 @@ try {
   );
   await visit(admin, 'admin-reports', '/admin/reports', 'Download weeks (CSV)');
   await visit(admin, 'admin-weeks', '/admin/weeks', 'weeks');
+  await visit(admin, 'admin-more', '/admin/more', 'Audit log');
+  await visit(admin, 'admin-audit', '/admin/audit', 'Published the winner: Dale D.');
+  await visit(admin, 'admin-seasons', '/admin/seasons', 'This season');
   await adminCtx.close();
 
   check('no script errors on any screen', errors.length === 0, errors.slice(0, 3).join(' | '));

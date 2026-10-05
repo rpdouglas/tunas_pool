@@ -4,14 +4,14 @@ import { auth } from '../../lib/firebase';
 import { useAuth } from '../auth/useAuth';
 import { usePendingClaimCount } from './claims/claimsData';
 
+// The four screens used every week. Everything else is one tap away under More (D-091), so the bar
+// stays on one line on a phone.
 const NAV = [
   { to: '/admin', label: 'Payments', end: true },
   { to: '/admin/roster', label: 'Roster', end: false },
-  { to: '/admin/claims', label: 'Claims', end: false },
   { to: '/admin/results', label: 'Results', end: false },
   { to: '/admin/weeks', label: 'Weeks', end: false },
-  { to: '/admin/reports', label: 'Reports', end: false },
-  { to: '/admin/settings', label: 'Settings', end: false },
+  { to: '/admin/more', label: 'More', end: false },
 ];
 
 /** Back Office shell (DESIGN_SYSTEM §7): plain condensed headings, neutral page, wide max width. */
@@ -45,10 +45,10 @@ export function AdminLayout() {
                 className="flex min-h-touch items-center px-2 text-body underline-offset-4 sm:px-3 aria-[current=page]:font-semibold aria-[current=page]:underline"
               >
                 {item.label}
-                {item.label === 'Claims' && pendingClaims > 0 && (
+                {item.label === 'More' && pendingClaims > 0 && (
                   <span className="badge badge-pending ml-1">
                     {pendingClaims}
-                    <span className="sr-only"> waiting</span>
+                    <span className="sr-only"> claims waiting</span>
                   </span>
                 )}
               </NavLink>

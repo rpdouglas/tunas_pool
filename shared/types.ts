@@ -37,7 +37,8 @@ export type AuditAction =
   | 'claim.rejected'
   | 'claim.unlinked'
   | 'player.merged'
-  | 'player.guestMoved';
+  | 'player.guestMoved'
+  | 'season.status';
 
 // ---- players/{playerId} ----------------------------------------------------
 export interface Player {
@@ -86,6 +87,8 @@ export interface Season {
   status: 'active' | 'archived';
   entryFeeCents: number;
   createdAt: TimestampLike;
+  /** Function-written by `adminSetSeasonStatus` when the season is archived. */
+  archivedAt?: TimestampLike | null;
 }
 
 export interface Game {

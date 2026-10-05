@@ -128,6 +128,21 @@ and Ryan decides when:
 
 Storage is not part of the automatic deploy, so a change to `storage.rules` needs step 3 again.
 
+### Settling a dispute
+
+Back Office, More, **Audit log**. Type the player's name or the week in Find. Each entry says what changed, who did
+it, when, and the reason they typed, with the stored before and after under it. For "that's not what I picked", look
+for *Entered picks* or *Changed the picks* for that player: the before and after hold the picks themselves. A paper
+entry may also have a photo of the sheet (open the player's picks from the Roster). Nothing in the log can be edited.
+
+### End of season
+
+There is nothing to copy over. Players, logins, and history are not tied to a season. When the last week has its winner
+published: Back Office, More, **Seasons**, **Archive season**. That stops a week being opened in the old season by
+mistake, and can be undone. The new season starts when you set up its first week; the site works out the season from
+the date, with January and February counting as the season before. Take an export of the finished season first
+(`npm run admin:export -- 2026`).
+
 ### Backups (D-089)
 
 `npm run admin:export -- 2026` saves a readable copy of a season to `backups/` on this machine. It is not a restore.
