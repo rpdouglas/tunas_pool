@@ -282,6 +282,23 @@ try {
     Boolean(remind?.startsWith('sms:+16135550144?&body=Hi%20Rosalie')),
     remind?.slice(0, 60) ?? 'no link',
   );
+  // Someone who has played can't be deleted: the section says why and points to Inactive or Merge (D-094).
+  await admin.getByRole('button', { name: /Details for Rosalie/ }).click();
+  await admin.getByText('Added by mistake? Delete this player').click();
+  const whyNot = await admin
+    // Not just "has played": the closed Merge section above has those words too, and it is hidden.
+    .getByText(/has played (one week|\d+ weeks)/)
+    .first()
+    // The first call to a function that has not run yet can take a while to start in the emulator.
+    .waitFor({ timeout: 45_000 })
+    .then(() => '')
+    .catch((err: unknown) => String(err).replace(/\s+/g, ' ').slice(0, 220));
+  await admin.screenshot({ path: `${SHOTS}/admin-roster-delete.png`, fullPage: true });
+  check('delete explains why not for someone who has played', whyNot === '', whyNot);
+  check(
+    'and offers no delete button for them',
+    (await admin.getByRole('button', { name: /^Delete Rosalie/ }).count()) === 0,
+  );
   await visit(admin, 'admin-enter', '/admin/enter/rosalie?week=wk03', 'The sheet, top to bottom');
   await visit(admin, 'admin-claims', '/admin/claims', 'No requests waiting');
   await visit(admin, 'admin-results-final', '/admin/results?week=wk01', 'Correct a result');
@@ -305,6 +322,34 @@ try {
   await visit(admin, 'admin-more', '/admin/more', 'Audit log');
   await visit(admin, 'admin-audit', '/admin/audit', 'Published the winner: Dale D.');
   await visit(admin, 'admin-seasons', '/admin/seasons', 'This season');
+  // A player added by mistake can be deleted through the screen, with a reason in the audit log (D-094).
+  await db.doc('players/typo').set({
+    displayName: 'Typo T.',
+    phone: null,
+    email: null,
+    claimedByUid: null,
+    origin: 'admin',
+    usualPayment: null,
+    active: true,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  });
+  await admin.goto(`${APP}/admin/roster?week=wk03`);
+  await admin.getByRole('button', { name: /Details for Typo T/ }).click();
+  await admin.getByText('Added by mistake? Delete this player').click();
+  await admin.getByRole('button', { name: 'Delete Typo T.…' }).click();
+  await admin.getByLabel('Why are you deleting them?').fill('Added by mistake');
+  await admin.getByRole('button', { name: 'Delete Typo T.', exact: true }).click();
+  await admin.getByText('Typo T. deleted').first().waitFor({ timeout: 45_000 });
+  check(
+    'a player with no history is deleted through the screen',
+    !(await db.doc('players/typo').get()).exists,
+  );
+  const deleted = await db.collection('auditLog').where('action', '==', 'player.delete').get();
+  check(
+    'and the audit log keeps who and why',
+    deleted.size === 1 && deleted.docs[0].get('reason') === 'Added by mistake',
+  );
   await adminCtx.close();
 
   check('no script errors on any screen', errors.length === 0, errors.slice(0, 3).join(' | '));

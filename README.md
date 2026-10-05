@@ -152,6 +152,18 @@ it, when, and the reason they typed, with the stored before and after under it. 
 for *Entered picks* or *Changed the picks* for that player: the before and after hold the picks themselves. A paper
 entry may also have a photo of the sheet (open the player's picks from the Roster). Nothing in the log can be edited.
 
+### Removing a player (D-094)
+
+Back Office, Roster, tap the player, then **Added by mistake? Delete this player** at the bottom. It checks first and
+tells you plainly if it can't:
+
+- **Deletes** someone with no weeks played, no login, and no request waiting. You type a reason (saved in the audit
+  log) and confirm. It can't be undone from the site.
+- **Won't delete** someone who has played. That would change old results and pots. For someone who left the pool,
+  untick **Still playing** (Inactive). For a duplicate, use **Merge**. For an entry added by mistake, remove the entry
+  first (Roster, Edit picks, Remove this entry), then the player can be deleted if nothing else is attached.
+- **Won't delete** someone with a login linked. Unlink it first, or use Inactive.
+
 ### End of season
 
 There is nothing to copy over. Players, logins, and history are not tied to a season. When the last week has its winner
@@ -172,7 +184,7 @@ gcloud firestore backups schedules create --project lilypad-strategy-design --da
 gcloud firestore databases update --project lilypad-strategy-design --database=db-tunaspool --delete-protection
 ```
 
-The first keeps a daily backup for a week. The second stops the database being deleted by mistake.
+The first keeps a daily backup for a week: that is what would bring back a player or an entry deleted by mistake. The second only stops the whole database being deleted, not single records.
 
 ### Emulators in Codespaces
 Rules tests (`npm run test:rules`) run entirely inside the Codespace. Pointing the *browser* app at the emulators

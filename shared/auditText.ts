@@ -138,6 +138,9 @@ export function describeAudit(record: AuditRecord, names: Names, myUid?: string)
       what = `Merged ${player} into ${(into && names(into)) || text(after, 'intoDisplayName') || 'another player'}`;
       break;
     }
+    case 'player.delete':
+      what = `Deleted ${player} from the roster`;
+      break;
     case 'player.guestMoved':
       what = `Moved ${player}'s guest picks to their account`;
       break;

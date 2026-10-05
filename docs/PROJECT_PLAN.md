@@ -261,6 +261,7 @@ All eleven sprints are built and released. What that does and does not mean:
 - **Group payments** (one payment covering several entries, PERSONAS Spec Impact Log #2), revisit if marking entries one at a time becomes a chore (D-043).
 - **Payout method** per winner (cash pickup, e-Transfer, other, PERSONAS #4), beyond the Payout sent toggle (D-042).
 - **Hall of Fame** (all-time most weekly wins, highest average, most perfect weeks, most weeks played). Reconsider at Sprint 10, once a full season of data exists. No streak records (D-023). Run "largest pot won" through the Responsible-Play check before including it.
+- **Privacy wipe** for a player who has history and asks to be removed: keep their results but remove name, phone, email, and note, and show "Former player". The name is copied into entries, winner banners, and standings, so it is a job of its own (D-094).
 - Charts for the admin statistics (participation graph, pot history graph). Sprint 7 ships tables.
 
 ### Considered and rejected

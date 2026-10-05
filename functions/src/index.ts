@@ -19,6 +19,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '../../shared/config';
 import type { Game, WeekStatus } from '../../shared/types';
 import { deleteEntry, upsertEntry } from './adminEntries';
+import { deletePlayer, inspectPlayerDelete } from './players';
 import { createRateLimit, tidyClientError } from './clientErrors';
 import { auditInTransaction } from './audit';
 import {
@@ -237,6 +238,19 @@ export const adminDeleteEntry = onCall(async (req) => {
     year: requireId(req.data?.year, 'year'),
     weekId: requireId(req.data?.weekId, 'weekId'),
     playerId: requireId(req.data?.playerId, 'playerId'),
+    reason: req.data?.reason,
+    actorUid: req.auth!.uid,
+  });
+});
+
+// ---- adminDeletePlayer (D-094): delete a player who has no history, with a typed reason ----
+// `dryRun: true` only answers "can this player be deleted, and if not, why not?" for the screen.
+export const adminDeletePlayer = onCall(async (req) => {
+  requireAdmin(req);
+  const playerId = requireId(req.data?.playerId, 'playerId');
+  if (req.data?.dryRun === true) return inspectPlayerDelete(db, playerId);
+  return deletePlayer(db, {
+    playerId,
     reason: req.data?.reason,
     actorUid: req.auth!.uid,
   });
