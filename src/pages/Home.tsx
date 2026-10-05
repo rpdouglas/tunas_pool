@@ -22,7 +22,7 @@ export default function Home() {
   const current = useCurrentWeek(year);
   const week = current.data ?? null;
   const mine = useMyEntry(year, week?.id, session.user?.uid);
-  const lastWinner = useLastWinner(year).data ?? null;
+  const lastWinner = useLastWinner(year, Boolean(session.user)).data ?? null;
 
   const open = Boolean(week && week.status === 'open' && Date.now() < week.lockAtMs);
   const entry = mine.data?.entry ?? null;
