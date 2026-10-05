@@ -9,15 +9,15 @@ ADR-style log. Add an entry for every non-obvious decision. Status: **Accepted**
 | D-003 | 2026-10-04 | Audited admin actions go through callable Cloud Functions; clients never write `paymentStatus`, `claimedByUid`, `revealed`, standings, or auditLog | Accepted |
 | D-004 | 2026-10-04 | Every claim requires admin approval in v1 (no auto-claim) | Accepted |
 | D-005 | 2026-10-04 | Design palette is Baltimore Ravens (purple `#241773`, black, gold, red for urgency only) on the paper sheet's layout language | Accepted |
-| D-006 | 2026-10-04 | Use brighter UI gold `#D9AF26` (black text) for buttons; official gold `#9E7C0C` only for large text and graphics (3.9:1 on white) | Provisional |
-| D-007 | 2026-10-04 | Fonts: Alfa Slab One (wordmark), Barlow Condensed (headings), Barlow (body), self-hosted via Fontsource | Provisional (confirm vs original artwork) |
-| D-008 | 2026-10-04 | Tied NFL game: no one gets a win | Provisional |
-| D-009 | 2026-10-04 | Only paid entries are eligible to win | Provisional |
-| D-010 | 2026-10-04 | Tiebreaker among entries at or above the MNF total: lowest prediction wins | Provisional (confirm against how the pool has been run) |
-| D-011 | 2026-10-04 | Default lock time Saturday 11:59 PM America/Toronto, editable per week | Provisional |
-| D-012 | 2026-10-04 | Cloud Functions region `northamerica-northeast1` (Montreal). ~~Create Firestore in Montreal or Toronto~~: superseded by D-016 | Provisional (revisit region, see D-016) |
+| D-006 | 2026-10-04 | Use brighter UI gold `#D9AF26` (black text) for buttons; official gold `#9E7C0C` only for large text and graphics (3.9:1 on white) | Accepted (confirmed 2026-10-05) |
+| D-007 | 2026-10-04 | Fonts: Alfa Slab One (wordmark), Barlow Condensed (headings), Barlow (body), self-hosted via Fontsource | Accepted (confirmed 2026-10-05) |
+| D-008 | 2026-10-04 | Tied NFL game: no one gets a win | Accepted (confirmed 2026-10-05) |
+| D-009 | 2026-10-04 | Only paid entries are eligible to win | Accepted (confirmed 2026-10-05) |
+| D-010 | 2026-10-04 | Tiebreaker among entries at or above the MNF total: lowest prediction wins | Accepted (confirmed 2026-10-05) |
+| D-011 | 2026-10-04 | Default lock time Saturday 11:59 PM America/Toronto, editable per week | Accepted (confirmed 2026-10-05) |
+| D-012 | 2026-10-04 | Cloud Functions region `northamerica-northeast1` (Montreal). ~~Create Firestore in Montreal or Toronto~~: superseded by D-016 | Superseded by D-028 |
 | D-013 | 2026-10-04 | Local emulators use the `demo-tunas-pool` project id so no real Firebase login is needed for dev and tests | Accepted |
-| D-014 | 2026-10-04 | Ravens red `#C60C30` kept for urgency and errors only; revisit if the commissioner prefers purple, black, and gold only | Provisional |
+| D-014 | 2026-10-04 | Ravens red `#C60C30` kept for urgency and errors only; revisit if the commissioner prefers purple, black, and gold only | Accepted (confirmed 2026-10-05) |
 | D-015 | 2026-10-04 | Production runs in the existing, shared Firebase project `lilypad-strategy-design` (alias `prod`) rather than a dedicated one. The pool is isolated by its own Hosting site `tunaspool` and its own named Firestore database `db-tunaspool`, both pinned in `firebase.json`. Auth users, custom claims (including `admin`), and the default Storage bucket are shared with the project's other apps; Ryan accepted this. The functions codebase is named `tunaspool` so deploys cannot prune other apps' functions | Accepted |
 | D-016 | 2026-10-04 | Firestore database `db-tunaspool` was created in `nam5` (US multi-region), not Montreal or Toronto as D-012 planned. Location cannot be changed without recreating the database. Player data is therefore stored in the US | Accepted as built (confirm residency is acceptable) |
 | D-017 | 2026-10-04 | Soft-launch domain is the Firebase default `https://tunaspool.web.app` (PROJECT_PLAN §7 item 8) | Accepted |
@@ -31,10 +31,11 @@ ADR-style log. Add an entry for every non-obvious decision. Status: **Accepted**
 | D-025 | 2026-10-05 | The pot and entry count shown to players come from function-written `entryCount` and `paidCount` on the week doc, not from players counting entries. This keeps working if payment status is later hidden from other players (PERSONAS Spec Impact Log #1) | Accepted |
 | D-026 | 2026-10-05 | Confirmation code is derived, not stored: a short hash of year, week, `playerId`, and `picksSubmittedAt` (DATA_MODEL §10). No schema change; Sprint 2 adds the rule that `picksSubmittedAt == request.time` so the time behind it is server time | Accepted |
 | D-027 | 2026-10-05 | Reminders: the main path is an admin list of who hasn't entered or paid, with tap-to-text. The automatic email goes only to non-entrants with an email on file. Payment nudges are always admin-triggered | Accepted |
+| D-028 | 2026-10-05 | All Cloud Functions (callables, triggers, schedules) run in `us-central1`. Firestore triggers must run where the database lives, and `db-tunaspool` is in `nam5`; keeping callables there too means one region and no cross-border hop for reads. The value lives in `FUNCTIONS_REGION` (`shared/config.ts`), imported by both the functions and the web app. Supersedes D-012 | Accepted |
+| D-029 | 2026-10-05 | Paper-sheet photos go in a dedicated Storage bucket for the pool, with its own rules, created in Sprint 4. The shared default bucket is never used or deployed to (D-015) | Accepted |
+| D-030 | 2026-10-05 | CI runs axe (WCAG 2.2 AA), a brand-font load check, and a no-horizontal-scroll check against `/styleguide` at 375px and desktop, using Playwright on a production build with `VITE_ENABLE_STYLEGUIDE=true` (`npm run test:a11y`) | Accepted |
 
 ## Open (no default yet)
-- Functions region now that Firestore is in `nam5`: stay in Montreal (D-012) or move to a US region next to the data. Must be settled before the first Firestore trigger is written, since a trigger's region is tied to the database location
-- Storage in the shared project: `storage.rules` ends in deny-all and would replace the rules on the shared default bucket. Use a dedicated bucket for paper-sheet photos, or merge rules with the other apps. Do not deploy `storage` until decided
 - Legal and regulatory check for running the pool (blocks public launch)
 - e-Transfer address for `config/pool`
 - How US-side players pay and receive winnings (see docs/PERSONAS.md §6)

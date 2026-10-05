@@ -15,6 +15,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"shared/**/*.ts\" \"tests/**/*.ts\" \"functions/src/**/*.ts\" \"scripts/**/*.ts\"",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:a11y": "playwright test",
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-tunas-pool \"vitest run -c vitest.rules.config.ts\"",
     "emulators": "firebase emulators:start --project demo-tunas-pool --import=.emulator-data --export-on-exit",
     "functions:build": "npm --prefix functions run build",
@@ -33,8 +34,10 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^9.39.5",
     "@firebase/rules-unit-testing": "^5.0.2",
+    "@playwright/test": "^1.63.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

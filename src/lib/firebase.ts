@@ -3,9 +3,7 @@ import { connectAuthEmulator, getAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
 import { connectStorageEmulator, getStorage } from 'firebase/storage';
-import { FIRESTORE_DATABASE_ID } from '@shared/config';
-
-export const FUNCTIONS_REGION = 'northamerica-northeast1';
+import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '@shared/config';
 
 const app = initializeApp({
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,

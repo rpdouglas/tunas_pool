@@ -24,3 +24,8 @@ firestore-debug.log
 
 # drop folder used by scaffold.sh
 _drop
+
+# playwright
+dist-a11y
+test-results
+playwright-report

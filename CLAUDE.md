@@ -78,6 +78,7 @@ npm run dev            # Vite dev server
 npm run emulators      # firebase emulators:start (auth, firestore, functions, storage)
 npm run test           # Vitest
 npm run test:rules     # rules unit tests (emulator)
+npm run test:a11y      # axe, fonts, and 375px checks on /styleguide (Playwright)
 npm run typecheck      # tsc --noEmit across web + functions
 npm run build          # production build
 firebase deploy --project prod --only hosting,firestore:rules,functions

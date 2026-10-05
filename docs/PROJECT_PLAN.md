@@ -90,6 +90,7 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 - Results screen: tap the winner per game (including "tie"), enter the MNF total.
 - `adminEnterResults`, `onResultsWritten` (per-entry wins), and `adminPublishWinner` implementing the scoring and tiebreaker in `DATA_MODEL.md` §7.
 - Winner banner and a payout-sent toggle.
+- Add functions to the CI `deploy` job once they do real work, and grant the deploy service account the roles functions deploys need. Region `us-central1` (D-028).
 - Unit tests for the scoring and tiebreaker, including the paper-sheet example (actual 46: 58 wins over 45), the all-below case, and a split pot.
 
 **Acceptance (Phase 1 gate):** Run a full mock week end to end in the emulator and then in a staging project: 10 or more mixed players, payments confirmed, results entered, winner published with the correct tiebreaker outcome. Admin can do the whole weekly job from a phone.
@@ -101,6 +102,7 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 - "Entering for someone" mode reusing the same entry form, with paper-sheet game order.
 - Per-week roster status: entered or not yet.
 - Source tag (paper, text, phone) and optional paper photo upload to Storage.
+- Create the pool's dedicated Storage bucket, point `firebase.json` and the web config at it, and deploy `storage.rules` to that bucket only (D-029). Never the shared default bucket.
 - `adminUpsertEntry` (while open) and `adminLateOverride` (after lock, reason required, visible badge on the entry).
 - Mark Paid in the same flow when cash is handed over.
 - `adminDeleteEntry` with a reason.
@@ -198,16 +200,16 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 Defaults are in bold. Do not guess. Confirm with Ryan, or apply the default and log it in `DECISIONS.md`.
 
 1. **Legal and regulatory check.** Confirm the rules that apply to running a pool with entry fees, especially if payouts are 100% of fees. *Owner: Ryan, ideally with a lawyer. Block the public launch until done.*
-2. **Tie game result.** A tied NFL game has no winner. Options: **no one gets a win**, everyone gets a win, or a half win. Affects scoring.
-3. **Unpaid entries eligible to win?** **No**, only paid entries are eligible. Alternatively, allow ranking but require payment before payout.
-4. **Tiebreaker among entries that met or exceeded the total.** **Lowest qualifying prediction (closest) wins.** This matches the paper sheet's example. Please confirm.
-5. **Default lock time.** **Saturday 11:59 PM America/Toronto**, editable per week. Games and the London early kickoff on Sunday are covered by this.
+2. **Tie game result.** A tied NFL game has no winner. Options: **no one gets a win**, everyone gets a win, or a half win. Affects scoring. *Decided (D-008): no one gets a win.*
+3. **Unpaid entries eligible to win?** **No**, only paid entries are eligible. Alternatively, allow ranking but require payment before payout. *Decided (D-009): no.*
+4. **Tiebreaker among entries that met or exceeded the total.** **Lowest qualifying prediction (closest) wins.** This matches the paper sheet's example. Please confirm. *Decided (D-010): lowest qualifying prediction.*
+5. **Default lock time.** **Saturday 11:59 PM America/Toronto**, editable per week. Games and the London early kickoff on Sunday are covered by this. *Decided (D-011).*
 6. **e-Transfer email, instructions, and contact email** for `config/pool`. Pull from the paper sheet (`tunasweeklypool2026@yahoo.com` is the contact), but confirm the e-Transfer address.
 7. **Season standings eligibility.** **Players with a claimed or admin-roster profile.** Guest-only players are weekly only.
 8. **Pool name and domain.** "Tunas Weekly Football Pool Pick 'Em" in the UI. Choose a domain or use the Firebase default at soft launch. *Decided (D-017): soft launch on `https://tunaspool.web.app`.*
 9. **Mascot and artwork.** **Use Tuna recolored to the Ravens palette (purple, black, gold) with all NFL marks removed.** Ask the artwork source for vector or layered originals. See `DESIGN_SYSTEM.md` §10 and §12. Needed by Sprint 2.
-11. **Ravens palette details.** **Use the brighter UI gold `#D9AF26` for buttons** (the official `#9E7C0C` fails contrast), and keep Ravens red `#C60C30` for urgency and errors only. See `DESIGN_SYSTEM.md` §1.2 and §12.
-10. **Typefaces.** **Alfa Slab One, Barlow Condensed, and Barlow** as the closest open match to the sheet. Confirm against the original artwork. Swapping fonts is a token change only.
+11. **Ravens palette details.** **Use the brighter UI gold `#D9AF26` for buttons** (the official `#9E7C0C` fails contrast), and keep Ravens red `#C60C30` for urgency and errors only. See `DESIGN_SYSTEM.md` §1.2 and §12. *Decided (D-006, D-014).*
+10. **Typefaces.** **Alfa Slab One, Barlow Condensed, and Barlow** as the closest open match to the sheet. Confirm against the original artwork. Swapping fonts is a token change only. *Decided (D-007).*
 
 ## 8. Parked (post-v1 ideas)
 
