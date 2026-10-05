@@ -24,8 +24,10 @@ The commissioner keeps a roster of the people who play on paper, by text, or by 
 - [x] Styleguide entries for PickRow, PhotoField, and the roster row; `test:a11y` passes (18 checks)
 - [x] Emulator end-to-end at 375px (`npm run test:e2e:paper-entry`, 40 checks). `test:e2e:emulator` still passes
 - [x] Docs: DATA_MODEL §3.6 and §5, FIRESTORE_RULES (rules, Storage, rows 40 to 43), DESIGN_SYSTEM §6, DECISIONS D-054 to D-059, README, CLAUDE.md
-- [x] Production: the `tunaspool-paper-sheets` bucket is created (US multi-region, uniform access), added to Firebase, and has `storage.rules` deployed to it (2026-10-05, with Ryan's go-ahead; the release matches the file). A real upload from the live site has not been tried yet: it needs the Sprint 4 screens deployed
-- [ ] Production: the three new callables need a functions deploy. The merge triggers the automatic one, which has not yet succeeded in CI (see Sprint 3); if it fails, run the manual **Deploy functions** workflow. Until they are deployed, saving an entry on the new screens answers "not implemented yet"
+- [x] Production: the `tunaspool-paper-sheets` bucket is created (US multi-region, uniform access), added to Firebase, and has `storage.rules` deployed to it (2026-10-05, with Ryan's go-ahead; the release matches the file)
+- [x] Production: the three new callables are deployed. The merge of PR #19 ran the automatic functions deploy, and it succeeded (2026-10-05)
+- [x] Live check by Ryan (2026-10-05): a paper sheet entered on the live site saved with all 14 picks, an `entry.adminUpsert` audit entry, and a photo in the bucket (242 KB after shrinking on the phone)
+- [ ] Remove the live check's entry: it is in the real season (`2026` week 1) under the made-up player `seedtest-13`. Use "Remove this entry" on the entry screen, before running `admin:seed-test-week -- 2026-test --remove-players`, which deletes the profile but not the entry
 - [ ] Confirm the provisional decisions D-054 to D-058 with the commissioner
 - [ ] The acceptance's "about a minute" with a real sheet and a real thumb (the scripted run takes about 8 seconds: 15 taps, one field, one payment tap, one photo)
 
@@ -33,7 +35,6 @@ The commissioner keeps a roster of the people who play on paper, by text, or by 
 Admin transcribes a full paper sheet in about a minute and marks it paid. Late override requires a reason and appears in the audit log and entry badge.
 
 ## Notes / learned
-- Merging this sprint releases the screens and the rules, and triggers the functions deploy.
 - The Storage emulator refuses a bare `bucket` in `firebase.json` ("Must supply 'target' in Storage configuration"), so the bucket is a deploy target mapped in `.firebaserc` for both the demo project and production (D-058).
 - The public entry document carries `source` and `paperPhotoPath`, so any signed-in player could read how an entry came in and the photo's path, though never the photo itself (Storage rules) and no screen shows either. That is the Sprint 0 schema, unchanged here. If the path should be private too, move it to an admin-only document.
 - The first browser run caught two 375px overflows that typecheck and the unit tests could not: a fifth Back Office tab pushed "Settings" off the screen, and "Commanders" pushed a pick button out of its column. The tabs are now tighter and wrap; pick rows let a long name wrap.
@@ -69,7 +70,7 @@ The commissioner can run the whole weekly job from a phone: see who has entered 
 - [x] Functions: `adminSetPayment`, `adminListEntries`, `lockWeeks`, `onEntryWritten` and `onPaymentWritten` (week counters), `adminEnterResults`, `onResultsWritten`, `adminPreviewWinner`, `adminPublishWinner`, `adminMarkPayout`. Decisions live in small modules that take the database as a parameter; 13 integration tests run them against the Firestore emulator
 - [x] Back Office: payments queue as the home screen (filters, search, live pot, duplicate flags, undo), Toast, results screen, winner banner, payout toggle. All new components are in `/styleguide`
 - [x] Player home gains the pot and the number of players in
-- [x] CI: functions deploy after the site deploy when `functions/`, `shared/`, or `firebase.json` changed (D-041). Not yet proven: the step failed on the #12 and #14 merges ("We failed to modify the IAM policy for the project"), the manual workflow then succeeded with the same credentials, and no merge has triggered the automatic step since
+- [x] CI: functions deploy after the site deploy when `functions/`, `shared/`, or `firebase.json` changed (D-041). It failed on the #12 and #14 merges ("We failed to modify the IAM policy for the project"), worked from the manual workflow, and first succeeded on its own with the Sprint 4 merge (PR #19, 2026-10-05)
 - [x] Mock week in the emulator with 12 players, an independent check of the winner, and the paper-sheet tiebreak case (`npm run test:e2e:mock-week`, 42 checks at 375px)
 - [ ] Production test run in a separate `2026-test` season, then removed with `npm run admin:delete-season -- 2026-test` (D-044), after the functions are deployed (Ryan; steps in the README)
 - [x] Ops carried from Sprint 1 and 2: service-account roles, first functions deploy, admin claim, save Pool settings once (Ryan). Checked against production on 2026-10-05: all 21 functions active (manual **Deploy functions** run from `efbad0d`), `lockWeeks` firing every minute, rules and indexes match the repo, one admin claim, `config/pool` saved
