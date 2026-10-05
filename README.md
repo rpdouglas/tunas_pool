@@ -50,7 +50,13 @@ Firestore database (`db-tunaspool`, location `nam5`). Both are pinned in `fireba
 5. Cloud Functions and the scheduler need the Blaze (pay-as-you-go) plan.
 6. Grant admin: `GCLOUD_PROJECT=lilypad-strategy-design npm run admin:claim -- <uid>`.
 
-Because the project is shared: always pass `--project prod` with an explicit `--only` list, and do not deploy
+**Deploys are automatic.** Every push to `main` that passes CI deploys Hosting, Firestore rules, and Firestore
+indexes (the `deploy` job in `.github/workflows/ci.yml`). It authenticates with the `FIREBASE_SERVICE_ACCOUNT`
+repo secret (a service-account key) and builds with web config fetched by `scripts/write-web-env.mjs`, so no env
+file is committed. Indexes on `db-tunaspool` that are not in `firestore.indexes.json` are deleted. Functions and
+Storage are still deployed by hand.
+
+For manual deploys, because the project is shared: always pass `--project prod` with an explicit `--only` list, and do not deploy
 `storage` (it would replace the rules on the bucket other apps use) until that is sorted out.
 
 ### Emulators in Codespaces
