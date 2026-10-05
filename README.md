@@ -106,6 +106,23 @@ goes through the real screens. Its made-up player profiles live outside the seas
 
 For manual deploys, because the project is shared: always pass `--project prod` with an explicit `--only` list.
 
+If CI cannot deploy (it happened on 2026-10-05, when GitHub dropped the runs), the same release can be made by hand from
+`main`. The production build must not pick up `.env.local`, so write the production settings first:
+
+```bash
+npm run typecheck && npm test
+npx firebase apps:sdkconfig WEB 1:793264910505:web:fcee5faedc9853eebdf9b8 --project prod --json   # the values for .env.production.local
+# write .env.production.local with those values, VITE_USE_EMULATORS=false, VITE_ENABLE_STYLEGUIDE=false
+npm run build
+grep -l 'lilypad-strategy-design' dist/assets/*.js   # must list a file
+grep -l '127.0.0.1:9099' dist/assets/*.js            # must list nothing
+npx firebase deploy --project prod --only hosting,firestore:rules,firestore:indexes --non-interactive --force
+npx firebase deploy --project prod --only functions:tunaspool --non-interactive --force
+rm .env.production.local
+```
+
+`scripts/write-web-env.mjs` does the settings step in CI, but it is refused for a personal login.
+
 **Paper-sheet photos (D-029, D-058).** Photos of paper sheets go in the pool's own bucket, `tunaspool-paper-sheets`,
 never the project's default bucket, which other apps use. `firebase.json` names the deploy target `paperSheets` and
 `.firebaserc` maps it to that bucket, so a Storage deploy can only reach it. Setting it up is a one-time manual job,

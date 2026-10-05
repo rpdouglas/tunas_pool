@@ -224,7 +224,7 @@ All eleven sprints are built and released. What that does and does not mean:
 - No real week is final. Weeks 1 to 4 are backfilled with games and results but no entries; week 5 is open with three entries.
 - The Sprint 7 acceptance (standings against a hand-kept spreadsheet for three real weeks) cannot be run until those weeks are entered and published.
 - Never tried on a real device: Google sign-in after the Sprint 9 change, the paper sheet on paper, a reminder text link, the pool inside Facebook or Messenger.
-- Performance is 68 to 82 on Lighthouse mobile, not the 90 the plan asks for.
+- Performance is 74 to 78 on Lighthouse mobile (three runs on the live site), not the 90 the plan asks for. Accessibility is 100.
 
 **Carried over, each waiting on something outside the code:**
 - Saturday reminder email (needs a mail service, D-079).
@@ -245,7 +245,7 @@ All eleven sprints are built and released. What that does and does not mean:
 4. **Confirm or change the provisional decisions**, the money and fairness ones first.
 5. **Try the device checks:** Google sign-in, print a sheet, a reminder text, an in-app browser.
 6. **The legal check**, before the pool is opened beyond the people who already play.
-7. **Performance to 90:** the Firestore SDK is the largest download. The lighter SDK on the player's first screen is the next step.
+7. **Performance to 90:** it is at 74 to 78. The page no longer jumps and paints early; what is left is the wait for the app's code and first data. The Firestore SDK is the largest download, so the lighter SDK on the player's first screen is the next step, along with keeping the first-paint wordmark in place when the app starts instead of redrawing it.
 8. **Reminder email**, once a mail service is chosen.
 9. **Counter role for Devon**, if the commissioner wants to delegate.
 10. **A wide picks grid** for the counter or a printout, if the two lists are not enough (D-067).

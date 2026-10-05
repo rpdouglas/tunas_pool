@@ -103,7 +103,7 @@ Everything above marked **Provisional** was decided so the work could go on, and
 
 - **Money and fairness, worth a real look:** D-054 (late entries stop at Final), D-055 (a paid entry can't be removed), D-062 (no merge when both entered a week), D-068 (a correction that changes the winner clears "payout sent"), D-069 (the players' leaderboard does not show who is paid, so its top name can differ from the winner), D-071 (backfilled weeks take sheets with no late badge), D-073 (guests are left off the season standings).
 - **How things work, easy to change later:** D-056 (blank games on a paper sheet), D-057 (roster edits are not audited), D-060 (a claim needs a saved account), D-063, D-064, D-065 (claim details), D-067 (two lists, not a grid), D-070, D-075 (how standings rank), D-078 (reminders by text link), D-080 (no QR code on the sheet), D-083 (Google sign-in by popup), D-090 (rollover).
-- **Needs something set up or tried, not just a yes:** D-058 (the Storage bucket: done, a live upload worked), D-079 (reminder email needs a mail service), D-084 (performance is at 68 to 82, target 90), D-086 (see an error arrive in the logs), D-088 (try the pool inside Facebook and Messenger), D-089 (turn on database backups and delete protection).
+- **Needs something set up or tried, not just a yes:** D-058 (the Storage bucket: done, a live upload worked), D-079 (reminder email needs a mail service), D-084 (performance is at 74 to 78, target 90), D-086 (see an error arrive in the logs), D-088 (try the pool inside Facebook and Messenger), D-089 (turn on database backups and delete protection).
 - **Still open from before:** D-037 (the age wording, with the legal check below).
 
 ## Open (no default yet)
