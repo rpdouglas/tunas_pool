@@ -239,6 +239,84 @@
   .progress-track { height: 0.5rem; border-radius: var(--radius-pill); background: rgb(var(--purple-100)); overflow: hidden; }
   .progress-fill  { height: 100%; background: rgb(var(--gold-400)); transition: width var(--dur-state) var(--ease-out); }
 
+  /* ---- Player menu: top bar and slide-in drawer (D-092) ------------------ */
+  .app-bar-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: var(--touch-min);
+    padding: 0 1rem;
+    border: 2px solid rgb(var(--gold-400));
+    border-radius: var(--radius-md);
+    background: rgb(var(--purple-900) / 0.85);
+    color: rgb(var(--text-on-dark));
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .app-avatar {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--touch-min);
+    height: var(--touch-min);
+    border-radius: var(--radius-pill);
+    background: rgb(var(--gold-400));
+    color: rgb(var(--action-primary-text));
+    font-family: var(--font-heading);
+    font-size: 1.125rem;
+    font-weight: 800;
+  }
+  .app-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--touch-min);
+    min-height: var(--touch-min);
+    border-radius: var(--radius-md);
+    color: rgb(var(--text-on-dark));
+  }
+  .app-drawer {
+    margin: 0;
+    padding: 0;
+    width: min(88vw, 22rem);
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border: 0;
+    border-right: 3px solid rgb(var(--gold-400));
+    background: rgb(var(--purple-900));
+    color: rgb(var(--text-on-dark));
+    overflow-y: auto;
+  }
+  .app-drawer::backdrop { background: rgb(var(--black) / 0.65); }
+  .app-drawer[open] { animation: app-drawer-in 160ms ease-out; }
+  @keyframes app-drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .app-drawer[open] { animation: none; } }
+  .app-drawer-body { padding: 1rem 1rem 2rem; }
+  .app-drawer-divider {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgb(var(--purple-500));
+  }
+  .app-drawer-row {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: var(--touch-min);
+    padding: 0.5rem 0.75rem;
+    border: 1px solid rgb(var(--purple-500));
+    border-radius: var(--radius-md);
+    background: rgb(var(--purple-950));
+    color: rgb(var(--text-on-dark));
+    font-size: 1.125rem;
+  }
+  .app-drawer-row:hover { background: rgb(var(--purple-800)); }
+
   /* ---- Status badge ------------------------------------------------------ */
   .badge {
     display: inline-flex; align-items: center; gap: 0.3rem;

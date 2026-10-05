@@ -208,7 +208,8 @@ try {
   await guest.goto(APP);
   const anon = await waitForUser(guest);
   check('C1 a visitor is signed in as a guest without seeing anything', anon?.isAnonymous === true);
-  await guest.getByRole('link', { name: /Played on another phone/ }).click();
+  await guest.getByRole('button', { name: 'Menu' }).click();
+  await guest.getByRole('link', { name: 'Sign in to save your picks' }).click();
   await guest.getByLabel('Email').fill('dale@tunas.test');
   await guest.getByRole('button', { name: 'Email me a link' }).click();
   await guest.getByText('Check your email').waitFor();
