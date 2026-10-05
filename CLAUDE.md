@@ -92,7 +92,8 @@ Deployment targets (see `DECISIONS.md` D-015):
 | Firestore database | `db-tunaspool` (named, location `nam5`). Never `(default)`. |
 | Local and CI | `demo-tunas-pool` (emulator only, the `.firebaserc` default) |
 
-- Always pass `--project prod` and an explicit `--only` list. Never run a bare `firebase deploy`.
+- **Merging to `main` deploys to production.** After CI passes, the `deploy` job in `.github/workflows/ci.yml` releases Hosting, Firestore rules, and Firestore indexes (`DECISIONS.md` D-019). Treat every merge, and every rules change in particular, as a release. Functions and Storage are not automated.
+- For a manual deploy, always pass `--project prod` and an explicit `--only` list. Never run a bare `firebase deploy`.
 - Never deploy `storage` or anything targeting the `(default)` database without asking Ryan: those are shared with other apps in the project.
 - Get every Firestore handle with `FIRESTORE_DATABASE_ID` from `shared/config.ts`.
 

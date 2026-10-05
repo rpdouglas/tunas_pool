@@ -22,6 +22,7 @@ ADR-style log. Add an entry for every non-obvious decision. Status: **Accepted**
 | D-016 | 2026-10-04 | Firestore database `db-tunaspool` was created in `nam5` (US multi-region), not Montreal or Toronto as D-012 planned. Location cannot be changed without recreating the database. Player data is therefore stored in the US | Accepted as built (confirm residency is acceptable) |
 | D-017 | 2026-10-04 | Soft-launch domain is the Firebase default `https://tunaspool.web.app` (PROJECT_PLAN §7 item 8) | Accepted |
 | D-018 | 2026-10-04 | All code reaches Firestore through `FIRESTORE_DATABASE_ID` in `shared/config.ts`; bare `getFirestore()` is not allowed because `(default)` belongs to other apps | Accepted |
+| D-019 | 2026-10-05 | Continuous deployment: a push to `main` that passes CI deploys Hosting, Firestore rules, and Firestore indexes to production (`deploy` job in `ci.yml`, service-account key in the `FIREBASE_SERVICE_ACCOUNT` secret). `--force` makes `firestore.indexes.json` the source of truth for `db-tunaspool`. Functions are left out until they are implemented (16 stubs and a per-minute no-op today); Storage is left out because the bucket is shared (D-015) | Accepted |
 
 ## Open (no default yet)
 - Functions region now that Firestore is in `nam5`: stay in Montreal (D-012) or move to a US region next to the data. Must be settled before the first Firestore trigger is written, since a trigger's region is tied to the database location

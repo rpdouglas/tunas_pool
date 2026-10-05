@@ -27,3 +27,30 @@ jobs:
       - run: npm test
       - run: npm run test:rules
       - run: npm run build
+
+  # Production deploy. Runs only after `verify` passes on a push to main, never on pull requests.
+  # Targets are pinned in firebase.json / .firebaserc (site tunaspool, database db-tunaspool).
+  # Not deployed here: functions (added when they do something) and storage (the bucket is shared
+  # with other apps, see docs/DECISIONS.md D-015).
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    env:
+      FIREBASE_WEB_APP_ID: 1:793264910505:web:fcee5faedc9853eebdf9b8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - run: npm ci
+      - run: node scripts/write-web-env.mjs prod "$FIREBASE_WEB_APP_ID"
+      - run: npm run build
+      - run: npx firebase deploy --project prod --only hosting,firestore:rules,firestore:indexes --non-interactive --force

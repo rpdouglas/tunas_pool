@@ -20,6 +20,8 @@ Repo, emulators, CI, docs, rules skeleton, and the design system foundation runn
 - [x] Enable Auth providers (Anonymous, Google, Email link) and add `tunaspool.web.app` to authorized domains
 - [x] `firebase login`, add a Web app (`tunaspoolwebapp`), fill `.env.local`, deploy hello-world to Hosting (`--project prod`): live at https://tunaspool.web.app
 - [x] Deploy `firestore:rules` and `firestore:indexes` to `db-tunaspool` (verified: release `cloud.firestore/db-tunaspool`; the `(default)` release was not touched)
+- [x] Automatic deploy on merge to `main`: Hosting, Firestore rules, Firestore indexes (D-019)
+- [ ] Add functions to the deploy job once they are implemented (needs the functions region decided, and more roles on the deploy service account)
 - [ ] Decide the functions region and the Storage bucket approach for the shared project (DECISIONS.md, Open)
 - [x] Confirm `npm run test:rules` passes in the Codespace (needs Java 21+; first run downloads the emulator)
 - [ ] Add an axe accessibility check against `/styleguide` in CI
