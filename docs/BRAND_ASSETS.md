@@ -13,16 +13,16 @@ Added 2026-10-05 (supplied by Ryan, AI-generated artwork).
 |---|---|
 | **Cleared** | No third-party marks. Can be used on the site after the technical clean-up listed. |
 | **Cleared with edits** | Usable only after the named marks are removed or replaced. |
+| **Cleared by commissioner** | Ryan approved it for use (see the decision). Any risk is noted on the asset. |
 | **Blocked** | Contains league marks. Keep as reference only. Do not ship. |
-| **Needs a decision** | Commissioner call required before use. |
 
 ## Catalog
 
 | ID | File | Pixels | Status |
 |---|---|---|---|
 | BA-01 | `brand/originals/wordmark-tunas-pick-em.png` | 1536×1024 | **Cleared** (technical clean-up needed) |
-| BA-02 | `brand/originals/badge-tuna-mascot-weekly-pool.png` | 1254×1254 | **Blocked** until the NFL and Ravens marks are removed |
-| BA-03 | `brand/originals/helmet-pawn-shop-2na.png` | 1536×1024 | **Needs a decision** (sponsor logo, imagery) |
+| BA-02 | `brand/originals/badge-tuna-mascot-weekly-pool.png` | 1254×1254 | **Cleared by commissioner** (D-053, accepted risk: carries Ravens and NFL marks) |
+| BA-03 | `brand/originals/helmet-pawn-shop-2na.png` | 1536×1024 | **Cleared by commissioner** (D-053) |
 
 ### BA-01 · Wordmark lockup "TUNAS / PICK EM"
 
@@ -42,25 +42,19 @@ Added 2026-10-05 (supplied by Ryan, AI-generated artwork).
   2. **Ravens raven-head "B" logo** on the cap.
   3. **Ravens raven-head "B" logo** on the jersey chest.
   4. The cap and jersey are also Ravens uniform styling.
-- **Rule hit:** `DESIGN_SYSTEM.md` §10 and `CLAUDE.md` principle 9. The mascot is used "only recolored, with all NFL marks removed", with a neutral emblem (a "T" or fish) in their place.
-- **What is worth keeping:** the pose, sunglasses, grin, number 69, the ring layout, stars and the skyline. Those are all Tuna and the pool.
-- **Work needed (Sprint 5 design pass, `PROJECT_PLAN.md` Parked):**
-  - Replace the cap logo and chest logo with a neutral "T" or fish emblem.
-  - Delete the NFL shield.
-  - Ask for a clean re-generation or the layered original (see §10), because painting over a flattened raster usually looks poor.
-- **Until then:** reference only. Do not put it in `public/` and do not use it as an app icon, favicon or share image.
+- **Rule hit:** `DESIGN_SYSTEM.md` §10 and `CLAUDE.md` principle 9 would have blocked it. On 2026-10-05 Ryan decided all supplied logos are fine to use, so **D-053 makes this badge an approved exception**.
+- **Accepted risk (recorded once):** the Ravens raven-head and NFL shield are trademarks of third parties. The site is a private friends' pool, but a public share image or app icon is more visible than a page behind a sign-in. If anyone ever objects, the fallback is a recolored Tuna with a neutral "T" or fish emblem.
+- **Use:** home hero, About, empty states, winner banner and sharing are all fine. Favicon and app icon are better served by a simple "T" or Tuna's face cropped from it.
+- **Still needed:** the technical clean-up below (real transparency, smaller files).
 - **Note:** the ring text says "Tunas" with no apostrophe, which matches BA-01 and the site name.
 
 ### BA-03 · Football helmet "THE PAWN SHOP · 2NA"
 
 - **What it is:** purple helmet with black facemask, gold stripe, white "2NA" brush lettering, and a sponsor crest on the shell: "THE PAWN SHOP, EST. 2010" with a green cannabis leaf in place of the O, a skull in a feathered headdress, and skeleton hands.
-- **Third-party marks:** no NFL or Ravens logo. It is a generic purple helmet, so it passes §10 on league IP.
-- **Open questions for Ryan:**
-  1. **Sponsor or business use.** This is a business logo. Confirm it is yours or that the pawn shop has agreed to appear on the site.
-  2. **Cannabis leaf.** It is in the logo, so a shared public page carries it. The Responsible-Play and Welcome persona tests (`PERSONAS.md` §0) should say whether that is fine for every player, including the seniors, and for sharing with people from the US side.
-  3. **Headdress and skull.** The feathered war-bonnet and the skull are imagery some people find disrespectful or off-putting. This is a "stop and ask" item, not a ban.
-  4. **"2NA"** is not explained anywhere in the docs. Is it a team name, a league name, or a sub-pool? Tell me and I will record it.
-- **Likely use if cleared:** a "Sponsored by" footer or an About page. Not part of the core Game Day screens.
+- **Third-party marks:** no NFL or Ravens logo.
+- **Meaning:** "2NA" is a short, hip way of writing "Tuna" (Ryan, 2026-10-05).
+- **Cleared:** Ryan confirmed the crest, cannabis leaf and headdress imagery are fine (D-053).
+- **Likely use:** a "Sponsored by" footer, About page, or a fun alternate hero. Not part of the core Game Day screens.
 
 ## Technical state of all three files
 
@@ -75,12 +69,13 @@ Added 2026-10-05 (supplied by Ryan, AI-generated artwork).
 |---|---|---|
 | Sign-in and home hero | BA-01 | After background clean-up |
 | Social share image 1200×630 | BA-01 | After background clean-up |
-| Favicon and app icon | A "T" or fish mark, or Tuna's face from BA-02 | No, BA-02 must be recolored first |
-| Empty states, winner banner, 404 | Tuna (BA-02 after recolor) | No |
-| Sponsor footer or About | BA-03 | Needs Ryan's decision |
+| Favicon and app icon | Tuna's face cropped from BA-02, or a "T" | After crop and clean-up |
+| Empty states, winner banner, 404 | Tuna from BA-02 | After background clean-up |
+| Sponsor footer or About | BA-03 | After background clean-up |
 
 ## Change log
 
 | Date | Change |
 |---|---|
-| 2026-10-05 | Three originals added and cataloged. BA-02 blocked on league marks. BA-03 awaiting a decision. |
+| 2026-10-05 | Three originals added and cataloged. |
+| 2026-10-05 | Ryan cleared all three (D-053). BA-02 is an approved exception to §10. "2NA" means Tuna. |

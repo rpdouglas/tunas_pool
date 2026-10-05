@@ -56,7 +56,7 @@ Rules for docs:
 6. **Clients never write derived data.** Standings, stats, `revealed`, and the winner are written by functions only.
 7. **Admin = custom claim `admin: true`.** No separate admin login. Set the claim with a one-off script, never from client code.
 8. **Mobile first.** Design at 375px wide, thumb-reachable tap targets (min 44px), then scale up. Most players are on phones, and the admin is often at the shop counter.
-9. **No NFL logos or league IP.** Use team names and brand colors only. The site uses the Baltimore Ravens palette (purple `#241773`, black, gold, red for urgency only), defined in `src/styles/tokens.css`. The sheet's layout language is kept. The mascot is used only recolored, with all NFL marks removed. See `docs/DESIGN_SYSTEM.md` §10.
+9. **No NFL logos or league IP.** Use team names and brand colors only. The site uses the Baltimore Ravens palette (purple `#241773`, black, gold, red for urgency only), defined in `src/styles/tokens.css`. The sheet's layout language is kept. The mascot is used only recolored, with all NFL marks removed, except the artwork the commissioner cleared in `docs/BRAND_ASSETS.md` (D-053). See `docs/DESIGN_SYSTEM.md` §10.
 10. **The design system is the only source of visual decisions.** Colors, fonts, radii, and shadows come from `tokens.css` and `tailwind.preset.cjs`. No hard-coded hex values and no default Tailwind palette (it is intentionally removed). Prefer semantic utilities (`bg-surface`, `text-ink-muted`, `bg-action-primary`).
 
 ## 5. Conventions
@@ -129,4 +129,4 @@ Tracked in `docs/PROJECT_PLAN.md` §7. Do not guess on these. Ask Ryan, or use t
 
 ## 10. Out of scope for v1
 
-Multiple entries per person per week, phone OTP login, online payment processing, ESPN auto-import of scores (planned as a suggestion feature later; the schedule suggestion in week setup is in, `DECISIONS.md` D-051), push notifications, auto-claim by verified email (designed for, switched off).
+Multiple entries per person per week, phone OTP login, online payment processing, ESPN auto-import of scores (planned as a suggestion feature later; the schedule suggestion in week setup is in, `DECISIONS.md` D-053), push notifications, auto-claim by verified email (designed for, switched off).

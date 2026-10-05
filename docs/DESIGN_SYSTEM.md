@@ -268,7 +268,8 @@ Friendly, plain, a bit of football-fan warmth. Exclamation marks only in the her
 
 - **Colors are fine to use.** Team colors aren't ownable, and the pool is a fan community.
 - **Don't use Ravens, Bills, or any NFL logos, helmets, raven-head marks, or uniform marks** on the website. That includes the Ravens' raven-head logo, which would be the obvious temptation now. This is my judgment call, not legal advice.
-- **The mascot needs a recolor.** On the paper sheet Tuna wears a Bills cap and jersey with Bills logos. For the site, redraw or re-export him in **purple, black, and gold with a neutral emblem** (a "T" or fish), keeping the sunglasses, grin, number 69, and TUNA belt buckle.
+- **Exception (D-053):** the commissioner approved the supplied artwork in `docs/BRAND_ASSETS.md` as is, including the round Tuna badge with Ravens and NFL marks. The rules in this section still apply to any other artwork.
+- **The mascot needs a recolor** (unless using the approved badge). On the paper sheet Tuna wears a Bills cap and jersey with Bills logos. For the site, redraw or re-export him in **purple, black, and gold with a neutral emblem** (a "T" or fish), keeping the sunglasses, grin, number 69, and TUNA belt buckle.
 - Team names on game cards are plain text, with no logos.
 - Ask whoever produced the sheet for layered or vector originals. The file on hand is a flattened raster.
 
