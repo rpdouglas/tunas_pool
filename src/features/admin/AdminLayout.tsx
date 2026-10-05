@@ -2,10 +2,12 @@ import { signOut } from 'firebase/auth';
 import { Link, NavLink, Outlet, useSearchParams } from 'react-router-dom';
 import { auth } from '../../lib/firebase';
 import { useAuth } from '../auth/useAuth';
+import { usePendingClaimCount } from './claims/claimsData';
 
 const NAV = [
   { to: '/admin', label: 'Payments', end: true },
   { to: '/admin/roster', label: 'Roster', end: false },
+  { to: '/admin/claims', label: 'Claims', end: false },
   { to: '/admin/results', label: 'Results', end: false },
   { to: '/admin/weeks', label: 'Weeks', end: false },
   { to: '/admin/settings', label: 'Settings', end: false },
@@ -17,6 +19,7 @@ export function AdminLayout() {
   // The production test run lives in its own season (?season=2026-test): keep it while navigating.
   const season = useSearchParams()[0].get('season');
   const suffix = season ? `?season=${encodeURIComponent(season)}` : '';
+  const pendingClaims = usePendingClaimCount().data ?? 0;
 
   return (
     <div className="min-h-screen bg-page-backoffice">
@@ -41,6 +44,12 @@ export function AdminLayout() {
                 className="flex min-h-touch items-center px-2 text-body underline-offset-4 sm:px-3 aria-[current=page]:font-semibold aria-[current=page]:underline"
               >
                 {item.label}
+                {item.label === 'Claims' && pendingClaims > 0 && (
+                  <span className="badge badge-pending ml-1">
+                    {pendingClaims}
+                    <span className="sr-only"> waiting</span>
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>

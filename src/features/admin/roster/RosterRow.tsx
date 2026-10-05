@@ -32,6 +32,9 @@ export function RosterRow({ row, enterHref, late, showStatus, onEdit }: RosterRo
           <p className="flex flex-wrap items-center gap-2 font-heading text-h3">
             <span className="break-words">{row.displayName}</span>
             {!row.active && <span className="badge badge-draft">Inactive</span>}
+            {row.claimed && row.origin === 'admin' && (
+              <span className="badge badge-open">Linked</span>
+            )}
           </p>
           {showStatus && (
             <p className="flex flex-wrap items-center gap-2 text-body">

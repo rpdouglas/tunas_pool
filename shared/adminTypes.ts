@@ -67,3 +67,47 @@ export interface WeekPreview {
 }
 
 export type PublishedWinner = WinnerOutcome & { explanation: string | null };
+
+/** One pending claim as the admin sees it. Matches are worked out on demand, never stored. */
+export interface ClaimRow {
+  claimId: string;
+  claimedName: string;
+  claimedPhone: string | null;
+  requesterEmail: string | null;
+  createdAtMs: number;
+  /** The website profile this login already has, if any. Approving merges it into the match. */
+  requesterProfile: { playerId: string; displayName: string; weeksPlayed: number } | null;
+  /** Possible matches, best first. */
+  candidates: {
+    playerId: string;
+    displayName: string;
+    phone: string | null;
+    reasons: DuplicateReason[];
+    /** Already linked to a login, so it can't be approved until it is unlinked. */
+    linked: boolean;
+    active: boolean;
+    weeksPlayed: number;
+  }[];
+  /** The best match that can still be claimed, or null. */
+  suggestedPlayerId: string | null;
+  /** Another pending request points at the same suggested profile. */
+  sharedSuggestion: boolean;
+}
+
+export interface ClaimsList {
+  claims: ClaimRow[];
+}
+
+export interface ApproveClaimResult {
+  playerId: string;
+  displayName: string;
+  /** True when the claimant's website profile was merged in. A merge can't be undone. */
+  merged: boolean;
+  /** Weeks moved by the merge, as "2026/wk03". */
+  movedWeeks: string[];
+}
+
+export interface MergeResult {
+  intoId: string;
+  movedWeeks: string[];
+}

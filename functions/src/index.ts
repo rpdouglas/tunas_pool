@@ -3,7 +3,7 @@
  * Handlers here only check who is calling and validate the input; the decisions live in small
  * modules next to this file that take the database as a parameter, so they are unit tested and
  * run against the emulator in tests/functions. Every write that matters also writes auditLog
- * (CLAUDE.md principle 5). The stubs that remain (claims and merges) arrive in Sprint 5.
+ * (CLAUDE.md principle 5).
  * Shared types and scoring: import from '../../shared/...'
  * Firestore: always getFirestore(FIRESTORE_DATABASE_ID) from '../../shared/config', never the
  * bare getFirestore(). Firestore triggers must also set `database: FIRESTORE_DATABASE_ID`.
@@ -20,6 +20,14 @@ import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '../../shared/config';
 import type { Game, WeekStatus } from '../../shared/types';
 import { deleteEntry, upsertEntry } from './adminEntries';
 import { auditInTransaction } from './audit';
+import {
+  approveClaim,
+  listClaims,
+  mergePlayers,
+  rejectClaim,
+  requestClaim as requestClaimFor,
+  unlinkClaim,
+} from './claims';
 import { writeEntryRecords } from './evaluate';
 import { listEntries } from './entriesList';
 import { planGuestMove } from './guestMove';
@@ -46,13 +54,6 @@ function requireSignedIn(req: CallableRequest): void {
   }
 }
 
-function notImplemented(name: string): never {
-  throw new HttpsError(
-    'unimplemented',
-    `${name} is not implemented yet (see docs/PROJECT_PLAN.md).`,
-  );
-}
-
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 function requireId(value: unknown, name: string): string {
@@ -62,20 +63,48 @@ function requireId(value: unknown, name: string): string {
   return value;
 }
 
-const adminStub = (name: string) =>
-  onCall(async (req) => {
-    requireAdmin(req);
-    return notImplemented(name);
-  });
-
 const weekPath = (year: string, weekId: string) => `seasons/${year}/weeks/${weekId}`;
 
-// ---- Admin callables still to come (Sprint 5) --------------------------------
-export const adminListClaims = adminStub('adminListClaims');
-export const adminApproveClaim = adminStub('adminApproveClaim');
-export const adminRejectClaim = adminStub('adminRejectClaim');
-export const adminUnlinkClaim = adminStub('adminUnlinkClaim');
-export const adminMergePlayers = adminStub('adminMergePlayers');
+// ---- Claims and merges (Sprint 5) ---------------------------------------------
+export const adminListClaims = onCall(async (req) => {
+  requireAdmin(req);
+  return listClaims(db);
+});
+
+export const adminApproveClaim = onCall(async (req) => {
+  requireAdmin(req);
+  return approveClaim(db, {
+    claimId: requireId(req.data?.claimId, 'claimId'),
+    playerId: requireId(req.data?.playerId, 'playerId'),
+    actorUid: req.auth!.uid,
+  });
+});
+
+export const adminRejectClaim = onCall(async (req) => {
+  requireAdmin(req);
+  return rejectClaim(db, {
+    claimId: requireId(req.data?.claimId, 'claimId'),
+    note: req.data?.note,
+    actorUid: req.auth!.uid,
+  });
+});
+
+export const adminUnlinkClaim = onCall(async (req) => {
+  requireAdmin(req);
+  return unlinkClaim(db, {
+    playerId: requireId(req.data?.playerId, 'playerId'),
+    actorUid: req.auth!.uid,
+  });
+});
+
+export const adminMergePlayers = onCall(async (req) => {
+  requireAdmin(req);
+  return mergePlayers(db, {
+    fromId: requireId(req.data?.fromId, 'fromId'),
+    intoId: requireId(req.data?.intoId, 'intoId'),
+    actorUid: req.auth!.uid,
+  });
+});
 
 // ---- adminSetWeekStatus (Sprint 1): draft -> open, open -> draft, open -> locked ----
 export const adminSetWeekStatus = onCall(async (req) => {
@@ -297,9 +326,19 @@ export const adoptGuestProfile = onCall(async (req) => {
   });
 });
 
+/**
+ * requestClaim (Sprint 5). A player asks to be linked to the history the pool already has for them.
+ * The answer is the same whoever they name. Rate limited, and it needs a saved account (D-060).
+ */
 export const requestClaim = onCall(async (req) => {
   requireSignedIn(req);
-  return notImplemented('requestClaim');
+  return requestClaimFor(db, {
+    uid: req.auth!.uid,
+    email: req.auth!.token.email ?? null,
+    isGuest: req.auth!.token.firebase?.sign_in_provider === 'anonymous',
+    data: req.data,
+    nowMs: Date.now(),
+  });
 });
 
 // ---- Firestore triggers (Sprint 3) -------------------------------------------

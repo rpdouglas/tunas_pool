@@ -25,6 +25,8 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 
 ## Scripts
 
+The four `test:e2e:*` browser flows are parked (D-066): they are not part of finishing a task, and they need more memory than a Codespace reliably has. Run them only when wanted.
+
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Vite dev server |
@@ -37,6 +39,7 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm run test:e2e:emulator` | Browser run of the sign-in, week-setup, and entry flows against running emulators (steps in `scripts/e2e-emulator.mjs`) |
 | `npm run test:e2e:mock-week` | The Phase 1 gate in a browser: 12 players, payments, results, winner, payout (needs the Functions emulator; see `scripts/e2e-mock-week.mjs`) |
 | `npm run test:e2e:paper-entry` | Sprint 4 in a browser: roster, a full paper sheet with a photo, blanks, edit, remove, and a late entry (needs the Functions and Storage emulators; see `scripts/e2e-paper-entry.mjs`) |
+| `npm run test:e2e:claims` | Sprint 5 in a browser: ask to link, approve, history, unlink, reject, merge (needs the Functions emulator; see `scripts/e2e-claims.mjs`) |
 | `npm run emulators` | Firebase emulators (Auth, Firestore, Functions, Hosting, Storage, UI) |
 | `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs a project and credentials, see step 6 below) |
 

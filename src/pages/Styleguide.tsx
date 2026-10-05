@@ -11,11 +11,12 @@ import { WordmarkLockup } from '../components/ui/WordmarkLockup';
 import { WinnerBanner } from '../components/ui/WinnerBanner';
 import { useToast } from '../components/ui/toastContext';
 import { PaymentRow } from '../features/admin/payments/PaymentRow';
+import { ClaimCard } from '../features/admin/claims/ClaimCard';
 import { RosterRow } from '../features/admin/roster/RosterRow';
 import type { RosterRow as RosterRowData } from '../features/admin/roster/roster';
 import { PhotoField } from '../components/ui/PhotoField';
 import { PickRow } from '../components/ui/PickRow';
-import type { EntryRow } from '@shared/adminTypes';
+import type { ClaimRow, EntryRow } from '@shared/adminTypes';
 import type { WeekWinner } from '@shared/types';
 import { Field } from '../components/ui/Field';
 import { GameCard } from '../components/ui/GameCard';
@@ -52,6 +53,37 @@ const SAMPLE_ROSTER: RosterRowData = {
   origin: 'admin',
   claimed: false,
   entry: null,
+};
+
+const SAMPLE_CLAIM: ClaimRow = {
+  claimId: 'c1',
+  claimedName: 'Rosalie M.',
+  claimedPhone: '+16135550144',
+  requesterEmail: 'granddaughter@example.com',
+  createdAtMs: Date.UTC(2026, 9, 8, 15, 30),
+  requesterProfile: null,
+  candidates: [
+    {
+      playerId: 'r1',
+      displayName: 'Rosalie M.',
+      phone: '+16135550144',
+      reasons: ['phone', 'name'],
+      linked: false,
+      active: true,
+      weeksPlayed: 3,
+    },
+    {
+      playerId: 'r2',
+      displayName: 'Rose Martin',
+      phone: null,
+      reasons: ['similar_name'],
+      linked: true,
+      active: true,
+      weeksPlayed: 1,
+    },
+  ],
+  suggestedPlayerId: 'r1',
+  sharedSuggestion: false,
 };
 
 const SAMPLE_WINNER: WeekWinner = {
@@ -443,11 +475,50 @@ export default function Styleguide() {
               onEdit={() => undefined}
             />
             <RosterRow
+              row={{ ...SAMPLE_ROSTER, playerId: 'r5', displayName: 'Gord M.', claimed: true }}
+              enterHref="#sg-roster"
+              late={false}
+              showStatus
+              onEdit={() => undefined}
+            />
+            <RosterRow
               row={{ ...SAMPLE_ROSTER, playerId: 'r4', displayName: 'Old Timer', active: false }}
               enterHref={null}
               late={false}
               showStatus={false}
               onEdit={() => undefined}
+            />
+          </ul>
+        </section>
+
+        <section aria-labelledby="sg-claims">
+          <h2 id="sg-claims" className="mb-3 font-heading text-h2 italic">
+            Claim request (Back Office)
+          </h2>
+          <ul className="flex max-w-player flex-col gap-3">
+            <ClaimCard
+              claim={SAMPLE_CLAIM}
+              others={[{ playerId: 'r9', displayName: 'Hank O.' }]}
+              busy={false}
+              onApprove={() => undefined}
+              onReject={() => undefined}
+            />
+            <ClaimCard
+              claim={{
+                ...SAMPLE_CLAIM,
+                claimId: 'c2',
+                claimedName: 'Bern',
+                claimedPhone: null,
+                requesterEmail: 'bernie@example.com',
+                requesterProfile: { playerId: 'u1', displayName: 'Bern', weeksPlayed: 2 },
+                candidates: [],
+                suggestedPlayerId: null,
+                sharedSuggestion: true,
+              }}
+              others={[{ playerId: 'r9', displayName: 'Bernie T.' }]}
+              busy={false}
+              onApprove={() => undefined}
+              onReject={() => undefined}
             />
           </ul>
         </section>

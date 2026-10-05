@@ -1,11 +1,56 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 4: Roster and paper-entry mode** · Phase 2 (Roster, paper, and claims) · Started: 2026-10-05
+**Sprint 5: Claims and merges** · Phase 2 (Roster, paper, and claims) · Started: 2026-10-05
 
 ## Goal
-The commissioner keeps a roster of the people who play on paper, by text, or by phone, sees who has and hasn't entered this week, and enters a sheet for someone in about a minute in the paper's own order, marking it paid in the same step. After the lock, an entry can only be added or changed with a typed reason that leaves a badge and an audit entry.
+A player who has been entered on paper, by text, or by phone can ask to link that history to their own login, the commissioner approves or rejects it in one tap, and after approval the history shows in the player's account at once. A wrong approval can be undone. Two profiles for the same person can be merged. Asking reveals nothing about anyone's profile.
 
 ## Persona check
+- **Primary persona:** the Commissioner (Ten Seconds and an Undo) for the Claims tab. Secondary: Bernie and a family member helping Rosalie (the claimant), the Snoop (anti-persona E), the Double-Dipper (anti-persona A), Gerald (proof).
+- **Snoop test (anti-persona E):** typing someone else's name and phone gets the same "we'll let the pool know" answer whether or not anyone matches. The claim document the claimant can read holds only what they typed. Matches are worked out for the admin when the Claims tab opens and are never stored where the claimant can read them. A pending or rejected claimant cannot read the profile, its entries' picks, or its payments (rules tests).
+- **Rosalie Inclusion Test:** nothing changes for a paper player who never claims. Her roster profile, entries, and history stay exactly as they are, and she is never asked to register. A claim is always someone's own choice.
+- **Commissioner Counter Test:** the Claims tab shows a count. Each request shows who is asking, the best match first, and Approve. Approve has an Undo (unlink) when it was a plain link. Reject takes an optional friendly note. A merge names both profiles and says it cannot be undone before it runs.
+- **Gerald Trust Test:** every approval, rejection, unlink, and merge is an audited callable with before and after. No claim is ever approved automatically (D-004). A profile already linked to a login cannot be claimed again until it is unlinked.
+- **Welcome Test:** the page says in plain words what linking does and that a person at the pool checks every request. A rejection is worded kindly and says what to do next.
+- **Dale Deadline Test:** nothing is added to the entry form. The link to the claim page is one quiet line on the home screen.
+- **Border Test:** the phone on a claim takes any North American number, and is optional.
+- **Privacy test:** the claimant's email and typed phone go to the admin only. Other players never see that a claim exists.
+- **Responsible-Play Check:** still one entry per person per week. A merge is refused when both profiles entered the same week, so two entries are never quietly folded into one.
+
+## Tasks
+- [x] Shared logic: request validation, who may ask and how often, ranked matches, merge conflicts (`shared/claims.ts`, 13 tests)
+- [x] Functions: `requestClaim`, `adminListClaims`, `adminApproveClaim`, `adminRejectClaim`, `adminUnlinkClaim`, `adminMergePlayers` (`functions/src/claims.ts`). No stubs remain. 18 integration tests against the Firestore emulator, including the abuse cases and the acceptance case (three weeks of paper history, claimed, then unlinked back to the same state)
+- [x] Rules tests for the claim abuse cases: three new matrix rows (44 to 46), 49 rules tests in all. No rule changed
+- [x] Player: "Played before?" page (`/claim`) with save-your-account, pending, rejected, and linked states; "Your history" page (`/history`) with each week's picks; two quiet links on the home screen
+- [x] Back Office: Claims tab with a waiting count, the best match already chosen, one-tap link with Undo, reject with an optional note; Unlink and Merge under a roster player's Details; a "Linked" badge on the roster
+- [x] Styleguide entry for the claim request card; `test:a11y` passes (18 checks)
+- [x] Docs: DATA_MODEL §3.3 and §5, FIRESTORE_RULES (rows 44 to 46), DESIGN_SYSTEM §6, DECISIONS D-060 to D-065, README, CLAUDE.md
+- [x] Emulator end-to-end at 375px: `npm run test:e2e:claims` passed all 30 checks on the final code, twice, before the Codespace stopped being able to run browser flows (see the notes)
+- [ ] Confirm the provisional decisions D-060 and D-062 to D-065 with the commissioner
+- [ ] Try it on the live site in the `2026-test` season, or with a real roster player, after the functions deploy
+
+## Acceptance (from PROJECT_PLAN.md)
+A roster senior with three weeks of admin-entered history is claimed by a signed-in player. After approval, the history appears in their account immediately. Unlinking restores the previous state. Every step is in the audit log.
+
+## Notes / learned
+- **End-to-end browser runs are parked as a sprint habit** (Ryan, 2026-10-05: they were taking most of the time and getting in the way). This sprint was verified with typecheck, lint, the unit tests, and `npm run test:rules` (rules plus the functions' integration tests). The browser scripts stay in the repo for when they are wanted.
+- Why they got in the way: with the emulators, the Vite dev server, and several browser pages open, the 8 GB Codespace runs out of memory and Chromium reports "Page crashed" at a different step each time. The same flow passes when memory is free and fails minutes later with nothing changed. Unchanged `main` behaves the same. None of the crashes was a code problem. `test:e2e:mock-week` got past the lock and results on this branch before crashing at the publish step.
+- The first design stored the suggested match on the claim, as the data model said. The claimant can read their own claim, so that would have leaked whether a name and phone are on the roster. Matches are now worked out for the admin on demand (D-061).
+- A browser run caught one real bug before the runs were parked: per-call success callbacks on a mutation are dropped when the component unmounts first. A merge removes the player from the roster, so the form closed before its "merged" message could show. Unlink and merge now await the result instead.
+- The roster list now reloads every time it opens and once a minute. With the app's 30-second cache, a player who had just entered on the website was missing from the roster.
+- With six tabs, the Back Office menu wraps to two lines at 375px. It reads fine; a shorter menu is worth a thought if a seventh tab arrives.
+- An entry moved by a merge gets a new confirmation code, because the code is made from the player ID. The audit log's `movedWeeks` is the record.
+
+---
+
+## Sprint 4 (released 2026-10-05, PR #19; follow-ups open)
+
+**Sprint 4: Roster and paper-entry mode** · Phase 2 (Roster, paper, and claims) · Started: 2026-10-05
+
+### Goal
+The commissioner keeps a roster of the people who play on paper, by text, or by phone, sees who has and hasn't entered this week, and enters a sheet for someone in about a minute in the paper's own order, marking it paid in the same step. After the lock, an entry can only be added or changed with a typed reason that leaves a badge and an audit entry.
+
+### Persona check
 - **Primary persona:** Rosalie (Never Require a Screen), served through the Commissioner (Ten Seconds and an Undo). Secondary: Gerald (proof), Bernie (texted picks), the Late Pick Lobbyist (anti-persona B). Devon's counter role stays out of this sprint (PERSONAS §3.10: post-Sprint 4).
 - **Rosalie Inclusion Test:** she never touches a screen, gives no email, and creates no account. Her roster profile needs only a name. Games are entered 1 to 15 in the sheet's order, a blank on the sheet can be saved as a blank, and a photo of the sheet can be kept with the entry. "Did you get mine?" is answered by the roster's Entered / Not yet.
 - **Commissioner Counter Test:** find the player by typing part of a name, tap Enter picks, 15 taps, the tiebreaker, Paid cash, Save. Rows and buttons are 48px or more, one-handed at 375px. A half-entered sheet survives an interruption (kept on the device). Wrong picks are fixed by entering again; removing an entry needs a reason.
@@ -15,7 +60,7 @@ The commissioner keeps a roster of the people who play on paper, by text, or by 
 - **Welcome / Privacy test:** roster phone numbers and notes are admin-only (the rules already say so), and so is the photo of a sheet. No player screen shows how an entry came in or whether it is paid.
 - **Responsible-Play Check:** still one entry per person per week (the entry ID is the player ID), one fee, no tabs.
 
-## Tasks
+### Tasks
 - [x] Shared logic: admin entry validation, the typed reason, and which callable applies when (`shared/paperEntry.ts`, 15 tests); roster search, Entered / Not yet, the add form, and possible doubles (`src/features/admin/roster/roster.ts`, 10 tests)
 - [x] Rules first: a roster profile needs a name and only roster fields; an admin edit can never touch the link, the origin, a merge, or the age confirmation; paper photos are images of 5 MB or less. Four new matrix rows (40 to 43), 46 rules tests in all
 - [x] Functions: `adminUpsertEntry`, `adminLateOverride`, `adminDeleteEntry` (`functions/src/adminEntries.ts`), with mark-paid in the same transaction through the same code as the payments queue. 13 integration tests against the Firestore emulator
@@ -31,10 +76,10 @@ The commissioner keeps a roster of the people who play on paper, by text, or by 
 - [ ] Confirm the provisional decisions D-054 to D-058 with the commissioner
 - [ ] The acceptance's "about a minute" with a real sheet and a real thumb (the scripted run takes about 8 seconds: 15 taps, one field, one payment tap, one photo)
 
-## Acceptance (from PROJECT_PLAN.md)
+### Acceptance (from PROJECT_PLAN.md)
 Admin transcribes a full paper sheet in about a minute and marks it paid. Late override requires a reason and appears in the audit log and entry badge.
 
-## Notes / learned
+### Notes / learned
 - The Storage emulator refuses a bare `bucket` in `firebase.json` ("Must supply 'target' in Storage configuration"), so the bucket is a deploy target mapped in `.firebaserc` for both the demo project and production (D-058).
 - The public entry document carries `source` and `paperPhotoPath`, so any signed-in player could read how an entry came in and the photo's path, though never the photo itself (Storage rules) and no screen shows either. That is the Sprint 0 schema, unchanged here. If the path should be private too, move it to an admin-only document.
 - The first browser run caught two 375px overflows that typecheck and the unit tests could not: a fifth Back Office tab pushed "Settings" off the screen, and "Commanders" pushed a pick button out of its column. The tabs are now tighter and wrap; pick rows let a long name wrap.

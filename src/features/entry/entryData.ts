@@ -90,7 +90,7 @@ export interface MyEntry {
 }
 
 /** Find this login's profile by query, never by assuming players/{uid} (D-034). */
-async function findMyProfile(uid: string): Promise<{ id: string; data: Player } | null> {
+export async function findMyProfile(uid: string): Promise<{ id: string; data: Player } | null> {
   const snap = await getDocs(
     query(collection(db, 'players'), where('claimedByUid', '==', uid), limit(1)),
   );

@@ -4,6 +4,8 @@ import Home from './pages/Home';
 import SaveAccount from './pages/SaveAccount';
 import FinishSignIn from './pages/FinishSignIn';
 import EntryPage from './features/entry/EntryPage';
+const ClaimPage = lazy(() => import('./features/claims/ClaimPage'));
+const HistoryPage = lazy(() => import('./features/claims/HistoryPage'));
 const Styleguide = lazy(() => import('./pages/Styleguide'));
 import NotFound from './pages/NotFound';
 import { AdminLayout } from './features/admin/AdminLayout';
@@ -16,6 +18,7 @@ const ResultsPage = lazy(() => import('./features/admin/results/ResultsPage'));
 const WeekEditorPage = lazy(() => import('./features/admin/weeks/WeekEditorPage'));
 const PoolSettingsPage = lazy(() => import('./features/admin/settings/PoolSettingsPage'));
 const RosterPage = lazy(() => import('./features/admin/roster/RosterPage'));
+const ClaimsPage = lazy(() => import('./features/admin/claims/ClaimsPage'));
 const PaperEntryPage = lazy(() => import('./features/admin/entries/PaperEntryPage'));
 
 // The styleguide is visible in dev, and in builds where VITE_ENABLE_STYLEGUIDE=true (CI a11y checks).
@@ -34,6 +37,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/picks/:year/:weekId" element={<EntryPage />} />
         <Route path="/account" element={<SaveAccount />} />
+        <Route path="/claim" element={<ClaimPage />} />
+        <Route path="/history" element={<HistoryPage />} />
         <Route path="/auth/finish" element={<FinishSignIn />} />
         <Route
           path="/admin"
@@ -45,6 +50,7 @@ export default function App() {
         >
           <Route index element={<PaymentsPage />} />
           <Route path="roster" element={<RosterPage />} />
+          <Route path="claims" element={<ClaimsPage />} />
           <Route path="enter/:playerId" element={<PaperEntryPage />} />
           <Route path="results" element={<ResultsPage />} />
           <Route path="weeks" element={<WeeksPage />} />

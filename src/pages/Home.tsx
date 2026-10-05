@@ -144,6 +144,23 @@ export default function Home() {
           </Link>
         )}
 
+        <nav aria-label="Your account" className="flex flex-col items-center">
+          <Link
+            to="/history"
+            className="inline-flex min-h-touch items-center justify-center text-body text-ink-inverse underline"
+          >
+            Your history
+          </Link>
+          {mine.data?.profile?.origin !== 'admin' && (
+            <Link
+              to="/claim"
+              className="inline-flex min-h-touch items-center justify-center text-center text-body text-ink-inverse underline"
+            >
+              Played on paper, by text, or by phone before? Link your history
+            </Link>
+          )}
+        </nav>
+
         <PawnShopHelmet className="mx-auto mt-2 w-44" />
       </div>
     </main>

@@ -14,6 +14,7 @@ import {
   type PlayerFormValues,
   type RosterPlayer,
 } from './roster';
+import { PlayerLinkTools } from './PlayerLinkTools';
 import { useSavePlayer } from './rosterData';
 
 const METHODS: { value: PaymentMethod; label: string }[] = [
@@ -30,10 +31,19 @@ export interface PlayerFormProps {
   startName?: string;
   onSaved: (playerId: string, name: string, added: boolean) => void;
   onCancel: () => void;
+  /** After an unlink or a merge, with the message to show. Omit to leave those tools out. */
+  onLinkChange?: (message: string) => void;
 }
 
 /** Add or edit a roster player. Only a name is needed: no email, no account (PERSONAS: Rosalie). */
-export function PlayerForm({ player, roster, startName = '', onSaved, onCancel }: PlayerFormProps) {
+export function PlayerForm({
+  player,
+  roster,
+  startName = '',
+  onSaved,
+  onCancel,
+  onLinkChange,
+}: PlayerFormProps) {
   const [values, setValues] = useState<PlayerFormValues>({
     displayName: player?.displayName ?? startName,
     phone: player?.phone ? formatPhone(player.phone) : '',
@@ -156,6 +166,9 @@ export function PlayerForm({ player, roster, startName = '', onSaved, onCancel }
           Cancel
         </Button>
       </div>
+      {player && onLinkChange && (
+        <PlayerLinkTools player={player} roster={roster} onDone={onLinkChange} />
+      )}
     </form>
   );
 }

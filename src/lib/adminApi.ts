@@ -1,6 +1,13 @@
 /** Typed wrappers for the admin callables (docs/DATA_MODEL.md §5). Every one is admin-only on the server. */
 import { httpsCallable } from 'firebase/functions';
-import type { EntriesList, PublishedWinner, WeekPreview } from '@shared/adminTypes';
+import type {
+  ApproveClaimResult,
+  ClaimsList,
+  EntriesList,
+  MergeResult,
+  PublishedWinner,
+  WeekPreview,
+} from '@shared/adminTypes';
 import type { AdminEntry } from '@shared/paperEntry';
 import type { GameResult, PaymentMethod } from '@shared/types';
 import { functions } from './firebase';
@@ -49,4 +56,13 @@ export const adminApi = {
   deleteEntry: callable<WeekArgs & { playerId: string; reason: string }, { deleted: true }>(
     'adminDeleteEntry',
   ),
+  listClaims: callable<Record<string, never>, ClaimsList>('adminListClaims'),
+  approveClaim: callable<{ claimId: string; playerId: string }, ApproveClaimResult>(
+    'adminApproveClaim',
+  ),
+  rejectClaim: callable<{ claimId: string; note: string | null }, { status: 'rejected' }>(
+    'adminRejectClaim',
+  ),
+  unlinkClaim: callable<{ playerId: string }, { unlinked: true }>('adminUnlinkClaim'),
+  mergePlayers: callable<{ fromId: string; intoId: string }, MergeResult>('adminMergePlayers'),
 };
