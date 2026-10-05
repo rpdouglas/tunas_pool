@@ -23,7 +23,7 @@ The pool holds up for the people it is hardest on: someone with large text on an
 - [x] Error monitoring: error boundary, uncaught errors reported to the `reportClientError` callable and the functions' log (D-086)
 - [x] Backups: `npm run admin:export`; the missing database backups are written up for Ryan (D-089, README)
 - [x] Docs: DECISIONS D-084 to D-089, DATA_MODEL §5, DESIGN_SYSTEM §6, README, CLAUDE.md
-- [ ] **Acceptance, performance:** Lighthouse mobile 90 or higher. It was 53 before this sprint and can only be measured again on the live site after release
+- [ ] **Acceptance, performance:** Lighthouse mobile 90 or higher. It was 53 before this sprint. After the release, two runs on the live home screen gave 68 and 82 (accessibility 100 both times). A follow-up puts the real wordmark image in the first paint; measure again once that is live
 - [ ] **Acceptance, in-app browsers:** open the pool from a link inside Facebook and Messenger on a real phone, make picks, and save an account with the email link
 - [ ] Turn on scheduled backups and delete protection for `db-tunaspool` (Ryan; commands in the README)
 - [ ] Confirm the provisional decisions D-084, D-086, D-088, D-089 with the commissioner
@@ -32,6 +32,7 @@ The pool holds up for the people it is hardest on: someone with large text on an
 Lighthouse mobile scores of 90 or higher for performance and accessibility. Sign-in works from Facebook and Messenger in-app browsers.
 
 ## Notes / learned
+- **Lighthouse after the release: 68 and 82, up from 53, not yet 90.** First paint fell from 4.9 s to about 2.5 s. What was left: the first paint showed the name as text and the app then swapped in the wordmark image, which was both the late largest paint (3.5 to 4.2 s) and, in one run, a layout shift of 0.19. The first paint now uses the same image, size, and layout as the home screen. Two runs minutes apart differed by 14 points, so one run is not a measurement.
 - **Accessibility was already 100 on Lighthouse and clean on every real screen.** The gaps were at large text, which no check had covered: the setting existed in the stylesheet with no way to turn it on.
 - Verified with typecheck, lint, 181 unit tests, 110 rules and function tests, the build, `test:a11y`, and the smoke run (22 screens, with the accessibility and large-text checks, about 75 seconds).
 - The smoke run now names the element that makes a screen scroll sideways. That turned a hunt into a one-line fix (the week picker row did not wrap).

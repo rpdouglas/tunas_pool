@@ -19,6 +19,7 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <title>Tunas Weekly Football Pool Pick 'Em</title>
+    <link rel="preload" as="image" type="image/webp" href="/src/assets/brand/wordmark.webp" fetchpriority="high" />
     <script>
       // The saved Text size, applied before the first paint (src/lib/textSize.ts).
       try {
@@ -28,14 +29,28 @@
     </script>
   </head>
   <body>
-    <!-- A first paint that doesn't wait for the app: the Game Day backdrop and the pool's name,
-         styled by the stylesheet alone. React replaces it as soon as it starts (D-084). -->
+    <!-- A first paint that doesn't wait for the app: the same backdrop, wordmark, and ribbon the home
+         screen opens with, so nothing moves or changes when React takes over (D-084). Vite rewrites
+         the image address to the built file, the same one the app uses. -->
     <div id="root">
       <main class="bg-gameday min-h-screen px-4 pb-16 pt-8">
-        <div class="mx-auto flex max-w-player flex-col items-center gap-3 text-center">
-          <p class="wordmark text-wordmark" aria-hidden="true">Tunas</p>
-          <span class="ribbon text-xl">Weekly Football Pool</span>
-          <p class="pt-6 text-body text-ink-inverse" role="status">Loading…</p>
+        <div class="mx-auto flex max-w-player flex-col gap-6">
+          <div class="flex flex-col items-center gap-3">
+            <img
+              src="/src/assets/brand/wordmark.webp"
+              alt=""
+              width="720"
+              height="472"
+              fetchpriority="high"
+              class="h-auto w-72 max-w-full"
+            />
+            <span class="ribbon text-xl">Weekly Football Pool</span>
+          </div>
+          <div class="min-h-[26rem]">
+            <section class="panel">
+              <div class="p-4"><p class="text-body" role="status">Loading this week…</p></div>
+            </section>
+          </div>
         </div>
       </main>
     </div>
