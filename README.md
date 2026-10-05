@@ -32,6 +32,8 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm run lint` | ESLint |
 | `npm test` | Unit and component tests (Vitest + Testing Library) |
 | `npm run test:rules` | Firestore rules tests in the emulator (needs Java 21+) |
+| `npm run test:a11y` | Axe, font, and no-horizontal-scroll checks on a production build (Playwright) |
+| `npm run test:e2e:emulator` | Browser run of the sign-in and week-setup flows against running emulators (steps in `scripts/e2e-emulator.mjs`) |
 | `npm run emulators` | Firebase emulators (Auth, Firestore, Functions, Hosting, Storage, UI) |
 | `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs credentials) |
 
@@ -48,7 +50,8 @@ Firestore database (`db-tunaspool`, location `nam5`). Both are pinned in `fireba
 3. In the terminal: `npx firebase login --no-localhost`.
 4. Deploy: `npm run build && npx firebase deploy --project prod --only hosting,firestore:rules,firestore:indexes`.
 5. Cloud Functions and the scheduler need the Blaze (pay-as-you-go) plan.
-6. Grant admin: `GCLOUD_PROJECT=lilypad-strategy-design npm run admin:claim -- <uid>`.
+6. Grant admin: sign in at `/admin` with your email link, find your uid under Authentication > Users, then run
+   `GCLOUD_PROJECT=lilypad-strategy-design npm run admin:claim -- <uid>` and tap **Check again**.
 
 **Deploys are automatic.** Every push to `main` that passes CI deploys Hosting, Firestore rules, and Firestore
 indexes (the `deploy` job in `.github/workflows/ci.yml`). It authenticates with the `FIREBASE_SERVICE_ACCOUNT`

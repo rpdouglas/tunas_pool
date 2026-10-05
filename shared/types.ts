@@ -35,7 +35,8 @@ export type AuditAction =
   | 'claim.approved'
   | 'claim.rejected'
   | 'claim.unlinked'
-  | 'player.merged';
+  | 'player.merged'
+  | 'player.guestMoved';
 
 // ---- players/{playerId} ----------------------------------------------------
 export interface Player {

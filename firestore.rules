@@ -40,8 +40,11 @@ service cloud.firestore {
 
     // ---------- players (roster + self-serve profiles) ----------
     match /players/{playerId} {
-      // PII (phone, email, notes): owner and admin only.
-      allow read: if isAdmin() || ownsPlayer(playerId);
+      // PII (phone, email, notes): owner and admin only. Checked against the doc itself so a
+      // login can find its profile with where('claimedByUid', '==', uid): after a guest's profile
+      // moves to an existing account, or a claim is approved, playerId no longer equals the uid.
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.claimedByUid == request.auth.uid);
 
       // Self-serve: playerId must equal the caller's uid, claimed by that uid.
       allow create: if
@@ -114,11 +117,18 @@ service cloud.firestore {
 
         // Admin may build/edit a week only while it is a draft (or create it).
         // Opening, locking, results, and winner go through callables.
-        allow create: if isAdmin() && request.resource.data.status == 'draft';
+        // Derived fields (revealed, counters, results, winner) start empty and are function-written.
+        allow create: if isAdmin()
+          && request.resource.data.status == 'draft'
+          && request.resource.data.revealed == false
+          && request.resource.data.entryCount == 0
+          && request.resource.data.paidCount == 0
+          && request.resource.data.winner == null;
         allow update: if isAdmin()
           && resource.data.status == 'draft'
-          && request.resource.data.status == 'draft'
-          && request.resource.data.revealed == false;
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+               'status', 'revealed', 'entryCount', 'paidCount', 'results', 'mnfTotal',
+               'winner', 'payoutSent']);
         allow delete: if isAdmin() && resource.data.status == 'draft';
 
         // ----- entries (one per person per week; doc ID = playerId) -----

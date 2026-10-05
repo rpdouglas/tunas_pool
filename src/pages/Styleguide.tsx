@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { Field } from '../components/ui/Field';
+import { GameCard } from '../components/ui/GameCard';
 import { Panel } from '../components/ui/Panel';
 import { SectionBar } from '../components/ui/SectionBar';
 import { StatusBadge, type BadgeStatus } from '../components/ui/StatusBadge';
+import { TextAreaField } from '../components/ui/TextAreaField';
 
 const STATUSES: BadgeStatus[] = ['paid', 'unpaid', 'pending', 'draft', 'open', 'locked', 'final'];
 
@@ -18,6 +20,7 @@ const SWATCHES: Array<{ name: string; className: string; hex: string }> = [
 /** Dev-only component gallery. Every new UI component gets an entry here (CLAUDE.md §5). */
 export default function Styleguide() {
   const [pick, setPick] = useState<'away' | 'home' | null>('home');
+  const [cardPick, setCardPick] = useState<'away' | 'home' | null>(null);
 
   return (
     <div className="min-h-screen bg-page-backoffice">
@@ -38,7 +41,10 @@ export default function Styleguide() {
           </h2>
           <ul className="grid grid-cols-2 gap-3">
             {SWATCHES.map((s) => (
-              <li key={s.name} className="overflow-hidden rounded-md border-2 border-line-subtle bg-surface">
+              <li
+                key={s.name}
+                className="overflow-hidden rounded-md border-2 border-line-subtle bg-surface"
+              >
                 <div className={`h-14 ${s.className}`} />
                 <p className="px-2 pt-1 font-heading text-h3">{s.name}</p>
                 <p className="px-2 pb-2 text-body-sm text-ink-muted">{s.hex}</p>
@@ -70,7 +76,8 @@ export default function Styleguide() {
           <div className="mt-4">
             <Panel title="How to play">
               <p className="text-body">
-                Pick one team to win every game. <span className="emphasis">No picks can be changed after lock.</span>
+                Pick one team to win every game.{' '}
+                <span className="emphasis">No picks can be changed after lock.</span>
               </p>
             </Panel>
           </div>
@@ -101,6 +108,28 @@ export default function Styleguide() {
           </div>
         </section>
 
+        <section aria-labelledby="sg-gamecard">
+          <h2 id="sg-gamecard" className="mb-3 font-heading text-h2 italic">
+            Game card
+          </h2>
+          <ol className="flex flex-col gap-3 rounded-lg bg-purple-700 p-3">
+            <GameCard
+              away="Jaguars"
+              home="Rams"
+              kickoffLabel="Sun 9:30 AM"
+              venueNote="London"
+              pick={cardPick}
+              onPick={setCardPick}
+            />
+            <GameCard away="Chiefs" home="Chargers" kickoffLabel="Mon 8:15 PM" pick="away" />
+            <GameCard
+              away="Colts"
+              home="Commanders"
+              kickoffLabel="Sun 1:00 PM (read-only preview)"
+            />
+          </ol>
+        </section>
+
         <section aria-labelledby="sg-badges">
           <h2 id="sg-badges" className="mb-3 font-heading text-h2 italic">
             Status badges
@@ -123,6 +152,18 @@ export default function Styleguide() {
               inputMode="tel"
               defaultValue="613 555"
               error="Phone number is too short. Enter all 10 digits."
+            />
+            <TextAreaField
+              label="Matchups"
+              hint="One game per line, like “Colts at Commanders”."
+              defaultValue={'Sun 9:30 AM Jaguars at Rams (London)\nColts at Commanders'}
+              rows={4}
+            />
+            <TextAreaField
+              label="Notes"
+              defaultValue="Comanders at Bears"
+              error="Line 1: Did you mean Commanders?"
+              rows={2}
             />
           </div>
         </section>
