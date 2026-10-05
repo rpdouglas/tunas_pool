@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import {
+  ClipboardList,
   History,
   House,
   Link2,
@@ -52,6 +53,8 @@ export interface MenuViewProps {
   email: string | null;
   signedIn: boolean;
   isAdmin: boolean;
+  /** The counter role (D-095): gets a link to the Counter screens. */
+  isCounter: boolean;
   /** The roster profile id, or null when there is none yet. */
   profileId: string | null;
   /** Hide "Link your history" for people the commissioner entered on paper (already linked). */
@@ -74,6 +77,7 @@ export function MenuView({
   email,
   signedIn,
   isAdmin,
+  isCounter,
   profileId,
   showClaim,
   printTo,
@@ -207,8 +211,13 @@ export function MenuView({
             )}
           </div>
 
-          {(isAdmin || signedIn) && (
+          {(isAdmin || isCounter || signedIn) && (
             <ul className="app-drawer-divider flex flex-col gap-2">
+              {isCounter && (
+                <DrawerLink to="/counter" icon={<ClipboardList size={24} />} onNavigate={close}>
+                  Counter
+                </DrawerLink>
+              )}
               {isAdmin && (
                 <DrawerLink to="/admin" icon={<ShieldCheck size={24} />} onNavigate={close}>
                   <span className="flex items-center justify-between gap-2">
@@ -245,7 +254,7 @@ export function MenuView({
 
 /** The menu for real screens: reads who is signed in, the roster profile, and the current week. */
 export function AppBar() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isCounter } = useAuth();
   const profile = useMyProfile(user?.uid).data ?? null;
   const year = currentSeason();
   const week = useCurrentWeek(year).data ?? null;
@@ -272,6 +281,7 @@ export function AppBar() {
       email={signedIn ? (user?.email ?? null) : null}
       signedIn={signedIn}
       isAdmin={isAdmin}
+      isCounter={isCounter}
       profileId={profile?.id ?? null}
       showClaim={profile?.data.origin !== 'admin'}
       printTo={week && open ? `/sheet/${year}/${week.id}` : null}

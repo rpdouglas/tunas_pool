@@ -112,6 +112,45 @@ describe('describeAudit', () => {
   });
 });
 
+describe('a counter in the audit log (D-095)', () => {
+  const record: AuditRecord = {
+    actorUid: 'devon-uid',
+    actorRole: 'counter',
+    actorEmail: 'devon@shop.test',
+    action: 'payment.set',
+    target: 'seasons/2026/weeks/wk05/entries/rosalie/payment/current',
+    after: { paymentStatus: 'paid', paymentMethod: 'cash' },
+    year: '2026',
+    weekId: 'wk05',
+  };
+
+  it('puts the action under their name, not under "Admin"', () => {
+    expect(describeAudit(record, () => 'Rosalie M.').who).toBe('Counter (devon@shop.test)');
+  });
+
+  it('falls back to the start of their uid when there is no email', () => {
+    expect(describeActor('devon-uid', undefined, { actorRole: 'counter' })).toBe(
+      'Counter (devon-)',
+    );
+  });
+
+  it('still says "You" to the counter themselves, and the roster actions read plainly', () => {
+    expect(describeAudit(record, () => 'Rosalie M.', 'devon-uid').who).toBe('You');
+    const added: AuditRecord = {
+      actorUid: 'devon-uid',
+      actorRole: 'counter',
+      action: 'player.saved',
+      target: 'players/p1',
+      before: null,
+      after: { displayName: 'Walt W.', created: true },
+    };
+    expect(describeAudit(added, () => undefined).what).toBe('Added Walt W. to the roster');
+    expect(describeAudit({ ...added, before: { displayName: 'Walt' } }, () => undefined).what).toBe(
+      'Fixed the details for Walt W.',
+    );
+  });
+});
+
 describe('describeActor', () => {
   it('names the scheduler and scripts for what they are', () => {
     expect(describeActor('system:lockWeeks')).toBe('The pool, automatically');

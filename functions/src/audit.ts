@@ -5,6 +5,9 @@ import type { AuditAction } from '../../shared/types';
 export interface AuditInput {
   /** The admin's uid, or "system:lockWeeks" for the scheduler. */
   actorUid: string;
+  /** Set for the counter role only (D-095), so the log can say whose hands these were. */
+  actorRole?: 'counter';
+  actorEmail?: string | null;
   action: AuditAction;
   /** Document path the change was made to. */
   target: string;

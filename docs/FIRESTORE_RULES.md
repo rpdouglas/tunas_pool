@@ -7,6 +7,7 @@ These rules deploy to the named database `db-tunaspool` only (`firestore.databas
 ## 1. Design summary
 
 - **Admin:** custom claim `admin == true`.
+- **Counter (D-095):** custom claim `counter == true`, for Devon. It gets **no** extra access in the database: a counter reads what any signed-in player reads. Only Storage knows about it (a counter can upload a sheet photo). Everything else Devon does goes through callables that apply his limits.
 - **Ownership:** a signed-in user owns a `playerId` when `players/{playerId}.claimedByUid == request.auth.uid`.
 - **Lockout:** player writes require `week.status == 'open'` **and** `request.time < week.lockAt`.
 - **Hidden picks:** `private/picks` is readable by owner and admin, or by anyone once `week.revealed == true`.
@@ -300,11 +301,13 @@ Paper-sheet photos live in the pool's own bucket, `tunaspool-paper-sheets` (D-02
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Photos of paper sheets (D-029). Admin only, images only, 5 MB at most: the app shrinks a
-    // phone photo well below that before it uploads.
+    // Photos of paper sheets (D-029). Images only, 5 MB at most: the app shrinks a phone photo well
+    // below that before it uploads. Only the admin can read or delete one. The counter role (D-095)
+    // can add one when entering a sheet, and can't look at any.
     match /paperSheets/{year}/{weekId}/{file} {
-      allow read, delete: if request.auth != null && request.auth.token.admin == true;
-      allow create, update: if request.auth != null && request.auth.token.admin == true
+      allow read, delete: if request.auth != null && request.auth.token.get('admin', false) == true;
+      allow create, update: if request.auth != null
+        && (request.auth.token.get('admin', false) == true || request.auth.token.get('counter', false) == true)
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
@@ -388,3 +391,7 @@ Each row is at least one passing and one failing test.
 | 50 | Any signed-in player lists the season standings and reads one row; an unauthenticated read; any client, admin included, writes a row | allow / deny / deny |
 | 51 | A player and the admin read that player's `stats/allTime`; another player reads it; anyone writes it from a client | allow / deny / deny |
 | 52 | Admin creates an active season and edits its fee; creates one already archived, sets `status` or `archivedAt`, or deletes a season; a player reads a season, or writes one | allow / deny / allow, deny |
+| 53 | A counter reads open weeks and the public part of an entry (as any player), and is refused another player's profile, the players list, a payment record, picks before the reveal, the audit log, claims, and a draft week; after the reveal the picks are readable | allow / deny / allow |
+| 54 | A counter writes a player, a week, the pool config, a payment, or deletes an entry or a player from the browser | deny |
+| 55 | A counter uploads a sheet photo (an image of 5 MB or less under `paperSheets`); reads or deletes one; uploads a PDF, an oversized file, or a file outside `paperSheets` | allow / deny / deny |
+| 56 | A token with a look-alike claim (`counter: 'true'`, `counter: 1`, `role: 'counter'`, `counters: true`) uploads a sheet photo | deny |

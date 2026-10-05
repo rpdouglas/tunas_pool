@@ -38,6 +38,7 @@ export type AuditAction =
   | 'claim.unlinked'
   | 'player.merged'
   | 'player.delete'
+  | 'player.saved'
   | 'player.guestMoved'
   | 'season.status';
 

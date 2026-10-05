@@ -1,11 +1,13 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Photos of paper sheets (D-029). Admin only, images only, 5 MB at most: the app shrinks a
-    // phone photo well below that before it uploads.
+    // Photos of paper sheets (D-029). Images only, 5 MB at most: the app shrinks a phone photo well
+    // below that before it uploads. Only the admin can read or delete one. The counter role (D-095)
+    // can add one when entering a sheet, and can't look at any.
     match /paperSheets/{year}/{weekId}/{file} {
-      allow read, delete: if request.auth != null && request.auth.token.admin == true;
-      allow create, update: if request.auth != null && request.auth.token.admin == true
+      allow read, delete: if request.auth != null && request.auth.token.get('admin', false) == true;
+      allow create, update: if request.auth != null
+        && (request.auth.token.get('admin', false) == true || request.auth.token.get('counter', false) == true)
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }

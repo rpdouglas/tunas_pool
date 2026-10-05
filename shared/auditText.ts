@@ -5,6 +5,9 @@
  */
 export interface AuditRecord {
   actorUid: string;
+  /** Written only for the counter role (D-095), so a counter's actions are under their own name. */
+  actorRole?: string;
+  actorEmail?: string | null;
   action: string;
   /** Document path the change was made to. */
   target: string;
@@ -41,8 +44,15 @@ function idAfter(path: string, segment: string): string | undefined {
 const weekNumber = (weekId: string | undefined) =>
   weekId ? Number(weekId.replace(/\D/g, '')) || weekId : undefined;
 
-export function describeActor(actorUid: string, myUid?: string): string {
+export function describeActor(
+  actorUid: string,
+  myUid?: string,
+  who?: { actorRole?: string; actorEmail?: string | null },
+): string {
   if (actorUid === myUid) return 'You';
+  if (who?.actorRole === 'counter') {
+    return `Counter (${who.actorEmail || actorUid.slice(0, 6)})`;
+  }
   if (actorUid === 'system:lockWeeks') return 'The pool, automatically';
   if (actorUid.startsWith('script:')) return `A one-off script (${actorUid.slice(7)})`;
   if (actorUid.startsWith('system:')) return 'The pool, automatically';
@@ -138,6 +148,9 @@ export function describeAudit(record: AuditRecord, names: Names, myUid?: string)
       what = `Merged ${player} into ${(into && names(into)) || text(after, 'intoDisplayName') || 'another player'}`;
       break;
     }
+    case 'player.saved':
+      what = before ? `Fixed the details for ${player}` : `Added ${player} to the roster`;
+      break;
     case 'player.delete':
       what = `Deleted ${player} from the roster`;
       break;
@@ -150,5 +163,5 @@ export function describeAudit(record: AuditRecord, names: Names, myUid?: string)
     default:
       what = action;
   }
-  return { what, where, who: describeActor(record.actorUid, myUid) };
+  return { what, where, who: describeActor(record.actorUid, myUid, record) };
 }
