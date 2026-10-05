@@ -14,6 +14,7 @@ import {
   type PlayerFormValues,
   type RosterPlayer,
 } from './roster';
+import { PlayerDeleteTools } from './PlayerDeleteTools';
 import { PlayerLinkTools } from './PlayerLinkTools';
 import { useSavePlayer } from './rosterData';
 
@@ -169,6 +170,7 @@ export function PlayerForm({
       {player && onLinkChange && (
         <PlayerLinkTools player={player} roster={roster} onDone={onLinkChange} />
       )}
+      {player && onLinkChange && <PlayerDeleteTools player={player} onDone={onLinkChange} />}
     </form>
   );
 }

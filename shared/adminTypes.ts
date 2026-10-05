@@ -107,6 +107,14 @@ export interface ApproveClaimResult {
   movedWeeks: string[];
 }
 
+/**
+ * Whether a player can be deleted (D-094). When not, `message` says why and what to do instead, in
+ * plain words, ready to show.
+ */
+export type PlayerDeleteCheck =
+  | { ok: true }
+  | { ok: false; code: 'merged' | 'played' | 'linked' | 'pending_claim'; message: string };
+
 export interface MergeResult {
   intoId: string;
   movedWeeks: string[];

@@ -6,6 +6,7 @@ import type {
   CorrectionResult,
   EntriesList,
   MergeResult,
+  PlayerDeleteCheck,
   PublishedWinner,
   WeekPreview,
 } from '@shared/adminTypes';
@@ -91,4 +92,11 @@ export const adminApi = {
   ),
   unlinkClaim: callable<{ playerId: string }, { unlinked: true }>('adminUnlinkClaim'),
   mergePlayers: callable<{ fromId: string; intoId: string }, MergeResult>('adminMergePlayers'),
+  /** Can this player be deleted, and if not, why not? Changes nothing. */
+  checkPlayerDelete: callable<{ playerId: string; dryRun: true }, PlayerDeleteCheck>(
+    'adminDeletePlayer',
+  ),
+  deletePlayer: callable<{ playerId: string; reason: string }, { deleted: true }>(
+    'adminDeletePlayer',
+  ),
 };
