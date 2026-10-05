@@ -88,6 +88,8 @@ export default function RosterPage() {
           {window?.mode === 'open' ? 'lock' : 'locked'}{' '}
           {formatPoolDateTime(new Date(week.lockAtMs))}.
           {window?.mode === 'late' && ' After the lock, an entry needs a reason.'}
+          {window?.mode === 'backfill' &&
+            ' This week was backfilled, so sheets go in as normal entries.'}
           {window?.mode === 'closed' && ` ${window.message}`}
         </p>
       ) : (

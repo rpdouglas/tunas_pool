@@ -285,3 +285,49 @@ describe('adminDeleteEntry', () => {
     await expect(remove('dale', 'Entered twice by mistake')).rejects.toThrow(/winner is published/);
   });
 });
+
+describe('a backfilled week (D-071)', () => {
+  it('takes a sheet as a normal entry while locked: no reason, no late badge, and a record at once', async () => {
+    await seedWeek(db, { status: 'locked', lockInHours: -200, extra: { backfilled: true } });
+    await seedRosterPlayer('rosalie');
+    await enterResults(db, { ...ref, results: ALL_HOME, mnfTotal: 44 });
+
+    const result = await enter('rosalie', sheet({ markPaid: 'cash' }));
+    expect(result).toMatchObject({ created: true, late: false, paid: true });
+    const entry = await db.doc(entryPath('rosalie')).get();
+    expect(entry.get('lateOverride')).toBeNull();
+    expect(entry.get('enteredBy')).toBe('admin');
+    expect(entry.get('record')).toEqual({ wins: 9, losses: GAME_IDS.length - 9 });
+    expect((await listEntries(db, YEAR, WEEK))?.rows[0].lateOverride).toBe(false);
+    const actions = (await audit()).map((a) => a.action);
+    expect(actions).toContain('entry.adminUpsert');
+    expect(actions).not.toContain('entry.lateOverride');
+  });
+
+  it('refuses a late-entry reason there, and closes once the winner is published', async () => {
+    await seedWeek(db, { status: 'locked', lockInHours: -200, extra: { backfilled: true } });
+    await seedRosterPlayer('rosalie');
+    await expect(
+      upsertEntry(db, {
+        ...ref,
+        playerId: 'rosalie',
+        entry: sheet(),
+        late: true,
+        reason: 'Dropped off late',
+        nowMs: Date.now(),
+      }),
+    ).rejects.toThrow(/backfilled/);
+
+    await enter('rosalie', sheet({ markPaid: 'cash' }));
+    await enterResults(db, { ...ref, results: ALL_HOME, mnfTotal: 44 });
+    await publishWinner(db, { ...ref, expectedPlayerIds: ['rosalie'] });
+    await seedRosterPlayer('bernie', { displayName: 'Bernie T.' });
+    await expect(enter('bernie', sheet())).rejects.toThrow(/winner is published/);
+  });
+
+  it('an ordinary locked week still refuses a normal entry', async () => {
+    await seedWeek(db, { status: 'locked', lockInHours: -200 });
+    await seedRosterPlayer('rosalie');
+    await expect(enter('rosalie', sheet())).rejects.toThrow(/Picks are locked/);
+  });
+});

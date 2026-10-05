@@ -24,6 +24,7 @@ Once picks lock, every player can see everyone's picks, a leaderboard that fills
 - [x] Back Office: "Correct a result" on the Results screen for a final week, and the "Result corrected" note
 - [x] Styleguide entries for the leaderboard row and the share bar; `test:a11y` passes (18 checks)
 - [x] Docs: DATA_MODEL §3.5, §5, §6, §10; FIRESTORE_RULES (rows 47, 48); DESIGN_SYSTEM §6; DECISIONS D-067 to D-070
+- [ ] Enter the paper sheets for weeks 1 to 4 (Roster, pick the week, Enter picks), enter week 4's Monday night result, then publish each winner
 - [ ] Look at the week page on a real phone with a real week (browser runs are parked, D-066, so no screen here has been opened in a browser)
 - [ ] Confirm the provisional decisions D-067 to D-070 with the commissioner
 
@@ -36,6 +37,9 @@ At lock, picks become visible to all within one minute. During the week the lead
 - "Season standings" do not exist yet (Sprint 7), so "updates standings" here means the week's records and winner.
 - A test caught a wrong assumption of mine, not a bug: flipping the Monday night result made the runner-up win outright, because she had picked the other side. The correction test now says so.
 - The players' leaderboard and the Back Office standings can disagree at the top when the leader has not paid (D-069). Worth watching for confusion in the first real weeks.
+- **The week page said "That week isn't available" on the live site** (fixed in PR #23). It asked for the week before the saved sign-in had been restored, the rules refused, and the page treated the refusal as "no such week" and kept showing it. Any query a page makes on opening must wait for the login (`enabled`), and a refusal must not be turned into "not found". This is what the parked browser check would have caught; with those parked, a look on a real phone after each release is the check.
+- **The season was backfilled** (D-072): the open week became week 5, and weeks 1 to 4 exist with real games and results and no entries. Week 4's Monday night result still has to be entered.
+- **Backfilled weeks take sheets as normal entries** (D-071), with one public note on the week instead of a "Late entry" badge on every entry. Weeks 1 to 4 are marked after this change is released.
 - A leftover emulator from an earlier browser run was still holding port 8080 and made `test:rules` exit without a summary. If it prints no "Tests" line, check the port.
 
 ---

@@ -681,4 +681,13 @@ describe('Sprint 6: the reveal and corrections', () => {
       await assertFails(updateDoc(final, { payoutSent: false }));
     }
   });
+
+  it('#49 no client can mark a week as backfilled, on a new draft or an existing one', async () => {
+    await assertFails(setDoc(doc(admin(), weekPath('wk09')), draftWeek({ backfilled: true })));
+    await assertFails(setDoc(doc(admin(), weekPath('wk09')), draftWeek({ correctedAt: serverTimestamp() })));
+    await assertSucceeds(setDoc(doc(admin(), weekPath('wk09')), draftWeek()));
+    await assertFails(updateDoc(doc(admin(), weekPath('wk09')), { backfilled: true }));
+    await assertFails(updateDoc(doc(admin(), weekPath(LOCKED_WEEK)), { backfilled: true }));
+    await assertSucceeds(updateDoc(doc(admin(), weekPath('wk09')), { games: [] }));
+  });
 });

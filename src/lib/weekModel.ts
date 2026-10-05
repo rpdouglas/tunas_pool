@@ -22,6 +22,8 @@ export interface WeekView {
   mnfTotal: number | null;
   winner: WeekWinner | null;
   payoutSent: boolean;
+  /** Set up after it was played, from the paper sheets (D-071). */
+  backfilled: boolean;
   /** When a result was last corrected after the winner was published, or null. */
   correctedAtMs: number | null;
 }
@@ -48,6 +50,7 @@ export const weekConverter: FirestoreDataConverter<WeekView> = {
       mnfTotal: w.mnfTotal ?? null,
       winner: w.winner ?? null,
       payoutSent: w.payoutSent === true,
+      backfilled: w.backfilled === true,
       correctedAtMs: w.correctedAt ? w.correctedAt.toDate().getTime() : null,
     };
   },

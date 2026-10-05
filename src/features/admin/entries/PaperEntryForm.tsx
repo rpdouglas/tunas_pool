@@ -53,6 +53,8 @@ export interface PaperEntryFormProps {
   view: AdminEntryView;
   /** True once picks are locked: saving needs a typed reason and leaves a "Late entry" badge. */
   late: boolean;
+  /** True for a week set up after it was played: sheets are entered as normal entries (D-071). */
+  backfill?: boolean;
   /** Where "Back" goes: the roster, keeping the season and week. */
   backHref: string;
   onSaved: (summary: { name: string; paid: boolean; late: boolean }) => void;
@@ -68,6 +70,7 @@ export function PaperEntryForm({
   week,
   view,
   late,
+  backfill = false,
   backHref,
   onSaved,
   onRemoved,
@@ -247,11 +250,18 @@ export function PaperEntryForm({
         </h1>
         <p className="flex flex-wrap items-center gap-2 text-body text-ink-muted">
           <StatusBadge status={week.status === 'open' ? 'open' : 'locked'} />
-          Week {week.weekNumber}. Picks {late ? 'locked' : 'lock'} {lockLabel}.
+          Week {week.weekNumber}. Picks {late || backfill ? 'locked' : 'lock'} {lockLabel}.
         </p>
         {isEdit && (
           <p className="text-body">
             {player.displayName} already has picks this week. Saving replaces them.
+          </p>
+        )}
+        {backfill && (
+          <p className="rounded-md bg-surface-tint p-3 text-body">
+            <span aria-hidden="true">ⓘ </span>
+            <strong>This week was backfilled.</strong> Enter the sheet as it was handed in. It saves
+            as a normal entry, and the results are already in, so the record shows at once.
           </p>
         )}
         {late && (

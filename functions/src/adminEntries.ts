@@ -23,7 +23,7 @@ export interface UpsertResult {
 
 /**
  * Enter or replace a player's picks. `late: false` is `adminUpsertEntry`: only while the week is
- * open and the lock time is ahead, by the server clock. `late: true` is `adminLateOverride`: only
+ * open and the lock time is ahead, by the server clock, or while a backfilled week is locked (D-071). `late: true` is `adminLateOverride`: only
  * once picks are locked and before the winner is published, with a typed reason that stays on the
  * entry as a badge.
  */
@@ -51,7 +51,11 @@ export async function upsertEntry(
     if (!week.exists) throw new HttpsError('not-found', 'That week does not exist.');
 
     const window = entryWindow(
-      { status: week.get('status'), lockAtMs: week.get('lockAt').toMillis() },
+      {
+        status: week.get('status'),
+        lockAtMs: week.get('lockAt').toMillis(),
+        backfilled: week.get('backfilled') === true,
+      },
       input.nowMs, // the server clock decides (CLAUDE.md §4.4)
     );
     if (window.mode === 'closed') throw new HttpsError('failed-precondition', window.message);
@@ -59,6 +63,12 @@ export async function upsertEntry(
       throw new HttpsError(
         'failed-precondition',
         'Picks are locked. After the lock, an entry needs a late-entry reason.',
+      );
+    }
+    if (late && window.mode === 'backfill') {
+      throw new HttpsError(
+        'failed-precondition',
+        "This week was backfilled, so its sheets don't need a late-entry reason. Save it as a normal entry.",
       );
     }
     if (late && window.mode === 'open') {
