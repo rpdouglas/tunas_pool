@@ -34,6 +34,9 @@ const REVEALED_WEEK = 'wk02'; // locked + revealed
 const DRAFT_WEEK = 'wk05'; // draft, admin only
 
 const hoursFromNow = (h: number) => Timestamp.fromMillis(Date.now() + h * 60 * 60 * 1000);
+// A time the phone made up. It is a minute old on purpose: `Timestamp.now()` can land in
+// the same millisecond as the server's `request.time`, and then the rules rightly accept it.
+const phoneClock = () => Timestamp.fromMillis(Date.now() - 60_000);
 const weekPath = (w: string) => `seasons/${YEAR}/weeks/${w}`;
 
 let env: RulesTestEnvironment;
@@ -435,20 +438,20 @@ describe('Sprint 2: private payment, server times, age, open weeks', () => {
     await seedBob();
     const db = env.authenticatedContext('bob').firestore();
     const entry = doc(db, `${weekPath(OPEN_WEEK)}/entries/p2`);
-    await assertFails(setDoc(entry, entryData('p2', { picksSubmittedAt: Timestamp.fromMillis(Date.now() - 60_000) })));
+    await assertFails(setDoc(entry, entryData('p2', { picksSubmittedAt: phoneClock() })));
     await assertSucceeds(setDoc(entry, entryData('p2')));
-    await assertFails(updateDoc(entry, { picksSubmittedAt: Timestamp.now() }));
+    await assertFails(updateDoc(entry, { picksSubmittedAt: phoneClock() }));
     const picks = doc(db, `${weekPath(OPEN_WEEK)}/entries/p2/private/picks`);
-    await assertFails(setDoc(picks, { picks: { g01: 'home' }, tiebreakerTotal: 40, updatedAt: Timestamp.now() }));
+    await assertFails(setDoc(picks, { picks: { g01: 'home' }, tiebreakerTotal: 40, updatedAt: phoneClock() }));
     await assertSucceeds(setDoc(picks, { picks: { g01: 'home' }, tiebreakerTotal: 40, updatedAt: serverTimestamp() }));
   });
 
   it('#35 the age confirmation on a profile is stamped by the server (D-037)', async () => {
     const carol = env.authenticatedContext('carol').firestore();
-    await assertFails(setDoc(doc(carol, 'players/carol'), profile('carol', { ageAttestedAt: Timestamp.now() })));
+    await assertFails(setDoc(doc(carol, 'players/carol'), profile('carol', { ageAttestedAt: phoneClock() })));
     await assertSucceeds(setDoc(doc(carol, 'players/carol'), profile('carol', { ageAttestedAt: serverTimestamp() })));
     const alice = env.authenticatedContext('alice').firestore();
-    await assertFails(updateDoc(doc(alice, 'players/p1'), { ageAttestedAt: Timestamp.now() }));
+    await assertFails(updateDoc(doc(alice, 'players/p1'), { ageAttestedAt: phoneClock() }));
     await assertSucceeds(updateDoc(doc(alice, 'players/p1'), { ageAttestedAt: serverTimestamp(), updatedAt: Timestamp.now() }));
   });
 
