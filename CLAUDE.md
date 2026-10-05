@@ -35,6 +35,7 @@ docs/
   FIRESTORE_RULES.md       <- security rules + rationale + test matrix
   PERSONAS.md              <- ten personas, anti-personas, persona tests (build every feature against these)
   DESIGN_SYSTEM.md         <- colors, type, components, voice, accessibility
+  BRAND_ASSETS.md          <- catalog of supplied artwork and what is cleared to use (originals in brand/originals/)
   PROJECT_PLAN.md          <- phases, sprints, acceptance criteria
   ACTIVE_CYCLE.md          <- current sprint (create at Sprint 0; update every sprint)
   DECISIONS.md             <- ADR-style log of decisions (create at Sprint 0)
