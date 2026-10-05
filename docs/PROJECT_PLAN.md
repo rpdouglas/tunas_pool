@@ -213,6 +213,43 @@ Defaults are in bold. Do not guess. Confirm with Ryan, or apply the default and 
 11. **Ravens palette details.** **Use the brighter UI gold `#D9AF26` for buttons** (the official `#9E7C0C` fails contrast), and keep Ravens red `#C60C30` for urgency and errors only. See `DESIGN_SYSTEM.md` §1.2 and §12. *Decided (D-006, D-014).*
 10. **Typefaces.** **Alfa Slab One, Barlow Condensed, and Barlow** as the closest open match to the sheet. Confirm against the original artwork. Swapping fonts is a token change only. *Decided (D-007).*
 
+## 7b. Where v1 stands (retro, 2026-10-05)
+
+All eleven sprints are built and released. What that does and does not mean:
+
+**Built and released:** entry form and receipt, week setup with schedule suggestion, payments queue, lock and reveal, results (with a scores suggestion) and winner, payout, roster and paper entry with sheet photos, late entries, claims and merges, the week page and leaderboard, corrections, season standings and player pages, reports with CSV, the printable sheet and results, reminders by text, sharing, Google sign-in, the text-size control, error reporting, the audit log screen, and season archiving.
+
+**Not yet proven with real people (this is the real gap):**
+- The Phase 1 gate was never run as written: a full week through the real screens with 10 or more real players. The site was released sprint by sprint instead.
+- No real week is final. Weeks 1 to 4 are backfilled with games and results but no entries; week 5 is open with three entries.
+- The Sprint 7 acceptance (standings against a hand-kept spreadsheet for three real weeks) cannot be run until those weeks are entered and published.
+- Never tried on a real device: Google sign-in after the Sprint 9 change, the paper sheet on paper, a reminder text link, the pool inside Facebook or Messenger.
+- Performance is 68 to 82 on Lighthouse mobile, not the 90 the plan asks for.
+
+**Carried over, each waiting on something outside the code:**
+- Saturday reminder email (needs a mail service, D-079).
+- Database backups and delete protection (a setting in the shared project, D-089).
+- Devon's counter role (PERSONAS §3.10): designed for, not built.
+- The legal and regulatory check, which blocks a public launch (§7, item 1).
+
+**What went wrong, and what changed because of it:**
+- Browser checks ate most of several sprints, then were parked, and a bug reached the live site because no screen had been opened (the week page before sign-in). A one-minute smoke run replaced them (D-082) and found two more problems on its first run.
+- The first season week was stored as week 1 when it was NFL week 5, and had to be renumbered with its entries (D-072). Week numbers now follow the NFL's.
+- Many decisions were taken as defaults to keep moving. They are listed in `DECISIONS.md` under "Waiting on the commissioner".
+
+## 7c. Backlog, in the order worth doing
+
+1. **Run a real week end to end** with the commissioner and a handful of players, on the live site: enter, pay, lock, results, winner, payout. Fix what it shows. This is the Phase 1 gate, late.
+2. **Enter weeks 1 to 4 and publish them**, then check the standings against a spreadsheet (Sprint 7's acceptance).
+3. **Turn on database backups and delete protection** before more real money weeks exist.
+4. **Confirm or change the provisional decisions**, the money and fairness ones first.
+5. **Try the device checks:** Google sign-in, print a sheet, a reminder text, an in-app browser.
+6. **The legal check**, before the pool is opened beyond the people who already play.
+7. **Performance to 90:** the Firestore SDK is the largest download. The lighter SDK on the player's first screen is the next step.
+8. **Reminder email**, once a mail service is chosen.
+9. **Counter role for Devon**, if the commissioner wants to delegate.
+10. **A wide picks grid** for the counter or a printout, if the two lists are not enough (D-067).
+
 ## 8. Parked (post-v1 ideas)
 
 - Multiple entries per person per week ("Ryan #2"), via an `entryId` under the player.

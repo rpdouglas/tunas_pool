@@ -144,7 +144,14 @@ service cloud.firestore {
     // ---------- seasons ----------
     match /seasons/{year} {
       allow read: if signedIn();
-      allow write: if isAdmin();
+      // The admin's screens create a season with its first week. Archiving and reopening go through
+      // the audited callable `adminSetSeasonStatus`, and a season is never deleted from a client.
+      allow create: if isAdmin()
+        && request.resource.data.status == 'active'
+        && !request.resource.data.keys().hasAny(['archivedAt']);
+      allow update: if isAdmin()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'archivedAt']);
+      allow delete: if false;
 
       // ----- weeks -----
       match /weeks/{weekId} {
@@ -272,6 +279,7 @@ service cloud.firestore {
 - **Self-serve profile ordering:** the client must create `players/{uid}` **before** its first entry write. Entry rules call `ownsPlayer()`, which needs the profile to exist.
 - **Admin entry edits:** the admin cannot write entries or picks directly from the client. Use `adminUpsertEntry` while open, or `adminLateOverride` (reason required) after lock.
 - **Roster (Sprint 4):** an admin adds and edits roster profiles directly from the client. A new roster profile must be unclaimed, `origin: 'admin'`, with a name of 1 to 60 characters and only the roster fields (rows 6, 7, 40). An admin edit may touch `displayName`, `phone`, `email`, `usualPayment`, `notes`, `active`, and `updatedAt` only: never the link, the origin, a merge, or the age confirmation (rows 8, 41). Profiles are never deleted; `active: false` retires one. Only an admin can list the roster (row 42). These writes are not audit logged (D-057).
+- **Seasons (Sprint 10):** the admin's screens still create a season with its first week, and may edit its fee. `status` and `archivedAt` are written only by `adminSetSeasonStatus`, so archiving and reopening are always in the audit log, and a season cannot be deleted from a client (row 52). Before this the rule was a plain admin write.
 - **Standings and stats (Sprint 7):** no rule changed. Standings are readable by any signed-in player and are the public player profile: a name and a record (row 50). All-time stats stay with the player and the admin (row 51). Both are written only by functions.
 - **Backfilled weeks (D-071):** `backfilled: true` on a week lets the admin enter sheets after the lock as normal entries. That would be a way round the lock if a client could set it, so the week rules refuse it on create and on every update, drafts included (row 49). Only a script with the Admin SDK sets it. `correctedAt` is kept out of client writes the same way.
 - **Reveal and corrections (Sprint 6):** no rule changed. The week page reads the entries list and each entry's `private/picks` only after `revealed == true`, which the picks rule has always required (rows 20, 21, 47). A correction to a final week is `adminCorrectResults` with the Admin SDK: the week update rule only allows draft edits, so no client can write `correctedAt`, results, or the winner (row 48).
@@ -379,3 +387,4 @@ Each row is at least one passing and one failing test.
 | 49 | Admin creates a draft week with `backfilled` or `correctedAt` set, or sets `backfilled` on a draft or a locked week; creates and edits a plain draft | deny / allow |
 | 50 | Any signed-in player lists the season standings and reads one row; an unauthenticated read; any client, admin included, writes a row | allow / deny / deny |
 | 51 | A player and the admin read that player's `stats/allTime`; another player reads it; anyone writes it from a client | allow / deny / deny |
+| 52 | Admin creates an active season and edits its fee; creates one already archived, sets `status` or `archivedAt`, or deletes a season; a player reads a season, or writes one | allow / deny / allow, deny |

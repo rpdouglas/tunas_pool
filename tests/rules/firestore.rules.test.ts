@@ -727,3 +727,23 @@ describe('Sprint 7: standings and stats', () => {
   });
 });
 
+describe('Sprint 10: seasons', () => {
+  it('#52 admin creates an active season with its first week, but archiving, reopening, and deleting are not client writes', async () => {
+    const season = (overrides: Record<string, unknown> = {}) => ({
+      year: '2027', status: 'active', entryFeeCents: 2000, createdAt: serverTimestamp(), ...overrides,
+    });
+    await assertFails(setDoc(doc(admin(), 'seasons/2027'), season({ status: 'archived' })));
+    await assertFails(setDoc(doc(admin(), 'seasons/2027'), season({ archivedAt: serverTimestamp() })));
+    await assertSucceeds(setDoc(doc(admin(), 'seasons/2027'), season()));
+    await assertSucceeds(updateDoc(doc(admin(), 'seasons/2027'), { entryFeeCents: 2500 }));
+    await assertFails(updateDoc(doc(admin(), 'seasons/2027'), { status: 'archived' }));
+    await assertFails(updateDoc(doc(admin(), 'seasons/2027'), { archivedAt: serverTimestamp() }));
+    await assertFails(deleteDoc(doc(admin(), 'seasons/2027')));
+    // Players read seasons (the history page lists them) and write nothing.
+    const alice = env.authenticatedContext('alice').firestore();
+    await assertSucceeds(getDoc(doc(alice, 'seasons/2027')));
+    await assertFails(setDoc(doc(alice, 'seasons/2028'), season({ year: '2028' })));
+    await assertFails(updateDoc(doc(alice, 'seasons/2027'), { entryFeeCents: 1 }));
+  });
+});
+

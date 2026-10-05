@@ -197,3 +197,69 @@ describe('adminSeasonReport', () => {
     expect(report.totals).toEqual({ weeks: 2, entries: 4, players: 3, potCents: 6000, unpaid: 1 });
   });
 });
+
+describe('seasons: archive and reopen', () => {
+  it('archives a finished season with an audit entry, stops weeks opening, and can be reopened', async () => {
+    const { listSeasons, setSeasonStatus, isSeasonArchived } = await import('./seasons');
+    await playWeek('wk01', [{ id: 'dale', name: 'Dale D.', wins: 11 }], ['dale']);
+    await playWeek('wk02', [{ id: 'dale', name: 'Dale D.', wins: 9 }], null); // still locked
+
+    await expect(
+      setSeasonStatus(db, { year: YEAR, status: 'archived', actorUid: ADMIN }),
+    ).rejects.toThrow(/1 week is still being played/);
+    await publishWinner(db, {
+      year: YEAR,
+      weekId: 'wk02',
+      actorUid: ADMIN,
+      expectedPlayerIds: ['dale'],
+    });
+
+    const archived = await setSeasonStatus(db, { year: YEAR, status: 'archived', actorUid: ADMIN });
+    expect(archived).toMatchObject({
+      year: YEAR,
+      status: 'archived',
+      weeks: 2,
+      finalWeeks: 2,
+      liveWeeks: 0,
+    });
+    const season = await db.doc(`seasons/${YEAR}`).get();
+    expect(season.get('status')).toBe('archived');
+    expect(season.get('archivedAt')).toBeTruthy();
+    expect(await isSeasonArchived(db, YEAR)).toBe(true);
+    const log = (await db.collection('auditLog').where('action', '==', 'season.status').get()).docs;
+    expect(log).toHaveLength(1);
+    expect(log[0].data()).toMatchObject({
+      actorUid: ADMIN,
+      before: { status: 'active' },
+      after: { status: 'archived' },
+      year: YEAR,
+    });
+
+    // The roster and the history are untouched by archiving.
+    expect((await db.doc('players/dale').get()).exists).toBe(true);
+    expect((await db.doc(`seasons/${YEAR}/weeks/wk01/entries/dale`).get()).exists).toBe(true);
+
+    expect(await listSeasons(db)).toEqual([
+      {
+        year: YEAR,
+        status: 'archived',
+        weeks: 2,
+        finalWeeks: 2,
+        liveWeeks: 0,
+        draftWeeks: 0,
+        test: false,
+      },
+    ]);
+    await expect(
+      setSeasonStatus(db, { year: YEAR, status: 'archived', actorUid: ADMIN }),
+    ).rejects.toThrow(/already archived/);
+
+    await setSeasonStatus(db, { year: YEAR, status: 'active', actorUid: ADMIN });
+    const reopened = await db.doc(`seasons/${YEAR}`).get();
+    expect(reopened.get('status')).toBe('active');
+    expect(reopened.get('archivedAt')).toBeUndefined();
+    await expect(
+      setSeasonStatus(db, { year: '1999', status: 'archived', actorUid: ADMIN }),
+    ).rejects.toThrow(/does not exist/);
+  });
+});

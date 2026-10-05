@@ -31,6 +31,17 @@ export interface UpsertEntryResult {
   picksSubmittedAtMs: number | null;
 }
 
+/** A season and how its weeks stand (functions/src/seasons.ts). */
+export interface SeasonSummary {
+  year: string;
+  status: 'active' | 'archived';
+  weeks: number;
+  finalWeeks: number;
+  liveWeeks: number;
+  draftWeeks: number;
+  test: boolean;
+}
+
 export const adminApi = {
   listEntries: callable<WeekArgs, EntriesList>('adminListEntries'),
   setPayment: callable<
@@ -67,6 +78,10 @@ export const adminApi = {
     { year: string },
     { year: string; players: number; removed: number; allTime: number }
   >('adminRecomputeStandings'),
+  listSeasons: callable<Record<string, never>, { seasons: SeasonSummary[] }>('adminListSeasons'),
+  setSeasonStatus: callable<{ year: string; status: 'active' | 'archived' }, SeasonSummary>(
+    'adminSetSeasonStatus',
+  ),
   listClaims: callable<Record<string, never>, ClaimsList>('adminListClaims'),
   approveClaim: callable<{ claimId: string; playerId: string }, ApproveClaimResult>(
     'adminApproveClaim',

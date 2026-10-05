@@ -125,7 +125,14 @@ service cloud.firestore {
     // ---------- seasons ----------
     match /seasons/{year} {
       allow read: if signedIn();
-      allow write: if isAdmin();
+      // The admin's screens create a season with its first week. Archiving and reopening go through
+      // the audited callable `adminSetSeasonStatus`, and a season is never deleted from a client.
+      allow create: if isAdmin()
+        && request.resource.data.status == 'active'
+        && !request.resource.data.keys().hasAny(['archivedAt']);
+      allow update: if isAdmin()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'archivedAt']);
+      allow delete: if false;
 
       // ----- weeks -----
       match /weeks/{weekId} {

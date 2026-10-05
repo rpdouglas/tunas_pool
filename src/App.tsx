@@ -25,6 +25,9 @@ const PoolSettingsPage = lazy(() => import('./features/admin/settings/PoolSettin
 const RosterPage = lazy(() => import('./features/admin/roster/RosterPage'));
 const ClaimsPage = lazy(() => import('./features/admin/claims/ClaimsPage'));
 const ReportsPage = lazy(() => import('./features/admin/reports/ReportsPage'));
+const AuditPage = lazy(() => import('./features/admin/audit/AuditPage'));
+const SeasonsPage = lazy(() => import('./features/admin/seasons/SeasonsPage'));
+const MorePage = lazy(() => import('./features/admin/MorePage'));
 const PaperEntryPage = lazy(() => import('./features/admin/entries/PaperEntryPage'));
 
 // The styleguide is visible in dev, and in builds where VITE_ENABLE_STYLEGUIDE=true (CI a11y checks).
@@ -66,6 +69,9 @@ export default function App() {
           <Route path="results" element={<ResultsPage />} />
           <Route path="weeks" element={<WeeksPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="audit" element={<AuditPage />} />
+          <Route path="seasons" element={<SeasonsPage />} />
+          <Route path="more" element={<MorePage />} />
           <Route path="weeks/:year/:weekId" element={<WeekEditorPage />} />
           <Route path="settings" element={<PoolSettingsPage />} />
         </Route>

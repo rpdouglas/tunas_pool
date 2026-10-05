@@ -36,6 +36,7 @@ import { lockDueWeeks } from './lockWeeks';
 import { parsePaymentRequest } from './payments';
 import { sameResults } from './results';
 import { recomputeAllTime, recomputeStandings, seasonReport } from './season';
+import { isSeasonArchived, listSeasons, setSeasonStatus } from './seasons';
 import { recountWeek } from './weekCounters';
 import {
   correctResults,
@@ -157,6 +158,12 @@ export const adminSetWeekStatus = onCall(async (req) => {
   const to = req.data?.status as WeekStatus;
   if (!['draft', 'open', 'locked'].includes(to)) {
     throw new HttpsError('invalid-argument', 'status must be draft, open, or locked.');
+  }
+  if (to === 'open' && (await isSeasonArchived(db, year))) {
+    throw new HttpsError(
+      'failed-precondition',
+      "This season is archived, so a week can't be opened in it. Reopen the season from Seasons first.",
+    );
   }
 
   const weekRef = db.doc(weekPath(year, weekId));
@@ -327,6 +334,26 @@ export const adminMarkPayout = onCall(async (req) => {
     year: requireId(req.data?.year, 'year'),
     weekId: requireId(req.data?.weekId, 'weekId'),
     sent,
+    actorUid: req.auth!.uid,
+  });
+});
+
+// ---- Seasons (Sprint 10) ------------------------------------------------------
+export const adminListSeasons = onCall(async (req) => {
+  requireAdmin(req);
+  return { seasons: await listSeasons(db) };
+});
+
+/** adminSetSeasonStatus: archive a finished season, or reopen one. */
+export const adminSetSeasonStatus = onCall(async (req) => {
+  requireAdmin(req);
+  const status = req.data?.status;
+  if (status !== 'active' && status !== 'archived') {
+    throw new HttpsError('invalid-argument', 'status must be active or archived.');
+  }
+  return setSeasonStatus(db, {
+    year: requireId(req.data?.year, 'year'),
+    status,
     actorUid: req.auth!.uid,
   });
 });

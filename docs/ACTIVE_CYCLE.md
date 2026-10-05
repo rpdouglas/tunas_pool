@@ -1,11 +1,48 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 9: Hardening** · Phase 4 (Polish and automation) · Started: 2026-10-05
+**Sprint 10: Rollover and retro** · Phase 5 (Season rollover) · Started: 2026-10-05
 
 ## Goal
-The pool holds up for the people it is hardest on: someone with large text on an older phone, someone on a weak signal, someone who opened the link inside Facebook, and the commissioner on the day something breaks.
+The season can be closed cleanly when it ends, a dispute can be settled by reading the record, and it is written down plainly what v1 has and has not proven.
 
 ## Persona check
+- **Primary persona:** the Commissioner (closing a season, answering a dispute) and Gerald (the record). Secondary: Rosalie (never re-registers).
+- **Rosalie Inclusion Test:** there is no rollover step for players at all. The roster, logins, claims, and history are not tied to a season, so nobody is asked to register again (PERSONAS §2: "Seniors never have to re-register").
+- **Gerald Trust Test:** the audit log can now be read in the Back Office, in plain words, with who, when, the typed reason, and the stored before and after. It cannot be edited from anywhere. Archiving and reopening a season are in it too.
+- **Commissioner Counter Test:** the bar is four tabs on one line again. Archive asks once, says what it stops, and has an Undo. Finding a dispute is typing a name.
+- **Privacy test:** the audit log is admin only, as it always was by rule.
+
+## Tasks
+- [x] Audit log in plain words (`shared/auditText.ts`, 8 tests) and its Back Office screen, fifty entries at a time with search
+- [x] Seasons: `adminListSeasons`, `adminSetSeasonStatus` (`functions/src/seasons.ts`, 3 unit tests and an integration test), and opening a week is refused in an archived season
+- [x] Rules: season `status` and `archivedAt` are function-written, and a season cannot be deleted from a client (row 52, 55 rules tests in all)
+- [x] Back Office: the Seasons screen, the More page, and a bar of four tabs and More (D-091)
+- [x] Smoke run covers the three new screens (25 screens)
+- [x] Retro: `PROJECT_PLAN.md` §7b (where v1 stands) and §7c (the backlog in order); `DECISIONS.md` "Waiting on the commissioner"
+- [x] Docs: DATA_MODEL §3.4, §3.10, §5; FIRESTORE_RULES (rules, row 52); DECISIONS D-090 to D-092; README (settling a dispute, end of season)
+- [ ] The real rollover, in February, when the 2026 season ends: export, then archive
+- [ ] Confirm D-090 with the commissioner
+
+## Acceptance (from PROJECT_PLAN.md)
+None is written for Sprint 10 in the plan. The working test: a finished season can be archived and reopened with both in the audit log, no week can be opened in an archived season, and a dispute about one player's picks can be answered from the Audit log screen.
+
+## Notes / learned
+- **The plan's rollover ("copy the roster, reset the weekly data") turned out to need neither** (D-090). The identity model from Sprint 0 already made players season-free. What was missing was a way to close a season.
+- The audit log had been written since Sprint 1 with no way to read it outside the Firebase console. Reading it back in plain words also tested how useful each entry is: the backfill and renumbering entries had borrowed `week.correction`, and the screen now tells those apart.
+- The parked long browser scripts click a "Claims" tab that is now under More. They would need that one line changed before being run again.
+- Verified with typecheck, lint, 191 unit tests, 112 rules and function tests, and the smoke run (25 screens with accessibility and large-text checks).
+- **Retro in one line:** everything in the plan is built and released, and almost none of it has been used by a real player yet. The backlog (PROJECT_PLAN §7c) starts with running one real week.
+
+---
+
+## Sprint 9 (released 2026-10-05, PR #28 and #29; follow-ups open)
+
+**Sprint 9: Hardening** · Phase 4 (Polish and automation) · Started: 2026-10-05
+
+### Goal
+The pool holds up for the people it is hardest on: someone with large text on an older phone, someone on a weak signal, someone who opened the link inside Facebook, and the commissioner on the day something breaks.
+
+### Persona check
 - **Primary persona:** Rosalie's family and the older regulars (large text, older phones) and Dale (weak signal, 20 minutes to lock). Secondary: Kayla and Jen (links opened inside Facebook or Messenger), the Commissioner (results on Sunday night, and knowing when something is broken), Gerald (results he can trust).
 - **Dale Deadline Test:** the home screen paints its backdrop and name from the stylesheet alone, before the app's code arrives, and no player downloads the Google sign-in helper unless they tap that button.
 - **Rosalie Inclusion Test / accessibility:** every screen passes the WCAG 2.2 AA rules with real data in it and fits a phone at Extra large text. The Text size control is on the home screen, where it can be found, not in a settings page.
@@ -14,7 +51,7 @@ The pool holds up for the people it is hardest on: someone with large text on an
 - **Commissioner Counter Test:** "Fill in finished games from ESPN" is one tap on Sunday night, then a look, then Save. A screen that breaks shows a plain message with Reload, and the error reaches the logs.
 - **Privacy test:** an error report carries the page path without its query string (which can hold a sign-in code), and no picks, names, or payments. A season export holds private data and is written only to a folder that is never committed.
 
-## Tasks
+### Tasks
 - [x] Accessibility audit on the real screens: the smoke run now applies the WCAG 2.2 AA rules to all 22 screens (no violations) and checks each at Extra large text. Three overflows fixed (results rows, the printed results table, the week picker row)
 - [x] Text size control on the home screen (Normal, Large, Extra large), applied before first paint
 - [x] Performance: a first paint from `index.html`, Auth without the popup helper, and the week's space held while it loads (D-084)
@@ -28,10 +65,10 @@ The pool holds up for the people it is hardest on: someone with large text on an
 - [ ] Turn on scheduled backups and delete protection for `db-tunaspool` (Ryan; commands in the README)
 - [ ] Confirm the provisional decisions D-084, D-086, D-088, D-089 with the commissioner
 
-## Acceptance (from PROJECT_PLAN.md)
+### Acceptance (from PROJECT_PLAN.md)
 Lighthouse mobile scores of 90 or higher for performance and accessibility. Sign-in works from Facebook and Messenger in-app browsers.
 
-## Notes / learned
+### Notes / learned
 - **Lighthouse after the release: 68 and 82, up from 53, not yet 90.** First paint fell from 4.9 s to about 2.5 s. What was left: the first paint showed the name as text and the app then swapped in the wordmark image, which was both the late largest paint (3.5 to 4.2 s) and, in one run, a layout shift of 0.19. The first paint now uses the same image, size, and layout as the home screen. Two runs minutes apart differed by 14 points, so one run is not a measurement.
 - **Accessibility was already 100 on Lighthouse and clean on every real screen.** The gaps were at large text, which no check had covered: the setting existed in the stylesheet with no way to turn it on.
 - Verified with typecheck, lint, 181 unit tests, 110 rules and function tests, the build, `test:a11y`, and the smoke run (22 screens, with the accessibility and large-text checks, about 75 seconds).
