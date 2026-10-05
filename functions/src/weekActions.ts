@@ -17,6 +17,7 @@ import { evaluateWeek, writeEntryRecords, type WeekEvaluation } from './evaluate
 import { planPaymentChange, type PaymentPlan } from './payments';
 import { sameResults, validateResultsInput } from './results';
 import { parseReason } from '../../shared/paperEntry';
+import { counterPaymentCheck } from '../../shared/counterPolicy';
 
 const weekPath = (year: string, weekId: string) => `seasons/${year}/weeks/${weekId}`;
 
@@ -24,6 +25,9 @@ export interface WeekRef {
   year: string;
   weekId: string;
   actorUid: string;
+  /** Set only for the counter role (D-095): its limits apply, and the audit entry names them. */
+  actorRole?: 'counter';
+  actorEmail?: string | null;
 }
 
 export async function setPayment(
@@ -45,11 +49,21 @@ export async function setPayment(
         }
       : null;
 
+    if (input.actorRole === 'counter') {
+      const allowed = counterPaymentCheck(existing, { status, method });
+      if (!allowed.ok) throw new HttpsError('permission-denied', allowed.message);
+    }
     const plan = planPaymentChange(existing, { status, method });
     if (plan.kind === 'error') throw new HttpsError('failed-precondition', plan.message);
     if (plan.kind === 'noop')
       return { changed: false, status: existing?.paymentStatus ?? 'unpaid' };
-    writePaymentPlan(tx, db, paymentRef, plan, { year, weekId, actorUid });
+    writePaymentPlan(tx, db, paymentRef, plan, {
+      year,
+      weekId,
+      actorUid,
+      actorRole: input.actorRole,
+      actorEmail: input.actorEmail,
+    });
     return { changed: true, status: plan.status };
   });
 }
@@ -83,6 +97,9 @@ export function writePaymentPlan(
 
   auditInTransaction(tx, db, {
     actorUid: ref.actorUid,
+    ...(ref.actorRole === 'counter'
+      ? { actorRole: 'counter', actorEmail: ref.actorEmail ?? null }
+      : {}),
     action: 'payment.set',
     target: paymentRef.path,
     before: plan.before ?? { paymentStatus: 'unpaid', paymentMethod: null },

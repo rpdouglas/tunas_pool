@@ -747,3 +747,69 @@ describe('Sprint 10: seasons', () => {
   });
 });
 
+
+describe('Counter role (D-095): daily work only, nothing private, nothing irreversible', () => {
+  const devon = () => env.authenticatedContext('devon', { counter: true }).firestore();
+  const devonStorage = () => env.authenticatedContext('devon', { counter: true }).storage();
+  const sheetPath = 'paperSheets/2026/wk04/p1.jpg';
+  const jpeg = { contentType: 'image/jpeg' };
+
+  it('#53 a counter reads exactly what any signed-in player reads, and no private data', async () => {
+    // Public: open weeks and the public part of an entry.
+    await assertSucceeds(getDoc(doc(devon(), weekPath(OPEN_WEEK))));
+    await assertSucceeds(getDoc(doc(devon(), `${weekPath(OPEN_WEEK)}/entries/p1`)));
+    // Private: someone else's profile (phone, email, notes), payment, picks before the reveal,
+    // the audit log, claims, and a week still being set up.
+    await assertFails(getDoc(doc(devon(), 'players/p1')));
+    await assertFails(getDocs(collection(devon(), 'players')));
+    await assertFails(getDoc(doc(devon(), `${weekPath(OPEN_WEEK)}/entries/p1/payment/current`)));
+    await assertFails(getDoc(doc(devon(), `${weekPath(OPEN_WEEK)}/entries/p1/private/picks`)));
+    await assertFails(getDocs(collection(devon(), 'auditLog')));
+    await assertFails(getDocs(collection(devon(), 'claims')));
+    await assertFails(getDoc(doc(devon(), weekPath(DRAFT_WEEK))));
+    // After the reveal the picks are public, for the counter as for everyone.
+    await assertSucceeds(getDoc(doc(devon(), `${weekPath(REVEALED_WEEK)}/entries/p1/private/picks`)));
+  });
+
+  it('#54 a counter cannot write what only the commissioner writes, from the browser', async () => {
+    await assertFails(
+      setDoc(doc(devon(), 'players/walk-in'), {
+        displayName: 'Walk In', phone: null, email: null, claimedByUid: null, origin: 'admin',
+        usualPayment: null, notes: null, active: true,
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(updateDoc(doc(devon(), 'players/p1'), { displayName: 'Hacked' }));
+    await assertFails(setDoc(doc(devon(), weekPath('wk09')), draftWeek()));
+    await assertFails(updateDoc(doc(devon(), weekPath(DRAFT_WEEK)), { weekNumber: 9 }));
+    await assertFails(setDoc(doc(devon(), 'config/pool'), { entryFeeCents: 100 }));
+    await assertFails(
+      updateDoc(doc(devon(), `${weekPath(OPEN_WEEK)}/entries/p1/payment/current`), {
+        paymentStatus: 'paid',
+      }),
+    );
+    await assertFails(deleteDoc(doc(devon(), `${weekPath(OPEN_WEEK)}/entries/p1`)));
+    await assertFails(deleteDoc(doc(devon(), 'players/p1')));
+  });
+
+  it('#55 a counter can add a sheet photo, and cannot read, replace-by-reading, or delete one', async () => {
+    await assertSucceeds(uploadString(ref(devonStorage(), sheetPath), 'photo', 'raw', jpeg));
+    await assertFails(getBytes(ref(devonStorage(), sheetPath)));
+    await assertFails(deleteObject(ref(devonStorage(), sheetPath)));
+    // Same limits as the commissioner: an image, 5 MB at most, only under paperSheets.
+    await assertFails(
+      uploadString(ref(devonStorage(), sheetPath), 'x', 'raw', { contentType: 'application/pdf' }),
+    );
+    await assertFails(
+      uploadBytes(ref(devonStorage(), sheetPath), new Uint8Array(5 * 1024 * 1024 + 1), jpeg),
+    );
+    await assertFails(uploadString(ref(devonStorage(), 'other/file.jpg'), 'x', 'raw', jpeg));
+  });
+
+  it('#56 only a real true counts: look-alike claims are an ordinary player', async () => {
+    for (const claims of [{ counter: 'true' }, { counter: 1 }, { role: 'counter' }, { counters: true }]) {
+      const fake = env.authenticatedContext('fake', claims);
+      await assertFails(uploadString(ref(fake.storage(), sheetPath), 'photo', 'raw', jpeg));
+    }
+  });
+});

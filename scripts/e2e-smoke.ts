@@ -16,7 +16,14 @@ import { createRequire } from 'node:module';
 import AxeBuilder from '@axe-core/playwright';
 import { chromium, type Page } from '@playwright/test';
 import { recomputeAllTime, recomputeStandings } from '../functions/src/season';
-import { ALL_HOME, YEAR, seedEntry, seedWeek, testDb } from '../functions/src/testSupport.int';
+import {
+  ALL_HOME,
+  GAME_IDS,
+  YEAR,
+  seedEntry,
+  seedWeek,
+  testDb,
+} from '../functions/src/testSupport.int';
 import { enterResults, publishWinner } from '../functions/src/weekActions';
 
 const fnRequire = createRequire(new URL('../functions/package.json', import.meta.url));
@@ -351,6 +358,127 @@ try {
     deleted.size === 1 && deleted.docs[0].get('reason') === 'Added by mistake',
   );
   await adminCtx.close();
+
+  // ---- 5. Devon, the counter role (D-095) ----
+  const counterCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+  const counter = await counterCtx.newPage();
+  counter.on('pageerror', (e) => errors.push(`counter: ${e.message}`));
+  const COUNTER_EMAIL = 'devon@tunas.test';
+  await counter.goto(`${APP}/counter`);
+  await counter.getByLabel('Email').fill(COUNTER_EMAIL);
+  await counter.getByRole('button', { name: 'Email me a sign-in link' }).click();
+  await counter.getByText('Check your email').waitFor();
+  const counterCodes = (
+    await (await fetch(`${AUTH}/emulator/v1/projects/${PROJECT}/oobCodes`)).json()
+  ).oobCodes;
+  const counterOob = counterCodes.filter((c: { email: string }) => c.email === COUNTER_EMAIL).pop();
+  await counter.goto(
+    `${APP}/auth/finish?next=%2Fcounter&apiKey=demo-api-key&oobCode=${counterOob.oobCode}&mode=signIn&lang=en`,
+  );
+  await counter.getByRole('link', { name: 'Continue' }).waitFor();
+  const counterUsers = await (
+    await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:query`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ returnUserInfo: true }),
+    })
+  ).json();
+  const counterUid = counterUsers.userInfo.find(
+    (u: { email?: string }) => u.email === COUNTER_EMAIL,
+  ).localId;
+  execSync(`npm run -s admin:claim -- ${counterUid} counter`, {
+    env: { ...process.env, FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099', GCLOUD_PROJECT: PROJECT },
+    stdio: 'pipe',
+  });
+  await counter.getByRole('link', { name: 'Continue' }).click();
+  await counter.getByRole('button', { name: 'Check again' }).click();
+  await counter.getByRole('heading', { name: 'Counter' }).waitFor();
+
+  await visit(counter, 'counter-home', '/counter', 'Find a player');
+  await counter.getByText('Jen K.').first().waitFor({ timeout: 45_000 }); // the roster arrives after the page
+  await counter.screenshot({ path: `${SHOTS}/counter-home-loaded.png`, fullPage: true });
+  const counterText = (await counter.locator('main').innerText()).replace(/\s+/g, ' ');
+  check(
+    'the counter list shows names and status, and no phone number',
+    counterText.includes('Jen K.') && !/315-555|315555|613-555|\+1\d{10}/.test(counterText),
+  );
+
+  // Take cash for Jen, who said she would e-Transfer.
+  await counter.getByRole('button', { name: 'Paid cash: Jen K.' }).click();
+  await counter.getByRole('button', { name: 'Undo cash: Jen K.' }).waitFor({ timeout: 45_000 });
+  const jenPay = (
+    await db.doc(`seasons/${YEAR}/weeks/wk03/entries/jen/payment/current`).get()
+  ).data();
+  check(
+    'cash received is saved as cash, under Devon',
+    jenPay?.paymentStatus === 'paid' &&
+      jenPay?.paymentMethod === 'cash' &&
+      jenPay?.paidBy === counterUid,
+  );
+
+  // Add a walk-in.
+  await counter.getByRole('button', { name: 'Add a player' }).click();
+  await counter.getByLabel('Name', { exact: true }).fill('Walt W.');
+  await counter.getByRole('button', { name: 'Add player' }).click();
+  await counter.getByText('Walt W.').first().waitFor({ timeout: 45_000 });
+  const walt = await db.collection('players').where('displayName', '==', 'Walt W.').get();
+  check(
+    'a walk-in is added to the roster with only a name',
+    walt.size === 1 && walt.docs[0].get('origin') === 'admin' && walt.docs[0].get('phone') === null,
+  );
+
+  // Enter a sheet for Rosalie, in paper order, and take her cash.
+  await visit(counter, 'counter-enter', '/counter/enter/rosalie', 'Entering for');
+  for (const id of GAME_IDS) await counter.locator(`#game-${id} button.pick`).nth(0).click();
+  await counter.getByLabel(/Tiebreaker/).fill('45');
+  check(
+    'the counter is not offered e-Transfer as a way it was paid',
+    (await counter.locator('label.pick', { hasText: 'Paid e-Transfer' }).count()) === 0,
+  );
+  await counter.locator('label.pick', { hasText: 'Paid cash' }).click();
+  await counter.getByRole('button', { name: 'Save picks' }).click();
+  await counter.getByRole('heading', { name: 'Counter' }).waitFor({ timeout: 45_000 });
+  const rosalieEntry = await db.doc(`seasons/${YEAR}/weeks/wk03/entries/rosalie`).get();
+  const rosaliePay = (
+    await db.doc(`seasons/${YEAR}/weeks/wk03/entries/rosalie/payment/current`).get()
+  ).data();
+  check(
+    'a sheet entered at the counter is saved, marked paid cash',
+    rosalieEntry.exists &&
+      rosaliePay?.paymentStatus === 'paid' &&
+      rosaliePay?.paymentMethod === 'cash',
+  );
+
+  // Someone already in: the screen says who to ask, before anything is typed.
+  await counter.goto(`${APP}/counter/enter/jen`);
+  const asked = await counter
+    .getByText(/sheet is already in.*ask the commissioner/i)
+    .first()
+    .waitFor({ timeout: 45_000 })
+    .then(() => true)
+    .catch(() => false);
+  check('a sheet that is already in says "Ask the commissioner"', asked);
+
+  // The audit log has Devon's work under his name.
+  const devonLogs = await db.collection('auditLog').where('actorUid', '==', counterUid).get();
+  check(
+    'everything the counter did is in the audit log under the counter role',
+    devonLogs.size >= 4 &&
+      devonLogs.docs.every(
+        (d) => d.get('actorRole') === 'counter' && d.get('actorEmail') === COUNTER_EMAIL,
+      ),
+    `${devonLogs.size} entries`,
+  );
+
+  // The Back Office is not his.
+  await counter.goto(`${APP}/admin`);
+  const blocked = await counter
+    .getByText(/isn't an admin account/)
+    .waitFor({ timeout: 15_000 })
+    .then(() => true)
+    .catch(() => false);
+  check('the counter is kept out of the Back Office', blocked);
+  await counterCtx.close();
 
   check('no script errors on any screen', errors.length === 0, errors.slice(0, 3).join(' | '));
 } catch (err) {
