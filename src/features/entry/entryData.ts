@@ -97,6 +97,16 @@ export async function findMyProfile(uid: string): Promise<{ id: string; data: Pl
   return snap.empty ? null : { id: snap.docs[0].id, data: snap.docs[0].data() as Player };
 }
 
+/** This login's roster profile, or null for a guest who has none yet. Shared by the menu on every screen. */
+export function useMyProfile(uid: string | undefined) {
+  return useQuery({
+    queryKey: ['myProfile', uid ?? ''] as const,
+    enabled: Boolean(uid),
+    staleTime: 60_000,
+    queryFn: () => findMyProfile(uid!),
+  });
+}
+
 export async function loadMyEntry(year: string, weekId: string, uid: string): Promise<MyEntry> {
   const profile = await findMyProfile(uid);
   if (!profile) return { playerId: null, profile: null, entry: null, payment: null, picks: null };

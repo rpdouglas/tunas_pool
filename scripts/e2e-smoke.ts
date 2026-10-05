@@ -42,7 +42,8 @@ function check(label: string, ok: boolean, detail = '') {
 async function visit(page: Page, name: string, path: string, expected: string | RegExp) {
   try {
     await page.goto(`${APP}${path}`);
-    await page.getByText(expected).first().waitFor({ timeout: 15_000 });
+    // Visible matches only: the closed menu drawer holds links with the same words as some headings.
+    await page.getByText(expected).locator('visible=true').first().waitFor({ timeout: 15_000 });
     const fits = await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
     );

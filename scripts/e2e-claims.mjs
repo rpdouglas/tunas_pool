@@ -117,7 +117,8 @@ try {
   // ---- B. A family member asks to link Rosalie's history ----------------------------------
   const kid = await newPage();
   await kid.goto(APP);
-  await kid.getByRole('link', { name: /Played on paper, by text, or by phone before/ }).click();
+  await kid.getByRole('button', { name: 'Menu' }).click();
+  await kid.getByRole('link', { name: 'Link your history' }).click();
   await kid.getByText('First, save your account').waitFor();
   check(
     'B1 a guest is asked to save their account before asking, in plain words',
@@ -168,8 +169,12 @@ try {
   await admin.getByRole('list', { name: 'Requests' }).getByRole('listitem').first().waitFor();
   check(
     'C1 the Claims tab shows a count of one',
-    (await admin.getByRole('link', { name: /Claims/ }).locator('.badge').textContent())?.trim() ===
-      '1 waiting',
+    (
+      await admin
+        .getByRole('link', { name: /Claims/ })
+        .locator('.badge')
+        .textContent()
+    )?.trim() === '1 waiting',
   );
   const card = admin.getByRole('list', { name: 'Requests' }).getByRole('listitem').first();
   check(
@@ -218,10 +223,12 @@ try {
 
   await kid.goto(APP);
   await kid.getByText('Picks in.').waitFor();
+  await kid.getByRole('button', { name: 'Menu' }).click(); // the link now lives in the menu
   check(
-    'D4 the home screen treats the paper entry as theirs, and no longer offers to link',
+    'D4 the menu treats the paper entry as theirs, and no longer offers to link',
     (await kid.getByRole('link', { name: /Link your history/ }).count()) === 0,
   );
+  await kid.getByRole('button', { name: 'Close menu' }).click();
   await kid.getByRole('link', { name: 'See or edit your picks' }).click();
   await kid.getByRole('button', { name: /^Edit picks until/ }).click();
   await kid.getByText('All 15 picked').waitFor();
@@ -242,7 +249,11 @@ try {
   await admin.getByRole('heading', { name: 'Roster' }).waitFor();
   check(
     'E1 the roster marks the player as linked',
-    (await admin.getByRole('listitem').filter({ hasText: 'Rosalie M.' }).getByText('Linked').count()) === 1,
+    (await admin
+      .getByRole('listitem')
+      .filter({ hasText: 'Rosalie M.' })
+      .getByText('Linked')
+      .count()) === 1,
   );
   await admin.getByRole('button', { name: 'Details for Rosalie M.' }).click();
   await admin.getByRole('button', { name: 'Unlink login' }).click();
@@ -262,7 +273,10 @@ try {
   );
   await kid.goto(`${APP}/history`);
   await kid.getByText('No weeks yet').waitFor();
-  check('E4 the unlinked login no longer sees the history', (await kid.getByText('Week 1').count()) === 0);
+  check(
+    'E4 the unlinked login no longer sees the history',
+    (await kid.getByText('Week 1').count()) === 0,
+  );
   await kid.goto(`${APP}/picks/2026/wk01`);
   await kid.getByText('0 of 15 picked').waitFor();
   check('E5 and is back to a blank form for the week, not the paper picks', true);
@@ -276,7 +290,9 @@ try {
   await admin.getByRole('link', { name: /Claims/ }).click();
   const second = admin.getByRole('list', { name: 'Requests' }).getByRole('listitem').first();
   await second.getByRole('button', { name: 'Reject the request from Bernie T.' }).click();
-  await second.getByLabel('A note for them (optional)').fill('Stop by the shop and we will sort it out');
+  await second
+    .getByLabel('A note for them (optional)')
+    .fill('Stop by the shop and we will sort it out');
   await second.getByRole('button', { name: 'Reject request' }).click();
   await admin.getByText('Request from Bernie T. rejected').waitFor();
   const rejected = await audit('claim.rejected');
@@ -323,7 +339,8 @@ try {
     'G2 the website week now belongs to the roster player, with its picks',
     entryIds.includes(bernie) &&
       !entryIds.includes(guestUid) &&
-      (await getDoc(`${WEEK}/entries/${bernie}/private/picks`)).fields.tiebreakerTotal.integerValue === '37' &&
+      (await getDoc(`${WEEK}/entries/${bernie}/private/picks`)).fields.tiebreakerTotal
+        .integerValue === '37' &&
       text(await getDoc(`${WEEK}/entries/${bernie}`), 'displayName') === 'Bernie T.',
   );
   check(

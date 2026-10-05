@@ -6,6 +6,7 @@ import { Countdown } from '../components/ui/Countdown';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { SegmentedChoice } from '../components/ui/SegmentedChoice';
 import { StatTile } from '../components/ui/StatTile';
+import { MenuView } from '../components/layout/AppMenu';
 import { PawnShopHelmet, TunaBadge, WordmarkArt } from '../components/ui/BrandArt';
 import { WordmarkLockup } from '../components/ui/WordmarkLockup';
 import { WinnerBanner } from '../components/ui/WinnerBanner';
@@ -239,6 +240,66 @@ export default function Styleguide() {
           <div className="bg-gameday flex flex-col items-center gap-6 rounded-lg p-6">
             <WordmarkLockup />
             <WordmarkLockup size="compact" />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-menu">
+          <h2 id="sg-menu" className="mb-3 font-heading text-h2 italic">
+            Player menu
+          </h2>
+          <p className="mb-3 text-body">
+            The bar and drawer on every player screen. Tap Menu to open the drawer. Three states
+            below: a guest, a player, and the commissioner.
+          </p>
+          <div className="flex flex-col gap-6">
+            {[
+              {
+                label: 'Guest',
+                props: {
+                  name: '',
+                  email: null,
+                  signedIn: false,
+                  isAdmin: false,
+                  profileId: null,
+                  showClaim: true,
+                  printTo: null,
+                },
+              },
+              {
+                label: 'Player',
+                props: {
+                  name: 'Dale D.',
+                  email: 'dale@tunas.test',
+                  signedIn: true,
+                  isAdmin: false,
+                  profileId: 'p1',
+                  showClaim: true,
+                  printTo: '/',
+                },
+              },
+              {
+                label: 'Commissioner',
+                props: {
+                  name: 'Ryan',
+                  email: 'rpdouglas@gmail.com',
+                  signedIn: true,
+                  isAdmin: true,
+                  profileId: 'p2',
+                  showClaim: false,
+                  printTo: '/',
+                },
+              },
+            ].map((state) => (
+              <div key={state.label} className="bg-gameday flex flex-col gap-3 rounded-lg p-4">
+                <p className="text-body font-semibold text-ink-inverse">{state.label}</p>
+                <MenuView
+                  {...state.props}
+                  shareNote={null}
+                  onShare={() => undefined}
+                  onSignOut={() => undefined}
+                />
+              </div>
+            ))}
           </div>
         </section>
 

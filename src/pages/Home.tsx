@@ -11,11 +11,8 @@ import { useCurrentWeek, useMyEntry } from '../features/entry/entryData';
 import { useLastWinner } from '../features/leaderboard/revealData';
 import { useSeasonLeaders } from '../features/leaderboard/standingsData';
 import { formatRecord } from '@shared/scoring';
-import { sharePoolMessage } from '@shared/messages';
-import { shareText } from '../lib/share';
-import { useState } from 'react';
 import { WinnerBanner } from '../components/ui/WinnerBanner';
-import { TextSizeControl } from '../components/ui/TextSizeControl';
+import { AppBar } from '../components/layout/AppMenu';
 
 /**
  * The weekly home screen (D-020): this week at a glance, your status, and the one next step.
@@ -31,19 +28,6 @@ export default function Home() {
   const lastWinner = useLastWinner(year, Boolean(session.user)).data ?? null;
   const leaders = useSeasonLeaders(year, Boolean(session.user)).data ?? [];
   const leader = leaders[0] ?? null;
-  const [shareNote, setShareNote] = useState<string | null>(null);
-
-  async function sharePool() {
-    const outcome = await shareText(sharePoolMessage(open && week ? week : null));
-    setShareNote(
-      outcome === 'copied'
-        ? 'Invitation copied. Paste it into your group chat.'
-        : outcome === 'failed'
-          ? "Couldn't share from this browser."
-          : null,
-    );
-  }
-
   const open = Boolean(week && week.status === 'open' && Date.now() < week.lockAtMs);
   const entry = mine.data?.entry ?? null;
   const payment = mine.data?.payment ?? null;
@@ -51,6 +35,7 @@ export default function Home() {
   return (
     <main className="bg-gameday min-h-screen px-4 pb-16 pt-8">
       <div className="mx-auto flex max-w-player flex-col gap-6">
+        <AppBar />
         <h1 className="sr-only">Tunas Weekly Football Pool Pick 'Em</h1>
         <div className="flex flex-col items-center gap-3">
           <WordmarkArt className="w-72" />
@@ -176,19 +161,6 @@ export default function Home() {
           </div>
         )}
 
-        {session.user && !session.user.isAnonymous ? (
-          <p className="text-center text-body text-ink-inverse">
-            Signed in as {session.user.email}
-          </p>
-        ) : (
-          <Link
-            to="/account"
-            className="inline-flex min-h-touch items-center justify-center text-body text-ink-inverse underline"
-          >
-            Played on another phone? Sign in with email
-          </Link>
-        )}
-
         {leader && (
           <Link
             to="/standings"
@@ -215,52 +187,6 @@ export default function Home() {
             </span>
           </Link>
         )}
-
-        <div className="flex flex-col gap-2">
-          <button type="button" className="btn btn-ghost bg-surface" onClick={sharePool}>
-            Share this pool
-          </button>
-          {shareNote && (
-            <p role="status" className="text-center text-body text-ink-inverse">
-              {shareNote}
-            </p>
-          )}
-        </div>
-
-        <nav aria-label="Your account" className="flex flex-col items-center">
-          <Link
-            to="/history"
-            className="inline-flex min-h-touch items-center justify-center text-body text-ink-inverse underline"
-          >
-            Your history
-          </Link>
-          {week && open && (
-            <Link
-              to={`/sheet/${year}/${week.id}`}
-              className="inline-flex min-h-touch items-center justify-center text-body text-ink-inverse underline"
-            >
-              Print a paper sheet
-            </Link>
-          )}
-          {!leader && (
-            <Link
-              to="/standings"
-              className="inline-flex min-h-touch items-center justify-center text-body text-ink-inverse underline"
-            >
-              Season standings
-            </Link>
-          )}
-          {mine.data?.profile?.origin !== 'admin' && (
-            <Link
-              to="/claim"
-              className="inline-flex min-h-touch items-center justify-center text-center text-body text-ink-inverse underline"
-            >
-              Played on paper, by text, or by phone before? Link your history
-            </Link>
-          )}
-        </nav>
-
-        <TextSizeControl onDark />
 
         <PawnShopHelmet className="mx-auto mt-2 w-44" />
       </div>
