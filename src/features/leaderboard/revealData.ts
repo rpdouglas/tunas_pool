@@ -16,10 +16,15 @@ export const revealKeys = {
   lastWinner: (year: string) => ['lastWinner', year] as const,
 };
 
-/** One week by ID. Null if it doesn't exist or is still a draft (players can't read drafts). */
-export function useRevealWeek(year: string, weekId: string) {
+/**
+ * One week by ID. Null if it doesn't exist or is still a draft (players can't read drafts).
+ * `signedIn` must be true before this runs: the rules refuse every read until the guest sign-in has
+ * finished, and that refusal looks the same as a week that isn't there.
+ */
+export function useRevealWeek(year: string, weekId: string, signedIn: boolean) {
   return useQuery({
     queryKey: revealKeys.week(year, weekId),
+    enabled: signedIn,
     queryFn: async (): Promise<WeekView | null> => {
       try {
         const snap = await getDoc(
@@ -63,10 +68,11 @@ export function useRevealEntries(year: string, weekId: string, enabled: boolean)
   });
 }
 
-/** The most recent week with a published winner, for the home screen. */
-export function useLastWinner(year: string) {
+/** The most recent week with a published winner, for the home screen. Waits for the sign-in too. */
+export function useLastWinner(year: string, signedIn: boolean) {
   return useQuery({
     queryKey: revealKeys.lastWinner(year),
+    enabled: signedIn,
     queryFn: async (): Promise<WeekView | null> => {
       const snap = await getDocs(
         query(

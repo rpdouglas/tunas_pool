@@ -33,7 +33,7 @@ type View = 'standings' | 'games';
 export default function WeekPage() {
   const { year = '', weekId = '' } = useParams();
   const session = useGuestSession();
-  const week = useRevealWeek(year, weekId);
+  const week = useRevealWeek(year, weekId, Boolean(session.user));
   const revealed = week.data?.revealed === true;
   const entries = useRevealEntries(year, weekId, revealed && Boolean(session.user));
   const profile = useMyProfile(session.user?.uid);
