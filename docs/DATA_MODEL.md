@@ -254,7 +254,7 @@ draft --(admin opens)--> open --(lockAt, automatic, or admin locks early)--> loc
   +--(admin, no entries)---+
 ```
 
-- **Setting up a draft:** the admin pastes one game per line (`shared/weeks.ts` `parseMatchups`). No day or time means Sunday 1:00 PM; the last line is Monday night, 8:15 PM by default. The default lock is Saturday 11:59 PM Toronto time. A week opens only with 1 to 14 Sunday games (D-050), one Monday night game as the tiebreaker, no team twice, and a lock that is in the future and before the first kickoff.
+- **Setting up a draft:** the admin pastes one game per line (`shared/weeks.ts` `parseMatchups`), or fills the box from ESPN's schedule feed and checks it (`shared/schedule.ts`, D-051). No day or time means Sunday 1:00 PM; the last line is Monday night, 8:15 PM by default. The default lock is Saturday 11:59 PM Toronto time. A week opens only with 1 to 14 Sunday games (D-050), one Monday night game as the tiebreaker, no team twice, and a lock that is in the future and before the first kickoff.
 
 - **draft:** visible to admin only. Games and lock time are editable.
 - **open:** players can create and edit entries until `lockAt`.

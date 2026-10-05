@@ -29,6 +29,7 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { TextAreaField } from '../../../components/ui/TextAreaField';
 import { friendlyError } from '../../../lib/errors';
 import { currentSeason, upcomingSunday } from '../../../lib/season';
+import { useWeekSchedule } from './scheduleData';
 import {
   useSaveDraftWeek,
   useSeasonWeeks,
@@ -157,6 +158,7 @@ function WeekEditor({ year, week, previous, message, setMessage }: WeekEditorPro
   const navigate = useNavigate();
   const save = useSaveDraftWeek();
   const setStatus = useSetWeekStatus();
+  const schedule = useWeekSchedule();
   const status: WeekStatus = week?.status ?? 'draft';
   const editable = status === 'draft';
 
@@ -241,9 +243,34 @@ function WeekEditor({ year, week, previous, message, setMessage }: WeekEditorPro
     }
   }
 
+  async function fillFromSchedule() {
+    try {
+      const found = await schedule.mutateAsync(form.sunday);
+      if (found.sundayGames + found.mondayGames === 0) {
+        setMessage({
+          tone: 'error',
+          text: 'No Sunday or Monday games were found for that week. Paste the games instead.',
+        });
+        return;
+      }
+      update({ text: found.text });
+      const sundays = `${found.sundayGames} Sunday ${found.sundayGames === 1 ? 'game' : 'games'}`;
+      const mondays = `${found.mondayGames} Monday ${found.mondayGames === 1 ? 'game' : 'games'}`;
+      setMessage({
+        tone: 'ok',
+        text: `Filled in ${sundays} and ${mondays} from ESPN. Check them against the schedule before you save.`,
+      });
+    } catch {
+      setMessage({
+        tone: 'error',
+        text: "Couldn't get the schedule right now. Paste the games instead.",
+      });
+    }
+  }
+
   const sundayGames = games.filter((g) => g.slot === 'sunday');
   const mnfGame = games.find((g) => g.slot === 'mnf');
-  const busy = save.isPending || setStatus.isPending;
+  const busy = save.isPending || setStatus.isPending || schedule.isPending;
 
   return (
     <div className="flex flex-col gap-6">
@@ -320,6 +347,16 @@ function WeekEditor({ year, week, previous, message, setMessage }: WeekEditorPro
               }}
             >
               Copy games and lock from week {previous.weekNumber}
+            </Button>
+          )}
+
+          {editable && (
+            <Button
+              variant="ghost"
+              onClick={fillFromSchedule}
+              disabled={!dateValid || Boolean(sundayError) || schedule.isPending}
+            >
+              {schedule.isPending ? 'Getting the games…' : "Get this week's games from ESPN"}
             </Button>
           )}
 

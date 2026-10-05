@@ -11,7 +11,7 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 - Support seniors and paper players through admin-entered picks, with a path to claim their history later.
 - Keep one permanent `playerId` per person so the pool runs year over year.
 
-**Non-goals for v1:** multiple entries per person, phone OTP login, online payments, push notifications, ESPN auto-import, auto-claim by verified email.
+**Non-goals for v1:** multiple entries per person, phone OTP login, online payments, push notifications, ESPN score import, auto-claim by verified email.
 
 ## 2. Release strategy
 
@@ -219,7 +219,6 @@ Defaults are in bold. Do not guess. Confirm with Ryan, or apply the default and 
 - Auto-claim when a verified email matches the roster email (a single config switch).
 - Phone OTP login.
 - Push notifications.
-- ESPN schedule import.
 - Survivor or confidence-point side pools.
 - Public read-only share page for the weekly winner banner.
 - **Group payments** (one payment covering several entries, PERSONAS Spec Impact Log #2), revisit if marking entries one at a time becomes a chore (D-043).
