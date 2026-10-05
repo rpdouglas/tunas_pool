@@ -36,7 +36,7 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm run test:e2e:emulator` | Browser run of the sign-in, week-setup, and entry flows against running emulators (steps in `scripts/e2e-emulator.mjs`) |
 | `npm run test:e2e:mock-week` | The Phase 1 gate in a browser: 12 players, payments, results, winner, payout (needs the Functions emulator; see `scripts/e2e-mock-week.mjs`) |
 | `npm run emulators` | Firebase emulators (Auth, Firestore, Functions, Hosting, Storage, UI) |
-| `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs credentials) |
+| `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs a project and credentials, see step 6 below) |
 
 ## Firebase setup (one time)
 
@@ -52,8 +52,15 @@ Firestore database (`db-tunaspool`, location `nam5`). Both are pinned in `fireba
 4. Deploy: `npm run build && npx firebase deploy --project prod --only hosting,firestore:rules,firestore:indexes`.
 5. Cloud Functions and the scheduler need the Blaze (pay-as-you-go) plan. Deploy them with the **Deploy functions** workflow
    or `npx firebase deploy --project prod --only functions:tunaspool`.
-6. Grant admin: sign in at `/admin` with your email link, find your uid under Authentication > Users, then run
-   `GCLOUD_PROJECT=lilypad-strategy-design npm run admin:claim -- <uid>` and tap **Check again**.
+6. Grant admin. Sign in at `/admin` with your email link and find your uid under Authentication > Users. The script
+   needs a service-account key as well as the project:
+   - In the Firebase console, open Project settings > Service accounts and choose **Generate new private key**.
+   - Save the JSON **outside the repo** (for example `~/tunas-sa.json`) and never commit it.
+   - Run `GOOGLE_APPLICATION_CREDENTIALS=~/tunas-sa.json GCLOUD_PROJECT=lilypad-strategy-design npm run admin:claim -- <uid>`.
+   - Tap **Check again** on `/admin` to pick up the claim, then delete the key file and revoke the key in the console.
+
+   To set the claim in the emulator instead, no key is needed:
+   `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 npm run admin:claim -- <uid>`.
 
 **Deploys are automatic.** Every push to `main` that passes CI deploys Hosting, Firestore rules, and Firestore
 indexes (the `deploy` job in `.github/workflows/ci.yml`). It authenticates with the `FIREBASE_SERVICE_ACCOUNT`
