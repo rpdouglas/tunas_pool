@@ -59,6 +59,11 @@ Firestore database (`db-tunaspool`, location `nam5`). Both are pinned in `fireba
    - Run `GOOGLE_APPLICATION_CREDENTIALS=~/tunas-sa.json GCLOUD_PROJECT=lilypad-strategy-design npm run admin:claim -- <uid>`.
    - Tap **Check again** on `/admin` to pick up the claim, then delete the key file and revoke the key in the console.
 
+   With gcloud (installed in the dev container) you can skip the key file: run
+   `gcloud auth application-default login --no-launch-browser`, then
+   `gcloud auth application-default set-quota-project lilypad-strategy-design` if it asks for a quota project, and
+   run the script with only `GCLOUD_PROJECT` set.
+
    To set the claim in the emulator instead, no key is needed:
    `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 npm run admin:claim -- <uid>`.
 
