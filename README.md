@@ -31,7 +31,7 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm run typecheck` | `tsc` for the web app and Cloud Functions |
 | `npm run lint` | ESLint |
 | `npm test` | Unit and component tests (Vitest + Testing Library) |
-| `npm run test:rules` | Firestore rules tests in the emulator (needs Java) |
+| `npm run test:rules` | Firestore rules tests in the emulator (needs Java 21+) |
 | `npm run emulators` | Firebase emulators (Auth, Firestore, Functions, Hosting, Storage, UI) |
 | `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs credentials) |
 

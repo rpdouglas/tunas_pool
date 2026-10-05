@@ -21,7 +21,7 @@ Repo, emulators, CI, docs, rules skeleton, and the design system foundation runn
 - [x] `firebase login`, add a Web app (`tunaspoolwebapp`), fill `.env.local`, deploy hello-world to Hosting (`--project prod`): live at https://tunaspool.web.app
 - [x] Deploy `firestore:rules` and `firestore:indexes` to `db-tunaspool` (verified: release `cloud.firestore/db-tunaspool`; the `(default)` release was not touched)
 - [ ] Decide the functions region and the Storage bucket approach for the shared project (DECISIONS.md, Open)
-- [ ] Confirm `npm run test:rules` passes in the Codespace (needs Java; first run downloads the emulator)
+- [x] Confirm `npm run test:rules` passes in the Codespace (needs Java 21+; first run downloads the emulator)
 - [ ] Add an axe accessibility check against `/styleguide` in CI
 - [ ] Verify fonts render (Alfa Slab One, Barlow Condensed, Barlow) and check the styleguide at 375px
 - [ ] Obtain the Tuna mascot artwork (Ravens palette, no NFL marks): DESIGN_SYSTEM §10
@@ -33,4 +33,5 @@ Repo, emulators, CI, docs, rules skeleton, and the design system foundation runn
 ## Notes / learned
 - The production project is shared with other apps. A bare `firebase deploy`, or one without the `site` / `database` pins, would overwrite their Hosting site, `(default)` Firestore rules, or Storage rules.
 - Nothing imports `src/lib/firebase.ts` yet, so the production bundle carries no Firebase config. The first real check of `.env.local` and the named database comes with the first feature that reads Firestore.
+- `firebase-tools` 15 will not start the emulators on Java older than 21. CI and the devcontainer were pinned to 17, which failed `test:rules` in CI; both are now 21.
 - (add as you go)
