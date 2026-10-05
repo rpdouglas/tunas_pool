@@ -207,6 +207,9 @@ All use semantic tokens. Build in `src/components/ui/`, each shown in the dev-on
 | **Leaderboard row** | Rank · name · record ("11 – 4") · paid badge (admin only). Winner gets the gold crown. | default · you · winner · tied |
 | **Winner banner** | Gold crown, name, record, tiebreaker points, pot. The only animated element. | n/a |
 | **Payments queue row** (admin) | Name, phone, declared method, one-tap **Paid** with undo. 56px. | unpaid · paid · flagged duplicate |
+| **Pick row** (admin) | One numbered line of the paper sheet: number, away, home. Two Pick buttons with no kickoff time, for copying a sheet top to bottom. Long team names wrap. | unpicked · picked |
+| **Photo field** (admin) | "Add a photo" opens the phone's camera or files. Shows that a photo is ready or saved, with Retake, View, and Remove. | empty · chosen · saved · error |
+| **Roster row** (admin) | Name, Entered or Not yet, paid badge, how it came in, phone, note. One button: **Enter picks** (gold) when not in, **Edit picks** (outline) when in, **Late entry** after the lock. | not yet · entered · late · inactive |
 | **Toast** | Bottom, `shadow-raised`. Same verb as the button. | success · error |
 | **Empty state** | `.icon-badge` + one sentence + one action | n/a |
 

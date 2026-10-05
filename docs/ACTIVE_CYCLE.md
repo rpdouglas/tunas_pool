@@ -1,11 +1,58 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 3: Admin payments, results, and winner** · Phase 1 (Playable MVP) · Started: 2026-10-05
+**Sprint 4: Roster and paper-entry mode** · Phase 2 (Roster, paper, and claims) · Started: 2026-10-05
 
 ## Goal
-The commissioner can run the whole weekly job from a phone: see who has entered and paid (and mark payments in one tap, with undo), have picks lock and reveal on their own, enter the results, check the winner, publish it, and record that the payout was sent. This closes the Phase 1 gate: a full mock week with 10 or more players.
+The commissioner keeps a roster of the people who play on paper, by text, or by phone, sees who has and hasn't entered this week, and enters a sheet for someone in about a minute in the paper's own order, marking it paid in the same step. After the lock, an entry can only be added or changed with a typed reason that leaves a badge and an audit entry.
 
 ## Persona check
+- **Primary persona:** Rosalie (Never Require a Screen), served through the Commissioner (Ten Seconds and an Undo). Secondary: Gerald (proof), Bernie (texted picks), the Late Pick Lobbyist (anti-persona B). Devon's counter role stays out of this sprint (PERSONAS §3.10: post-Sprint 4).
+- **Rosalie Inclusion Test:** she never touches a screen, gives no email, and creates no account. Her roster profile needs only a name. Games are entered 1 to 15 in the sheet's order, a blank on the sheet can be saved as a blank, and a photo of the sheet can be kept with the entry. "Did you get mine?" is answered by the roster's Entered / Not yet.
+- **Commissioner Counter Test:** find the player by typing part of a name, tap Enter picks, 15 taps, the tiebreaker, Paid cash, Save. Rows and buttons are 48px or more, one-handed at 375px. A half-entered sheet survives an interruption (kept on the device). Wrong picks are fixed by entering again; removing an entry needs a reason.
+- **Gerald Trust Test:** every admin entry, late entry, and removal goes through an audited callable with before and after. A late entry needs a typed reason and shows a "Late entry" badge. Late entries stop once the winner is published. A paid entry cannot be removed until the payment is undone, so the pot never changes quietly.
+- **Dale Deadline Test:** nothing is added to the player's form. The lock still comes from the server: `adminUpsertEntry` refuses after `lockAt` by the server clock.
+- **Border Test (Troy):** roster phones take any North American number. Cash and e-Transfer are equal in the paid step.
+- **Welcome / Privacy test:** roster phone numbers and notes are admin-only (the rules already say so), and so is the photo of a sheet. No player screen shows how an entry came in or whether it is paid.
+- **Responsible-Play Check:** still one entry per person per week (the entry ID is the player ID), one fee, no tabs.
+
+## Tasks
+- [x] Shared logic: admin entry validation, the typed reason, and which callable applies when (`shared/paperEntry.ts`, 15 tests); roster search, Entered / Not yet, the add form, and possible doubles (`src/features/admin/roster/roster.ts`, 10 tests)
+- [x] Rules first: a roster profile needs a name and only roster fields; an admin edit can never touch the link, the origin, a merge, or the age confirmation; paper photos are images of 5 MB or less. Four new matrix rows (40 to 43), 46 rules tests in all
+- [x] Functions: `adminUpsertEntry`, `adminLateOverride`, `adminDeleteEntry` (`functions/src/adminEntries.ts`), with mark-paid in the same transaction through the same code as the payments queue. 13 integration tests against the Firestore emulator
+- [x] Back Office: Roster tab (add, edit, deactivate, search, Entered / Not yet, possible doubles) and the "Entering for" screen (the sheet 1 to 15, source, paid cash or e-Transfer, photo, late reason, remove). The payments queue shows how an entry came in and links to its picks
+- [x] Storage in code: the bucket is pinned as a deploy target (`firebase.json`, `.firebaserc`, `shared/config.ts`), photos are shrunk on the phone, and the Storage SDK loads only on the entry screen (the player bundle is unchanged at about 270 KB gzipped)
+- [x] Styleguide entries for PickRow, PhotoField, and the roster row; `test:a11y` passes (18 checks)
+- [x] Emulator end-to-end at 375px (`npm run test:e2e:paper-entry`, 40 checks). `test:e2e:emulator` still passes
+- [x] Docs: DATA_MODEL §3.6 and §5, FIRESTORE_RULES (rules, Storage, rows 40 to 43), DESIGN_SYSTEM §6, DECISIONS D-054 to D-059, README, CLAUDE.md
+- [x] Production: the `tunaspool-paper-sheets` bucket is created (US multi-region, uniform access), added to Firebase, and has `storage.rules` deployed to it (2026-10-05, with Ryan's go-ahead; the release matches the file). A real upload from the live site has not been tried yet: it needs the Sprint 4 screens deployed
+- [ ] Production: the three new callables need a functions deploy. The merge triggers the automatic one, which has not yet succeeded in CI (see Sprint 3); if it fails, run the manual **Deploy functions** workflow. Until they are deployed, saving an entry on the new screens answers "not implemented yet"
+- [ ] Confirm the provisional decisions D-054 to D-058 with the commissioner
+- [ ] The acceptance's "about a minute" with a real sheet and a real thumb (the scripted run takes about 8 seconds: 15 taps, one field, one payment tap, one photo)
+
+## Acceptance (from PROJECT_PLAN.md)
+Admin transcribes a full paper sheet in about a minute and marks it paid. Late override requires a reason and appears in the audit log and entry badge.
+
+## Notes / learned
+- Merging this sprint releases the screens and the rules, and triggers the functions deploy.
+- The Storage emulator refuses a bare `bucket` in `firebase.json` ("Must supply 'target' in Storage configuration"), so the bucket is a deploy target mapped in `.firebaserc` for both the demo project and production (D-058).
+- The public entry document carries `source` and `paperPhotoPath`, so any signed-in player could read how an entry came in and the photo's path, though never the photo itself (Storage rules) and no screen shows either. That is the Sprint 0 schema, unchanged here. If the path should be private too, move it to an admin-only document.
+- The first browser run caught two 375px overflows that typecheck and the unit tests could not: a fifth Back Office tab pushed "Settings" off the screen, and "Commanders" pushed a pick button out of its column. The tabs are now tighter and wrap; pick rows let a long name wrap.
+- An admin edit of a player's own website entry keeps `enteredBy: 'self'`. The audit log, not the entry, says the admin changed it.
+- A late entry made after results are in gets its `record` at once, because `onResultsWritten` only fires when results change.
+- `test:e2e:mock-week` crashes a browser page at the lock step in this Codespace ("Page crashed", 13 pages open on an 8 GB machine). It does the same on unchanged `main`, so it is the machine, not this sprint. It passed through the payments steps on this branch. The end-to-end scripts now start Chromium with `--disable-dev-shm-usage`, which moved the crash later but did not cure it. Re-run it on a bigger machine before the Phase 1 gate is called closed.
+- The project had no Firebase default Storage bucket until 2026-10-05: `lilypad-strategy-design.firebasestorage.app` was created that day, from the console's Storage setup, with Firebase's deny-everything rules. The pool does not use it. The console only offers "Add bucket" after that setup, so the pool's bucket was linked with the `addFirebase` API call instead (README).
+- Toasts stay 8 seconds and stack up to three, which covers the bottom of a short screen for a moment after several quick saves. Left alone; worth a look if the commissioner notices.
+
+---
+
+## Sprint 3 (build done; production test run still open)
+
+**Sprint 3: Admin payments, results, and winner** · Phase 1 (Playable MVP) · Started: 2026-10-05
+
+### Goal
+The commissioner can run the whole weekly job from a phone: see who has entered and paid (and mark payments in one tap, with undo), have picks lock and reveal on their own, enter the results, check the winner, publish it, and record that the payout was sent. This closes the Phase 1 gate: a full mock week with 10 or more players.
+
+### Persona check
 - **Primary persona:** The Commissioner (Ten Seconds and an Undo). Secondary: Gerald (proof), Dale and Jen (what players see), Troy (cross-border payments), Devon (counter work is Sprint 4).
 - **Commissioner Counter Test:** the payments queue is the Back Office home screen. Marking paid is one tap with an Undo, in the row and in a toast. Rows are 56px, one-handed in portrait at 375px. Every write that matters (paid or not, results, winner, payout, status changes) goes through an audited callable.
 - **Gerald Trust Test:** the winner is shown with a plain "How this was decided" line (most wins, tiebreaker, or split pot) before it is published, and the publish step needs a confirmation that names the winner. The audit log keeps before and after for every change. Lock is enforced by the rules, not just the scheduler.
@@ -14,7 +61,7 @@ The commissioner can run the whole weekly job from a phone: see who has entered 
 - **Border Test (Troy):** cash and e-Transfer are equal in the queue. An entry with no payment choice yet shows "Hasn't said how they'll pay", and the admin picks cash or e-Transfer when marking paid.
 - **Dale Deadline Test:** picks reveal within a minute of the lock (scheduler), and the server rules reject late writes even before it runs.
 
-## Tasks
+### Tasks
 - [x] Spike: named-database Firestore triggers run in the emulator (they fire, with the right paths); the sandbox proxy workaround is D-049
 - [x] Shared scoring: record, tie rule, winner, tiebreaker, split pot (`shared/scoring.ts`, 22 tests incl. the paper-sheet example, the all-below case, a split pot with leftover cents, unpaid entries)
 - [x] Shared duplicate flags (phone, email, name, similar name), flags only (`shared/duplicates.ts`)
@@ -27,10 +74,10 @@ The commissioner can run the whole weekly job from a phone: see who has entered 
 - [ ] Production test run in a separate `2026-test` season, then removed with `npm run admin:delete-season -- 2026-test` (D-044), after the functions are deployed (Ryan; steps in the README)
 - [x] Ops carried from Sprint 1 and 2: service-account roles, first functions deploy, admin claim, save Pool settings once (Ryan). Checked against production on 2026-10-05: all 21 functions active (manual **Deploy functions** run from `efbad0d`), `lockWeeks` firing every minute, rules and indexes match the repo, one admin claim, `config/pool` saved
 
-## Acceptance (from PROJECT_PLAN.md)
+### Acceptance (from PROJECT_PLAN.md)
 Run a full mock week end to end in the emulator and then in production under a test season: 10 or more mixed players, payments confirmed, results entered, winner published with the correct tiebreaker outcome. Admin can do the whole weekly job from a phone.
 
-## Notes / learned
+### Notes / learned
 - The mock week caught a real bug the integration tests could not: the browser's callable layer sends an omitted field as `null`, and the server only accepted `undefined`, so every plain "Paid" tap was rejected. Fixed by `parsePaymentRequest` (tested). Check any new callable's optional fields the same way.
 - **Corrections after Final are not possible yet** (D-047, Sprint 6). Until then the publish step shows the winner, asks for confirmation, and refuses if the winner changed since the admin looked. If a wrong result is published anyway, the fix is by hand in the Firebase console, so check results before publishing.
 - Firestore triggers cannot be tested with the sandbox's default proxy; see D-049. The scheduler (`lockWeeks`) cannot run in the emulator at all (no Pub/Sub emulator here), so its logic is covered by the integration tests instead and the schedule itself is verified after the first deploy.

@@ -24,7 +24,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { getBytes, ref, uploadString } from 'firebase/storage';
+import { deleteObject, getBytes, ref, uploadBytes, uploadString } from 'firebase/storage';
 
 const PROJECT_ID = 'demo-tunas-pool';
 const YEAR = '2026';
@@ -194,6 +194,48 @@ describe('players', () => {
   it('#8 admin cannot change claimedByUid on a player', async () => {
     await assertSucceeds(updateDoc(doc(admin(), 'players/p1'), { notes: 'Pays cash' }));
     await assertFails(updateDoc(doc(admin(), 'players/p1'), { claimedByUid: 'boss' }));
+  });
+
+  const roster = (overrides: Record<string, unknown> = {}) =>
+    profile('x', { claimedByUid: null, origin: 'admin', notes: null, ...overrides });
+
+  it('#40 a roster player needs only a name: no phone, email, or account; the name is checked', async () => {
+    await assertSucceeds(setDoc(doc(admin(), 'players/r1'), roster({ displayName: 'Rosalie M.' })));
+    await assertFails(setDoc(doc(admin(), 'players/r2'), roster({ displayName: '' })));
+    await assertFails(setDoc(doc(admin(), 'players/r2'), roster({ displayName: 'x'.repeat(61) })));
+    await assertFails(setDoc(doc(admin(), 'players/r2'), roster({ active: 'yes' })));
+    await assertFails(setDoc(doc(admin(), 'players/r2'), roster({ mergedInto: 'p1' })));
+    await assertFails(setDoc(doc(admin(), 'players/r2'), roster({ origin: 'self' })));
+    // A player cannot add someone to the roster.
+    const alice = env.authenticatedContext('alice').firestore();
+    await assertFails(setDoc(doc(alice, 'players/r3'), roster()));
+  });
+
+  it('#41 admin edits roster details and deactivates, but cannot change origin, a merge, or the age confirmation', async () => {
+    await assertSucceeds(setDoc(doc(admin(), 'players/r1'), roster()));
+    const r1 = doc(admin(), 'players/r1');
+    await assertSucceeds(
+      updateDoc(r1, {
+        displayName: 'Rosalie M.', phone: '+16135550144', usualPayment: 'cash',
+        notes: 'Large print sheet', updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertSucceeds(updateDoc(r1, { active: false }));
+    await assertSucceeds(updateDoc(r1, { active: true }));
+    await assertFails(updateDoc(r1, { displayName: '' }));
+    await assertFails(updateDoc(r1, { origin: 'self' }));
+    await assertFails(updateDoc(r1, { mergedInto: 'p1' }));
+    await assertFails(updateDoc(r1, { ageAttestedAt: serverTimestamp() }));
+    await assertFails(deleteDoc(r1));
+  });
+
+  it('#42 admin can list the whole roster; a player cannot, and cannot read a roster profile', async () => {
+    await assertSucceeds(setDoc(doc(admin(), 'players/r1'), roster()));
+    await assertSucceeds(getDocs(collection(admin(), 'players')));
+    const alice = env.authenticatedContext('alice').firestore();
+    await assertFails(getDocs(collection(alice, 'players')));
+    await assertFails(getDoc(doc(alice, 'players/r1')));
+    await assertFails(getDocs(query(collection(alice, 'players'), where('origin', '==', 'admin'))));
   });
 });
 
@@ -412,14 +454,34 @@ describe('weeks', () => {
 describe('storage', () => {
   const path = 'paperSheets/2026/wk04/p1.jpg';
 
+  const jpeg = { contentType: 'image/jpeg' };
+
   it('#32 only admin can read or write paper-sheet photos', async () => {
     const adminStorage = env.authenticatedContext('boss', { admin: true }).storage();
-    await assertSucceeds(uploadString(ref(adminStorage, path), 'photo'));
+    await assertSucceeds(uploadString(ref(adminStorage, path), 'photo', 'raw', jpeg));
     await assertSucceeds(getBytes(ref(adminStorage, path)));
     const player = env.authenticatedContext('alice').storage();
     await assertFails(getBytes(ref(player, path)));
-    await assertFails(uploadString(ref(player, path), 'photo'));
-    await assertFails(uploadString(ref(adminStorage, 'other/file.txt'), 'x'));
+    await assertFails(uploadString(ref(player, path), 'photo', 'raw', jpeg));
+    await assertFails(uploadString(ref(adminStorage, 'other/file.jpg'), 'x', 'raw', jpeg));
+  });
+
+  it('#43 a paper-sheet photo must be an image of 5 MB or less; admin can replace and delete it', async () => {
+    const adminStorage = env.authenticatedContext('boss', { admin: true }).storage();
+    await assertFails(uploadString(ref(adminStorage, path), 'not a photo'));
+    await assertFails(
+      uploadString(ref(adminStorage, path), 'x', 'raw', { contentType: 'application/pdf' }),
+    );
+    await assertFails(
+      uploadBytes(ref(adminStorage, path), new Uint8Array(5 * 1024 * 1024 + 1), jpeg),
+    );
+    await assertSucceeds(uploadBytes(ref(adminStorage, path), new Uint8Array(200_000), jpeg));
+    await assertSucceeds(uploadString(ref(adminStorage, path), 'retake', 'raw', jpeg));
+    await assertSucceeds(deleteObject(ref(adminStorage, path)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await uploadString(ref(ctx.storage(), path), 'photo', 'raw', jpeg);
+    });
+    await assertFails(deleteObject(ref(env.authenticatedContext('alice').storage(), path)));
   });
 });
 

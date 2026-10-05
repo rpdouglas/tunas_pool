@@ -9,7 +9,7 @@ import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '@shared/config';
 // config first (scripts/write-web-env.mjs).
 const env = import.meta.env;
 const hasConfig = Boolean(env.VITE_FIREBASE_API_KEY);
-const app = initializeApp(
+export const app = initializeApp(
   hasConfig
     ? {
         apiKey: env.VITE_FIREBASE_API_KEY,
@@ -38,5 +38,5 @@ if (import.meta.env.VITE_USE_EMULATORS === 'true') {
   connectFunctionsEmulator(functions, '127.0.0.1', 5001);
 }
 
-// Storage (paper-sheet photos) arrives in Sprint 4. Load it on demand there, so the player bundle
-// doesn't carry it: `const { getStorage } = await import('firebase/storage')` (DECISIONS D-029).
+// Storage (paper-sheet photos) is loaded on demand by src/lib/paperPhotos.ts, so the player bundle
+// doesn't carry it (DECISIONS D-029).

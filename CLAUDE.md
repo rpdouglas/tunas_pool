@@ -82,6 +82,7 @@ npm run test:rules     # rules tests and the functions' integration tests (Fires
 npm run test:a11y      # axe, fonts, and 375px checks on /styleguide and the sign-in pages (Playwright)
 npm run test:e2e:emulator  # full browser flows against running emulators + dev server (see the script header)
 npm run test:e2e:mock-week # the Phase 1 gate: 12 players, payments, results, winner, payout (needs the Functions emulator)
+npm run test:e2e:paper-entry # Sprint 4: roster, a paper sheet with a photo, a late entry (needs the Functions and Storage emulators)
 npm run typecheck      # tsc --noEmit across web + functions
 npm run build          # production build
 firebase deploy --project prod --only functions:tunaspool   # CI does this after the site deploy when functions changed; or the "Deploy functions" workflow
@@ -94,6 +95,7 @@ Deployment targets (see `DECISIONS.md` D-015):
 | Firebase project | `lilypad-strategy-design` (alias `prod`). **Shared with other apps.** |
 | Hosting site | `tunaspool` → https://tunaspool.web.app |
 | Firestore database | `db-tunaspool` (named, location `nam5`). Never `(default)`. |
+| Storage bucket | `tunaspool-paper-sheets` (deploy target `paperSheets`, D-058). Never the default bucket. |
 | Local and CI | `demo-tunas-pool` (emulator only, the `.firebaserc` default) |
 
 - **Merging to `main` deploys to production.** After CI passes, the `deploy` job in `.github/workflows/ci.yml` releases Hosting, Firestore rules, and Firestore indexes (`DECISIONS.md` D-019). Treat every merge, and every rules change in particular, as a release. Functions deploy after the site deploy when `functions/`, `shared/`, or `firebase.json` changed (`DECISIONS.md` D-041), and can be re-run with the manual **Deploy functions** workflow (D-035). Storage is not automated.

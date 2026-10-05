@@ -63,12 +63,18 @@ service cloud.firestore {
           && isDisplayName(request.resource.data.displayName)
           && isNowOrNull(request.resource.data.get('ageAttestedAt', null)))
         ||
-        // Admin roster: unclaimed, admin-origin.
+        // Admin roster: unclaimed, admin-origin, with a name. No email or account is needed.
         (isAdmin()
           && request.resource.data.claimedByUid == null
-          && request.resource.data.origin == 'admin');
+          && request.resource.data.origin == 'admin'
+          && request.resource.data.keys().hasOnly([
+               'displayName', 'phone', 'email', 'claimedByUid', 'origin',
+               'usualPayment', 'notes', 'active', 'createdAt', 'updatedAt'])
+          && isDisplayName(request.resource.data.displayName)
+          && request.resource.data.active is bool);
 
-      // Owner may edit contact info only. Admin may edit anything except the link.
+      // Owner may edit contact info only. Admin may edit the roster details, never the link,
+      // the origin, or a merge (functions do those).
       allow update: if
         (ownsPlayer(playerId)
           && request.resource.data.diff(resource.data).affectedKeys()
@@ -78,7 +84,11 @@ service cloud.firestore {
               || request.resource.data.ageAttestedAt == request.time))
         ||
         (isAdmin()
-          && request.resource.data.claimedByUid == resource.data.claimedByUid);
+          && request.resource.data.claimedByUid == resource.data.claimedByUid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['displayName', 'phone', 'email', 'usualPayment', 'notes', 'active', 'updatedAt'])
+          && isDisplayName(request.resource.data.displayName)
+          && request.resource.data.active is bool);
 
       allow delete: if false; // deactivate via `active`; merges handled by functions
 

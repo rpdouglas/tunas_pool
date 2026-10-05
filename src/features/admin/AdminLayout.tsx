@@ -5,6 +5,7 @@ import { useAuth } from '../auth/useAuth';
 
 const NAV = [
   { to: '/admin', label: 'Payments', end: true },
+  { to: '/admin/roster', label: 'Roster', end: false },
   { to: '/admin/results', label: 'Results', end: false },
   { to: '/admin/weeks', label: 'Weeks', end: false },
   { to: '/admin/settings', label: 'Settings', end: false },
@@ -30,14 +31,14 @@ export function AdminLayout() {
           </Link>
           <nav
             aria-label="Back Office"
-            className="order-last flex w-full items-center sm:order-none sm:w-auto"
+            className="order-last -mx-2 flex w-[calc(100%+1rem)] flex-wrap items-center sm:order-none sm:mx-0 sm:w-auto"
           >
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
                 to={`${item.to}${suffix}`}
                 end={item.end}
-                className="flex min-h-touch items-center px-3 text-body underline-offset-4 aria-[current=page]:font-semibold aria-[current=page]:underline"
+                className="flex min-h-touch items-center px-2 text-body underline-offset-4 sm:px-3 aria-[current=page]:font-semibold aria-[current=page]:underline"
               >
                 {item.label}
               </NavLink>

@@ -18,6 +18,7 @@
     "test:a11y": "playwright test",
     "test:e2e:emulator": "node scripts/e2e-emulator.mjs",
     "test:e2e:mock-week": "node scripts/e2e-mock-week.mjs",
+    "test:e2e:paper-entry": "node scripts/e2e-paper-entry.mjs",
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-tunas-pool \"vitest run -c vitest.rules.config.ts\"",
     "emulators": "firebase emulators:start --project demo-tunas-pool --import=.emulator-data --export-on-exit",
     "functions:build": "npm --prefix functions run build",

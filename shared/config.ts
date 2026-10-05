@@ -12,3 +12,9 @@ export const FIRESTORE_DATABASE_ID = 'db-tunaspool';
  * functions' global options and the web app's callable client, so they cannot drift.
  */
 export const FUNCTIONS_REGION = 'us-central1';
+
+/**
+ * The pool's own Storage bucket for paper-sheet photos (DECISIONS.md D-029). The project's default
+ * bucket is shared with other apps and is never used. Pinned in firebase.json too.
+ */
+export const PAPER_SHEETS_BUCKET = 'tunaspool-paper-sheets';

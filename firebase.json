@@ -4,9 +4,12 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "storage": {
-    "rules": "storage.rules"
-  },
+  "storage": [
+    {
+      "target": "paperSheets",
+      "rules": "storage.rules"
+    }
+  ],
   "functions": [
     {
       "source": "functions",

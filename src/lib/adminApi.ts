@@ -1,6 +1,7 @@
 /** Typed wrappers for the admin callables (docs/DATA_MODEL.md §5). Every one is admin-only on the server. */
 import { httpsCallable } from 'firebase/functions';
 import type { EntriesList, PublishedWinner, WeekPreview } from '@shared/adminTypes';
+import type { AdminEntry } from '@shared/paperEntry';
 import type { GameResult, PaymentMethod } from '@shared/types';
 import { functions } from './firebase';
 
@@ -12,6 +13,13 @@ function callable<Req, Res>(name: string) {
 interface WeekArgs {
   year: string;
   weekId: string;
+}
+
+export interface UpsertEntryResult {
+  created: boolean;
+  late: boolean;
+  paid: boolean;
+  picksSubmittedAtMs: number | null;
 }
 
 export const adminApi = {
@@ -30,5 +38,15 @@ export const adminApi = {
   ),
   markPayout: callable<WeekArgs & { sent: boolean }, { changed: boolean; payoutSent: boolean }>(
     'adminMarkPayout',
+  ),
+  upsertEntry: callable<WeekArgs & { playerId: string; entry: AdminEntry }, UpsertEntryResult>(
+    'adminUpsertEntry',
+  ),
+  lateOverride: callable<
+    WeekArgs & { playerId: string; entry: AdminEntry; reason: string },
+    UpsertEntryResult
+  >('adminLateOverride'),
+  deleteEntry: callable<WeekArgs & { playerId: string; reason: string }, { deleted: true }>(
+    'adminDeleteEntry',
   ),
 };

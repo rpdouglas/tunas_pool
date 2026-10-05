@@ -12,6 +12,10 @@ export interface EntryRow {
   phone: string | null;
   email: string | null;
   source: string;
+  /** Who first entered it: the player on the website, or the admin for them. */
+  enteredBy: 'self' | 'admin';
+  /** A photo of the paper sheet is stored with the entry. */
+  hasPaperPhoto: boolean;
   picksSubmittedAtMs: number | null;
   lateOverride: boolean;
   /** Null when the player hasn't said how they'll pay. */
