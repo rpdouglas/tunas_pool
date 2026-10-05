@@ -17,10 +17,12 @@
     "test:watch": "vitest",
     "test:a11y": "playwright test",
     "test:e2e:emulator": "node scripts/e2e-emulator.mjs",
+    "test:e2e:mock-week": "node scripts/e2e-mock-week.mjs",
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-tunas-pool \"vitest run -c vitest.rules.config.ts\"",
     "emulators": "firebase emulators:start --project demo-tunas-pool --import=.emulator-data --export-on-exit",
     "functions:build": "npm --prefix functions run build",
-    "admin:claim": "tsx scripts/set-admin-claim.ts"
+    "admin:claim": "tsx scripts/set-admin-claim.ts",
+    "admin:delete-season": "tsx scripts/delete-season.ts"
   },
   "dependencies": {
     "@fontsource/alfa-slab-one": "^5.3.0",

@@ -22,5 +22,15 @@
       "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["src", "shared", "tests", "scripts", "vite.config.ts", "vitest.rules.config.ts", "playwright.config.ts"]
+  "include": [
+    "src",
+    "shared",
+    "tests",
+    "scripts",
+    "functions/src/**/*.test.ts",
+    "functions/src/**/*.int.ts",
+    "vite.config.ts",
+    "vitest.rules.config.ts",
+    "playwright.config.ts"
+  ]
 }

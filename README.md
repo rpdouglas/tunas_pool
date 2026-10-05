@@ -31,9 +31,10 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm run typecheck` | `tsc` for the web app and Cloud Functions |
 | `npm run lint` | ESLint |
 | `npm test` | Unit and component tests (Vitest + Testing Library) |
-| `npm run test:rules` | Firestore rules tests in the emulator (needs Java 21+) |
+| `npm run test:rules` | Firestore rules tests and the functions' integration tests in the emulator (needs Java 21+) |
 | `npm run test:a11y` | Axe, font, and no-horizontal-scroll checks on a production build (Playwright) |
 | `npm run test:e2e:emulator` | Browser run of the sign-in, week-setup, and entry flows against running emulators (steps in `scripts/e2e-emulator.mjs`) |
+| `npm run test:e2e:mock-week` | The Phase 1 gate in a browser: 12 players, payments, results, winner, payout (needs the Functions emulator; see `scripts/e2e-mock-week.mjs`) |
 | `npm run emulators` | Firebase emulators (Auth, Firestore, Functions, Hosting, Storage, UI) |
 | `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs credentials) |
 
@@ -60,12 +61,23 @@ repo secret (a service-account key) and builds with web config fetched by `scrip
 file is committed. Indexes on `db-tunaspool` that are not in `firestore.indexes.json` are deleted. Storage is
 still deployed by hand.
 
-**Functions deploy on demand.** After merging a change to `functions/`, run **Deploy functions** from the
-repo's Actions tab (`.github/workflows/deploy-functions.yml`). It runs only on `main` and deploys only this pool's
-codebase (`--only functions:tunaspool`). The `FIREBASE_SERVICE_ACCOUNT` service account needs these roles on
-`lilypad-strategy-design`: Cloud Functions Admin, Service Account User, Cloud Scheduler Admin, and Artifact
-Registry Administrator. The first deploy may also need the Cloud Functions, Cloud Build, Artifact Registry,
-Cloud Run, Eventarc, and Cloud Scheduler APIs enabled (a project owner can enable them in the console).
+**Functions deploy after the site.** When a merge to `main` changes `functions/`, `shared/`, or `firebase.json`, the
+`deploy` job runs `firebase deploy --only functions:tunaspool` right after the site, rules, and indexes (D-041). Only
+this pool's codebase is deployed, so other apps' functions in the shared project are never touched. The manual
+**Deploy functions** workflow (`.github/workflows/deploy-functions.yml`, `main` only) re-runs it. The
+`FIREBASE_SERVICE_ACCOUNT` service account needs these roles on `lilypad-strategy-design`: Cloud Functions Admin,
+Cloud Run Admin, Service Account User, Cloud Scheduler Admin, Eventarc Admin, and Artifact Registry Administrator.
+The first deploy may also need the Cloud Functions, Cloud Build, Artifact Registry, Cloud Run, Eventarc, and Cloud
+Scheduler APIs enabled (a project owner can enable them in the console). If a deploy reports a missing permission,
+add the role it names. The site and rules deploy first, so a permissions problem shows as a red `deploy` job without
+blocking them.
+
+**Production test run (D-044).** There is no staging project. To try a full week on the live site without real players
+seeing it, set up a week in a separate season by opening `/admin/weeks?season=2026-test` (the Back Office shows a "Test
+season" badge and keeps the season while you navigate), enter picks at `/picks/2026-test/wk01`, and run the weekly job.
+Players' home screen only ever shows the current season. Remove it afterward with `npm run admin:delete-season --
+2026-test` (needs credentials, see the script).
+
 
 For manual deploys, because the project is shared: always pass `--project prod` with an explicit `--only` list, and do not deploy
 `storage` (it would replace the rules on the bucket other apps use) until that is sorted out.

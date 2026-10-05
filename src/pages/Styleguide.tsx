@@ -7,12 +7,46 @@ import { ProgressBar } from '../components/ui/ProgressBar';
 import { SegmentedChoice } from '../components/ui/SegmentedChoice';
 import { StatTile } from '../components/ui/StatTile';
 import { WordmarkLockup } from '../components/ui/WordmarkLockup';
+import { WinnerBanner } from '../components/ui/WinnerBanner';
+import { useToast } from '../components/ui/toastContext';
+import { PaymentRow } from '../features/admin/payments/PaymentRow';
+import type { EntryRow } from '@shared/adminTypes';
+import type { WeekWinner } from '@shared/types';
 import { Field } from '../components/ui/Field';
 import { GameCard } from '../components/ui/GameCard';
 import { Panel } from '../components/ui/Panel';
 import { SectionBar } from '../components/ui/SectionBar';
 import { StatusBadge, type BadgeStatus } from '../components/ui/StatusBadge';
 import { TextAreaField } from '../components/ui/TextAreaField';
+
+const SAMPLE_ROW: EntryRow = {
+  playerId: 'p1',
+  displayName: 'Dale D.',
+  phone: '+16135550123',
+  email: null,
+  source: 'web',
+  picksSubmittedAtMs: null,
+  lateOverride: false,
+  paymentMethod: 'etransfer',
+  paymentIntent: 'will_do',
+  paymentStatus: 'unpaid',
+  paidAtMs: null,
+  record: null,
+  duplicates: [],
+};
+
+const SAMPLE_WINNER: WeekWinner = {
+  playerIds: ['a'],
+  displayNames: ['Dale D.'],
+  record: { wins: 12, losses: 3 },
+  mnfPrediction: 58,
+  decision: 'tiebreaker',
+  tiedPlayerIds: ['a', 'b'],
+  potCents: 20_000,
+  shareCents: 20_000,
+  leftoverCents: 0,
+  publishedAt: { seconds: 0, nanoseconds: 0, toDate: () => new Date(0) },
+};
 
 const STATUSES: BadgeStatus[] = ['paid', 'unpaid', 'pending', 'draft', 'open', 'locked', 'final'];
 
@@ -31,6 +65,7 @@ export default function Styleguide() {
   const [method, setMethod] = useState<'cash' | 'etransfer' | null>('etransfer');
   const [adult, setAdult] = useState(false);
   const NOW = Date.UTC(2026, 9, 10, 12, 0);
+  const { showToast } = useToast();
 
   return (
     <div className="min-h-screen bg-page-backoffice">
@@ -215,10 +250,112 @@ export default function Styleguide() {
             <StatTile label="Week" value="6" />
             <StatTile label="Entry fee" value="$20" accent />
           </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <StatTile compact label="Pot" value="$180" accent />
+            <StatTile compact label="Paid" value="9/14" />
+            <StatTile compact label="Unpaid" value="5" />
+          </div>
           <div className="mt-4 flex flex-col gap-3 rounded-lg bg-surface p-4">
             <Countdown lockAtMs={NOW + (26 * 60 + 12) * 60_000} nowMs={NOW} />
             <Countdown lockAtMs={NOW + 40 * 60_000} nowMs={NOW} />
             <Countdown lockAtMs={NOW - 1} nowMs={NOW} />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-payments">
+          <h2 id="sg-payments" className="mb-3 font-heading text-h2 italic">
+            Payments queue row (Back Office)
+          </h2>
+          <ul className="flex flex-col gap-2">
+            <PaymentRow
+              row={SAMPLE_ROW}
+              busy={false}
+              onPay={() => undefined}
+              onUndo={() => undefined}
+            />
+            <PaymentRow
+              row={{
+                ...SAMPLE_ROW,
+                displayName: 'Jen K.',
+                paymentMethod: null,
+                paymentIntent: null,
+                phone: null,
+              }}
+              busy={false}
+              onPay={() => undefined}
+              onUndo={() => undefined}
+            />
+            <PaymentRow
+              row={{
+                ...SAMPLE_ROW,
+                displayName: 'Troy T.',
+                paymentStatus: 'paid',
+                paymentIntent: 'already_did',
+              }}
+              busy={false}
+              onPay={() => undefined}
+              onUndo={() => undefined}
+            />
+            <PaymentRow
+              row={{
+                ...SAMPLE_ROW,
+                displayName: 'Alex R.',
+                lateOverride: true,
+                duplicates: [
+                  {
+                    otherPlayerId: 'x',
+                    otherName: 'Alexander R.',
+                    reasons: ['phone', 'similar_name'],
+                  },
+                ],
+              }}
+              busy={true}
+              onPay={() => undefined}
+              onUndo={() => undefined}
+            />
+          </ul>
+        </section>
+
+        <section aria-labelledby="sg-winner">
+          <h2 id="sg-winner" className="mb-3 font-heading text-h2 italic">
+            Winner banner and toasts
+          </h2>
+          <div className="flex flex-col gap-4">
+            <WinnerBanner weekNumber={6} winner={SAMPLE_WINNER} />
+            <WinnerBanner
+              weekNumber={7}
+              winner={{
+                ...SAMPLE_WINNER,
+                playerIds: ['a', 'b'],
+                displayNames: ['Dale D.', 'Jen K.'],
+                decision: 'split_pot',
+                mnfPrediction: 50,
+                potCents: 20_000,
+                shareCents: 10_000,
+              }}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  showToast({
+                    message: 'Dale D. marked paid',
+                    actionLabel: 'Undo',
+                    onAction: () => undefined,
+                  })
+                }
+              >
+                Show success toast
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  showToast({ message: "Couldn't reach the pool. Try again.", tone: 'error' })
+                }
+              >
+                Show error toast
+              </Button>
+            </div>
           </div>
         </section>
 

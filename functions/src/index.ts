@@ -1,21 +1,32 @@
 /**
  * Cloud Functions entry. Contracts live in docs/DATA_MODEL.md §5.
- * Every function below is a STUB that enforces auth and then throws "unimplemented".
- * Implement them in the sprint noted in docs/PROJECT_PLAN.md. Admin-sensitive writes must
- * also write auditLog (CLAUDE.md principle 5).
- * Shared types: import type { ... } from '../../shared/types'
+ * Handlers here only check who is calling and validate the input; the decisions live in small
+ * modules next to this file that take the database as a parameter, so they are unit tested and
+ * run against the emulator in tests/functions. Every write that matters also writes auditLog
+ * (CLAUDE.md principle 5). The stubs that remain (claims, paper entry) arrive in Sprints 4 and 5.
+ * Shared types and scoring: import from '../../shared/...'
  * Firestore: always getFirestore(FIRESTORE_DATABASE_ID) from '../../shared/config', never the
  * bare getFirestore(). Firestore triggers must also set `database: FIRESTORE_DATABASE_ID`.
  */
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { FieldValue, getFirestore, type Transaction } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { setGlobalOptions } from 'firebase-functions/v2';
+import { onDocumentWritten } from 'firebase-functions/v2/firestore';
+import { logger } from 'firebase-functions/v2';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '../../shared/config';
-import type { AuditAction, Game, WeekStatus } from '../../shared/types';
+import type { Game, WeekStatus } from '../../shared/types';
+import { auditInTransaction } from './audit';
+import { writeEntryRecords } from './evaluate';
+import { listEntries } from './entriesList';
 import { planGuestMove } from './guestMove';
+import { lockDueWeeks } from './lockWeeks';
+import { parsePaymentRequest } from './payments';
+import { sameResults } from './results';
+import { recountWeek } from './weekCounters';
+import { enterResults, markPayout, previewWinner, publishWinner, setPayment } from './weekActions';
 import { planStatusChange, toGameDraft } from './weekStatus';
 
 const app = initializeApp();
@@ -41,22 +52,6 @@ function notImplemented(name: string): never {
   );
 }
 
-function writeAudit(
-  tx: Transaction,
-  entry: {
-    actorUid: string;
-    action: AuditAction;
-    target: string;
-    before: unknown;
-    after: unknown;
-    reason?: string;
-    year?: string;
-    weekId?: string;
-  },
-): void {
-  tx.create(db.collection('auditLog').doc(), { at: FieldValue.serverTimestamp(), ...entry });
-}
-
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 function requireId(value: unknown, name: string): string {
@@ -72,20 +67,17 @@ const adminStub = (name: string) =>
     return notImplemented(name);
   });
 
-// ---- Admin callables (Sprints 1-5) ------------------------------------------
-export const adminSetPayment = adminStub('adminSetPayment');
+const weekPath = (year: string, weekId: string) => `seasons/${year}/weeks/${weekId}`;
+
+// ---- Admin callables still to come (Sprints 4-5) -----------------------------
 export const adminUpsertEntry = adminStub('adminUpsertEntry');
 export const adminLateOverride = adminStub('adminLateOverride');
 export const adminDeleteEntry = adminStub('adminDeleteEntry');
-export const adminEnterResults = adminStub('adminEnterResults');
-export const adminPublishWinner = adminStub('adminPublishWinner');
-export const adminMarkPayout = adminStub('adminMarkPayout');
 export const adminListClaims = adminStub('adminListClaims');
 export const adminApproveClaim = adminStub('adminApproveClaim');
 export const adminRejectClaim = adminStub('adminRejectClaim');
 export const adminUnlinkClaim = adminStub('adminUnlinkClaim');
 export const adminMergePlayers = adminStub('adminMergePlayers');
-export const getDuplicateFlags = adminStub('getDuplicateFlags');
 
 // ---- adminSetWeekStatus (Sprint 1): draft -> open, open -> draft, open -> locked ----
 export const adminSetWeekStatus = onCall(async (req) => {
@@ -97,8 +89,8 @@ export const adminSetWeekStatus = onCall(async (req) => {
     throw new HttpsError('invalid-argument', 'status must be draft, open, or locked.');
   }
 
-  const weekRef = db.doc(`seasons/${year}/weeks/${weekId}`);
-  return db.runTransaction(async (tx) => {
+  const weekRef = db.doc(weekPath(year, weekId));
+  const update = await db.runTransaction(async (tx) => {
     const snap = await tx.get(weekRef);
     if (!snap.exists) throw new HttpsError('not-found', 'That week does not exist.');
     const week = snap.data()!;
@@ -117,7 +109,7 @@ export const adminSetWeekStatus = onCall(async (req) => {
     if (!plan.ok) throw new HttpsError(plan.code, plan.message);
 
     tx.update(weekRef, { ...plan.update, updatedAt: FieldValue.serverTimestamp() });
-    writeAudit(tx, {
+    auditInTransaction(tx, db, {
       actorUid: req.auth!.uid,
       action: 'week.status',
       target: weekRef.path,
@@ -127,6 +119,87 @@ export const adminSetWeekStatus = onCall(async (req) => {
       weekId,
     });
     return plan.update;
+  });
+  if (to === 'locked') await recountWeek(db, year, weekId); // reconcile once no more entries can arrive
+  return update;
+});
+
+// ---- adminSetPayment (Sprint 3): mark an entry paid or unpaid -----------------
+export const adminSetPayment = onCall(async (req) => {
+  requireAdmin(req);
+  const request = parsePaymentRequest(req.data);
+  if (!request.ok) throw new HttpsError('invalid-argument', request.message);
+  return setPayment(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    playerId: requireId(req.data?.playerId, 'playerId'),
+    status: request.status,
+    method: request.method,
+    actorUid: req.auth!.uid,
+  });
+});
+
+// ---- adminListEntries (Sprint 3): the payments queue, in one round trip -------
+export const adminListEntries = onCall(async (req) => {
+  requireAdmin(req);
+  const year = requireId(req.data?.year, 'year');
+  const weekId = requireId(req.data?.weekId, 'weekId');
+  const list = await listEntries(db, year, weekId);
+  if (!list) throw new HttpsError('not-found', 'That week does not exist.');
+  return list;
+});
+
+// ---- adminEnterResults (Sprint 3): winners per game and the Monday night total ----
+export const adminEnterResults = onCall(async (req) => {
+  requireAdmin(req);
+  return enterResults(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    results: req.data?.results,
+    mnfTotal: req.data?.mnfTotal ?? null,
+    actorUid: req.auth!.uid,
+  });
+});
+
+// ---- adminPreviewWinner (Sprint 3): standings and the winner "if the games ended now" ----
+export const adminPreviewWinner = onCall(async (req) => {
+  requireAdmin(req);
+  return previewWinner(
+    db,
+    requireId(req.data?.year, 'year'),
+    requireId(req.data?.weekId, 'weekId'),
+  );
+});
+
+// ---- adminPublishWinner (Sprint 3): decide the winner and make the week final ----
+export const adminPublishWinner = onCall(async (req) => {
+  requireAdmin(req);
+  const expected: unknown = req.data?.expectedPlayerIds;
+  if (!Array.isArray(expected) || !expected.every((id) => typeof id === 'string')) {
+    throw new HttpsError(
+      'invalid-argument',
+      'Confirm the winner you reviewed (expectedPlayerIds).',
+    );
+  }
+  return publishWinner(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    expectedPlayerIds: expected,
+    actorUid: req.auth!.uid,
+  });
+});
+
+// ---- adminMarkPayout (Sprint 3): record that the winner was paid (D-042) ----
+export const adminMarkPayout = onCall(async (req) => {
+  requireAdmin(req);
+  const sent = req.data?.sent;
+  if (typeof sent !== 'boolean')
+    throw new HttpsError('invalid-argument', 'sent must be true or false.');
+  return markPayout(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    sent,
+    actorUid: req.auth!.uid,
   });
 });
 
@@ -173,7 +246,7 @@ export const adoptGuestProfile = onCall(async (req) => {
     });
     if (plan.action === 'relink') {
       tx.update(guestRef, { claimedByUid: callerUid, updatedAt: FieldValue.serverTimestamp() });
-      writeAudit(tx, {
+      auditInTransaction(tx, db, {
         actorUid: callerUid,
         action: 'player.guestMoved',
         target: guestRef.path,
@@ -190,11 +263,62 @@ export const requestClaim = onCall(async (req) => {
   return notImplemented('requestClaim');
 });
 
+// ---- Firestore triggers (Sprint 3) -------------------------------------------
+
+/** Players in: recount only when an entry is created or deleted, never on an edit (D-048). */
+export const onEntryWritten = onDocumentWritten(
+  { document: 'seasons/{year}/weeks/{weekId}/entries/{playerId}', database: FIRESTORE_DATABASE_ID },
+  async (event) => {
+    const change = event.data;
+    if (change?.before.exists && change.after.exists) return;
+    await recountWeek(db, event.params.year, event.params.weekId);
+  },
+);
+
+/** Players paid: recount when a payment is created or its status changes. */
+export const onPaymentWritten = onDocumentWritten(
+  {
+    document: 'seasons/{year}/weeks/{weekId}/entries/{playerId}/payment/{doc}',
+    database: FIRESTORE_DATABASE_ID,
+  },
+  async (event) => {
+    const change = event.data;
+    if (change?.before.exists && change.after.exists) {
+      if (change.before.get('paymentStatus') === change.after.get('paymentStatus')) return;
+    }
+    await recountWeek(db, event.params.year, event.params.weekId);
+  },
+);
+
+/** When results or the Monday night total change, write each entry's record. */
+export const onResultsWritten = onDocumentWritten(
+  { document: 'seasons/{year}/weeks/{weekId}', database: FIRESTORE_DATABASE_ID },
+  async (event) => {
+    const change = event.data;
+    if (!change?.after.exists) return;
+    const sameTotal =
+      (change.before.get('mnfTotal') ?? null) === (change.after.get('mnfTotal') ?? null);
+    if (
+      change.before.exists &&
+      sameTotal &&
+      sameResults(change.before.get('results'), change.after.get('results'))
+    ) {
+      return; // a status change, a counter update, or an edit that did not touch results
+    }
+    const written = await writeEntryRecords(db, event.params.year, event.params.weekId);
+    logger.info('entry records updated', {
+      year: event.params.year,
+      weekId: event.params.weekId,
+      written,
+    });
+  },
+);
+
 // ---- Scheduled (Sprint 3): at lockAt set status='locked' and revealed=true ----
 export const lockWeeks = onSchedule(
   { schedule: 'every 1 minutes', timeZone: 'America/Toronto' },
   async () => {
-    // TODO(Sprint 3): find open weeks where lockAt <= now, lock them, set revealed=true,
-    // and write an auditLog entry. Consider a slower cadence outside Saturday night.
+    const locked = await lockDueWeeks(db, Date.now());
+    if (locked.length > 0) logger.info('weeks locked', { locked });
   },
 );

@@ -31,6 +31,7 @@ export type AuditAction =
   | 'week.status'
   | 'week.results'
   | 'week.winnerPublished'
+  | 'week.payout'
   | 'week.correction'
   | 'claim.approved'
   | 'claim.rejected'
@@ -97,11 +98,18 @@ export interface Game {
   slot: GameSlot;
 }
 
+export type WinnerDecision = 'most_wins' | 'tiebreaker' | 'split_pot';
+
 export interface WeekWinner {
   playerIds: string[]; // more than one = split pot
+  displayNames: string[]; // denormalized for banners
   record: { wins: number; losses: number };
-  mnfPrediction: number;
+  mnfPrediction: number | null;
+  decision: WinnerDecision; // how it was decided, for "How this was decided"
+  tiedPlayerIds: string[]; // who tied for the most wins before the tiebreaker
   potCents: number;
+  shareCents: number; // each winner's share, rounded down
+  leftoverCents: number; // cents that did not divide evenly, shown to the admin (D-046)
   publishedAt: TimestampLike;
 }
 
@@ -133,6 +141,8 @@ export interface Entry {
   paperPhotoPath: string | null;
   lateOverride: { reason: string; by: string; at: TimestampLike } | null;
   picksSubmittedAt: TimestampLike; // server time of the latest submit or edit (D-040)
+  /** Function-written by `onResultsWritten` once results are in. Never client-writable. */
+  record?: { wins: number; losses: number };
   createdAt: TimestampLike;
   updatedAt: TimestampLike;
 }

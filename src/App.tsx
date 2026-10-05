@@ -11,6 +11,8 @@ import { AdminLayout } from './features/admin/AdminLayout';
 // Admin screens and the styleguide load on demand, so players on a weak signal download less.
 import { RequireAdmin } from './features/admin/RequireAdmin';
 const WeeksPage = lazy(() => import('./features/admin/weeks/WeeksPage'));
+const PaymentsPage = lazy(() => import('./features/admin/payments/PaymentsPage'));
+const ResultsPage = lazy(() => import('./features/admin/results/ResultsPage'));
 const WeekEditorPage = lazy(() => import('./features/admin/weeks/WeekEditorPage'));
 const PoolSettingsPage = lazy(() => import('./features/admin/settings/PoolSettingsPage'));
 
@@ -39,7 +41,9 @@ export default function App() {
             </RequireAdmin>
           }
         >
-          <Route index element={<WeeksPage />} />
+          <Route index element={<PaymentsPage />} />
+          <Route path="results" element={<ResultsPage />} />
+          <Route path="weeks" element={<WeeksPage />} />
           <Route path="weeks/:year/:weekId" element={<WeekEditorPage />} />
           <Route path="settings" element={<PoolSettingsPage />} />
         </Route>

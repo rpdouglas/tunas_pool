@@ -7,6 +7,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /** One primary button per screen. Primary is gold with BLACK text (docs/DESIGN_SYSTEM.md §1.2). */
-export function Button({ variant = 'primary', className = '', type = 'button', ...rest }: ButtonProps) {
+export function Button({
+  variant = 'primary',
+  className = '',
+  type = 'button',
+  ...rest
+}: ButtonProps) {
   return <button type={type} className={`btn btn-${variant} ${className}`.trim()} {...rest} />;
 }

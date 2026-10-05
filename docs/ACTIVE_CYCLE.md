@@ -1,11 +1,53 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 2: Player entry form** · Phase 1 (Playable MVP) · Started: 2026-10-05
+**Sprint 3: Admin payments, results, and winner** · Phase 1 (Playable MVP) · Started: 2026-10-05
 
 ## Goal
-A guest opens the site, sees this week at a glance, makes 15 picks and a tiebreaker, says how they'll pay, and submits in under two minutes on a phone. They get a receipt with a confirmation code, can edit until the lock, and see their picks read-only after it.
+The commissioner can run the whole weekly job from a phone: see who has entered and paid (and mark payments in one tap, with undo), have picks lock and reveal on their own, enter the results, check the winner, publish it, and record that the payout was sent. This closes the Phase 1 gate: a full mock week with 10 or more players.
 
 ## Persona check
+- **Primary persona:** The Commissioner (Ten Seconds and an Undo). Secondary: Gerald (proof), Dale and Jen (what players see), Troy (cross-border payments), Devon (counter work is Sprint 4).
+- **Commissioner Counter Test:** the payments queue is the Back Office home screen. Marking paid is one tap with an Undo, in the row and in a toast. Rows are 56px, one-handed in portrait at 375px. Every write that matters (paid or not, results, winner, payout, status changes) goes through an audited callable.
+- **Gerald Trust Test:** the winner is shown with a plain "How this was decided" line (most wins, tiebreaker, or split pot) before it is published, and the publish step needs a confirmation that names the winner. The audit log keeps before and after for every change. Lock is enforced by the rules, not just the scheduler.
+- **Privacy test (Jen, Rosalie, Kayla):** payment status stays admin-only. Players see only the pot and how many are in. Duplicate flags use neutral wording ("Same phone as Alex R."), never an accusation, and never block anything (D-022).
+- **Welcome / Responsible-Play:** the pot is paid entries times $20, one entry per person, no tabs. Unpaid entries cannot win (D-009), and the admin sees who is unpaid before results.
+- **Border Test (Troy):** cash and e-Transfer are equal in the queue. An entry with no payment choice yet shows "Hasn't said how they'll pay", and the admin picks cash or e-Transfer when marking paid.
+- **Dale Deadline Test:** picks reveal within a minute of the lock (scheduler), and the server rules reject late writes even before it runs.
+
+## Tasks
+- [x] Spike: named-database Firestore triggers run in the emulator (they fire, with the right paths); the sandbox proxy workaround is D-049
+- [x] Shared scoring: record, tie rule, winner, tiebreaker, split pot (`shared/scoring.ts`, 22 tests incl. the paper-sheet example, the all-below case, a split pot with leftover cents, unpaid entries)
+- [x] Shared duplicate flags (phone, email, name, similar name), flags only (`shared/duplicates.ts`)
+- [x] Rules and schema first: `record` on entries (function-written), the winner shape, a payout audit action, the `lockWeeks` collection-group index. No rule had to change, but three new rules tests (rows 37-39, 42 in all) now pin the function-written fields down
+- [x] Functions: `adminSetPayment`, `adminListEntries`, `lockWeeks`, `onEntryWritten` and `onPaymentWritten` (week counters), `adminEnterResults`, `onResultsWritten`, `adminPreviewWinner`, `adminPublishWinner`, `adminMarkPayout`. Decisions live in small modules that take the database as a parameter; 13 integration tests run them against the Firestore emulator
+- [x] Back Office: payments queue as the home screen (filters, search, live pot, duplicate flags, undo), Toast, results screen, winner banner, payout toggle. All new components are in `/styleguide`
+- [x] Player home gains the pot and the number of players in
+- [x] CI: functions deploy after the site deploy when `functions/`, `shared/`, or `firebase.json` changed (D-041). Not yet exercised: it needs the service-account roles (README)
+- [x] Mock week in the emulator with 12 players, an independent check of the winner, and the paper-sheet tiebreak case (`npm run test:e2e:mock-week`, 42 checks at 375px)
+- [ ] Production test run in a separate `2026-test` season, then removed with `npm run admin:delete-season -- 2026-test` (D-044), after the functions are deployed (Ryan; steps in the README)
+- [ ] Ops carried from Sprint 1 and 2: service-account roles, first functions deploy, admin claim, save Pool settings once (Ryan)
+
+## Acceptance (from PROJECT_PLAN.md)
+Run a full mock week end to end in the emulator and then in production under a test season: 10 or more mixed players, payments confirmed, results entered, winner published with the correct tiebreaker outcome. Admin can do the whole weekly job from a phone.
+
+## Notes / learned
+- The mock week caught a real bug the integration tests could not: the browser's callable layer sends an omitted field as `null`, and the server only accepted `undefined`, so every plain "Paid" tap was rejected. Fixed by `parsePaymentRequest` (tested). Check any new callable's optional fields the same way.
+- **Corrections after Final are not possible yet** (D-047, Sprint 6). Until then the publish step shows the winner, asks for confirmation, and refuses if the winner changed since the admin looked. If a wrong result is published anyway, the fix is by hand in the Firebase console, so check results before publishing.
+- Firestore triggers cannot be tested with the sandbox's default proxy; see D-049. The scheduler (`lockWeeks`) cannot run in the emulator at all (no Pub/Sub emulator here), so its logic is covered by the integration tests instead and the schedule itself is verified after the first deploy.
+- The queue loads in one call (`adminListEntries`) and refreshes every minute; marking paid updates the screen at once and rolls back if the server refuses. At about 100 entries that is roughly 200 reads per refresh, which is fine for now; revisit with real traffic.
+- Payments with no declared method show "Hasn't said how they'll pay" with Paid cash and Paid e-Transfer buttons. Creating that payment from the admin is audited like any other.
+- The three-across Pot / Paid / Unpaid tiles use a compact StatTile so they fit at 375px.
+
+---
+
+## Sprint 2 (closed 2026-10-05)
+
+**Sprint 2: Player entry form** · Phase 1 (Playable MVP) · Started: 2026-10-05 · **Closed: 2026-10-05** (PR #8)
+
+### Goal
+A guest opens the site, sees this week at a glance, makes 15 picks and a tiebreaker, says how they'll pay, and submits in under two minutes on a phone. They get a receipt with a confirmation code, can edit until the lock, and see their picks read-only after it.
+
+### Persona check
 - **Primary persona:** Dale (the regular, last 20 minutes before lock). Secondary: Jen (first-timer), Bernie (guest), Troy (NY side), Gerald (proof), Kayla (screenshots).
 - **Dale Deadline Test:** picks save on the device from the first tap; the sticky bar says how many are left and jumps to the next one; payment never blocks submit; a failed save says so loudly and offers a retry; the countdown turns red under an hour.
 - **Welcome Test (Jen):** a collapsible "How it works" in plain words, the tiebreaker explained with the sheet's own example, "Payment pending" in neutral gold, never red.
@@ -16,7 +58,7 @@ A guest opens the site, sees this week at a glance, makes 15 picks and a tiebrea
 - **Responsible-Play Check:** one entry, one fee; an "I'm 18 or older" confirmation (D-037). No streaks, odds, or spreads.
 - **Commissioner Counter Test:** the e-Transfer address is set once in Pool settings, not in code.
 
-## Tasks
+### Tasks
 - [x] Rules first: payment moves to a private `payment/current` document; the server stamps `picksSubmittedAt` and picks `updatedAt`; `ageAttestedAt` on profiles; players can list open, locked, and final weeks (39 rules tests; matrix rows 12b, 33–36)
 - [x] Shared logic: phone normalizing (+1), confirmation code, countdown text
 - [x] Components in `/styleguide`: sticky progress bar, segmented choice, copy field, stat tile, countdown, wordmark lockup, checkbox (game card correct/missed states wait for results in Sprint 6)
@@ -27,16 +69,15 @@ A guest opens the site, sees this week at a glance, makes 15 picks and a tiebrea
 - [x] Locked state: read-only picks
 - [x] Admin Pool settings: e-Transfer address and contact email (`config/pool`)
 - [x] Emulator end-to-end at 375px (`npm run test:e2e:emulator`, 51 checks). The scripted entry takes about 3 seconds and 15 taps plus 4 fields; the 2-minute target still needs a real person on a real phone at the soft launch
-- [ ] Ops carried from Sprint 1: deploy service account roles, run **Deploy functions**, grant the admin claim in production (Ryan)
+- [→] Ops carried from Sprint 1: deploy service account roles, run **Deploy functions**, grant the admin claim in production (Ryan)
 
-## Acceptance (from PROJECT_PLAN.md)
+### Acceptance (from PROJECT_PLAN.md)
 On a 375px viewport, a new guest goes from the home screen to a submitted entry in under 2 minutes, and the receipt shows a confirmation code and Toronto-time timestamp. Resubmitting edits the same entry. After `lockAt`, the form is read-only and the rules reject writes (verified in the emulator).
 
-## Notes / learned
+### Notes / learned
 - Payment choice is optional at submit, so `payment/current` can be missing until the player picks cash or e-Transfer. Sprint 3's payments queue must show "not said yet" for those entries.
 - The end-to-end screenshots caught error messages that stayed on screen after the field was fixed. Fixed: a field's error clears as soon as it changes.
 - The player bundle is about 268 KB gzipped, almost all Firebase SDK. Admin screens and the styleguide now load on demand. Revisit in the Sprint 9 performance pass (Lighthouse 90 on slow mobile).
-- (add as you go)
 
 ---
 

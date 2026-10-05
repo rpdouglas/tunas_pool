@@ -13,107 +13,31 @@
  * It clears the emulators' Auth and Firestore data first.
  */
 import { execSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
-import { chromium } from '@playwright/test';
+import {
+  APP,
+  FS,
+  FULL_WEEK,
+  check,
+  failNow,
+  failureCount,
+  finish,
+  getDoc,
+  launch,
+  listDocs,
+  oobFor,
+  finishUrl,
+  pageUser,
+  resetEmulators,
+  shotsDir,
+  uidForEmail,
+  waitForUser,
+} from './lib/e2e.mjs';
 
-const APP = 'http://127.0.0.1:5173';
-const AUTH = 'http://127.0.0.1:9099';
-const FS = 'http://127.0.0.1:8080/v1/projects/demo-tunas-pool/databases/db-tunaspool/documents';
-const SHOTS = process.env.E2E_SHOTS ?? 'test-results/e2e-emulator';
-mkdirSync(SHOTS, { recursive: true });
 const OWNER = { Authorization: 'Bearer owner', 'Content-Type': 'application/json' };
+const SHOTS = shotsDir('e2e-emulator');
 
-let failures = 0;
-function check(label, ok, detail = '') {
-  console.log(`${ok ? 'PASS' : 'FAIL'} ${label}${detail ? ` — ${detail}` : ''}`);
-  if (!ok) failures++;
-}
-
-async function oobFor(email) {
-  const res = await fetch(`${AUTH}/emulator/v1/projects/demo-tunas-pool/oobCodes`);
-  const { oobCodes } = await res.json();
-  const mine = oobCodes.filter((c) => c.email === email);
-  return mine[mine.length - 1];
-}
-
-function finishUrl(oob, next = '/') {
-  return `${APP}/auth/finish?next=${encodeURIComponent(next)}&apiKey=demo-api-key&oobCode=${oob.oobCode}&mode=signIn&lang=en`;
-}
-
-async function uidForEmail(email) {
-  const res = await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/demo-tunas-pool/accounts:query`, {
-    method: 'POST', headers: OWNER, body: JSON.stringify({ returnUserInfo: true }),
-  });
-  const { userInfo = [] } = await res.json();
-  return userInfo.find((u) => u.email === email)?.localId;
-}
-
-async function getDoc(path) {
-  const res = await fetch(`${FS}/${path}`, { headers: OWNER });
-  return res.ok ? res.json() : null;
-}
-
-async function listDocs(path) {
-  const res = await fetch(`${FS}/${path}?pageSize=100`, { headers: OWNER });
-  return (await res.json()).documents ?? [];
-}
-
-async function pageUser(page) {
-  return page.evaluate(
-    () =>
-      new Promise((resolve) => {
-        const req = indexedDB.open('firebaseLocalStorageDb');
-        req.onsuccess = () => {
-          const tx = req.result.transaction('firebaseLocalStorage', 'readonly');
-          const all = tx.objectStore('firebaseLocalStorage').getAll();
-          all.onsuccess = () => {
-            const user = all.result.map((r) => r.value).find((v) => v && v.uid);
-            resolve(user ? { uid: user.uid, isAnonymous: user.isAnonymous, email: user.email } : null);
-          };
-        };
-        req.onerror = () => resolve(null);
-      }),
-  );
-}
-
-async function waitForUser(page, predicate = (u) => Boolean(u)) {
-  for (let i = 0; i < 40; i++) {
-    const u = await pageUser(page);
-    if (predicate(u)) return u;
-    await page.waitForTimeout(250);
-  }
-  return pageUser(page);
-}
-
-const FULL_WEEK = `Sun 9:30 AM Jaguars at Rams (London)
-Colts at Commanders
-Bills at Dolphins
-Ravens at Bengals
-Browns at Steelers
-Texans at Titans
-Broncos at Raiders
-Cowboys at Giants
-Eagles at Bears
-Lions at Packers
-Vikings at Falcons
-Panthers at Saints
-Buccaneers at Cardinals
-Sun 4:25 PM 49ers at Seahawks
-Mon 8:15 PM Chiefs at Chargers`;
-
-await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-tunas-pool/databases/db-tunaspool/documents', { method: 'DELETE' });
-await fetch(`${AUTH}/emulator/v1/projects/demo-tunas-pool/accounts`, { method: 'DELETE' });
-
-const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM_PATH });
-const phone = { viewport: { width: 375, height: 812 } };
-const consoleErrors = [];
-async function newPage() {
-  const ctx = await browser.newContext(phone);
-  const page = await ctx.newPage();
-  page.on('pageerror', (e) => consoleErrors.push(e.message));
-  globalThis.lastPage = page;
-  return page;
-}
+await resetEmulators();
+const { browser, consoleErrors, lastPage, newPage } = await launch();
 
 try {
   // ---- A. Admin sign-in, guard, claim ------------------------------------------------
@@ -139,6 +63,8 @@ try {
     stdio: 'pipe',
   });
   await admin.getByRole('button', { name: 'Check again' }).click();
+  await admin.getByRole('heading', { name: 'Payments' }).waitFor(); // the Back Office home
+  await admin.goto(`${APP}/admin/weeks`);
   await admin.getByRole('heading', { name: '2026 weeks' }).waitFor();
   check('A5 the admin:claim script grants access after "Check again"', true);
   await admin.getByText('No weeks yet').waitFor();
@@ -191,7 +117,7 @@ try {
   audit = await listDocs('auditLog');
   check('B12 every change is logged (3 so far)', audit.filter((d) => d.fields.action.stringValue === 'week.status').length === 3);
 
-  await admin.goto(`${APP}/admin`);
+  await admin.goto(`${APP}/admin/weeks`);
   await admin.getByRole('link', { name: 'Set up week 2' }).click();
   await admin.getByRole('button', { name: 'Copy games and lock from week 1' }).click();
   const cloned = await admin.getByLabel('Matchups').inputValue();
@@ -387,11 +313,9 @@ try {
 
   check('F1 no uncaught page errors', consoleErrors.length === 0, consoleErrors.join(' | '));
 } catch (err) {
-  failures++;
-  console.log(`FAIL (exception) ${err.message.split('\n').slice(0, 3).join(' ')}`);
-  await globalThis.lastPage?.screenshot({ path: `${SHOTS}/e2e-failure.png`, fullPage: true });
+  failNow(err.message.split('\n').slice(0, 3).join(' '));
+  await lastPage()?.screenshot({ path: `${SHOTS}/e2e-failure.png`, fullPage: true });
 } finally {
   await browser.close();
 }
-console.log(failures ? `\n${failures} FAILED` : '\nALL PASSED');
-process.exit(failures ? 1 : 0);
+finish();
