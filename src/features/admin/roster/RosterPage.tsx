@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { entryReminder, groupReminder, smsLink } from '@shared/messages';
 import { entryWindow } from '@shared/paperEntry';
 import { formatPoolDateTime } from '@shared/time';
 import { Button } from '../../../components/ui/Button';
@@ -7,6 +8,7 @@ import { Field } from '../../../components/ui/Field';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { useToast } from '../../../components/ui/toastContext';
 import { friendlyError } from '../../../lib/errors';
+import { copyText } from '../../../lib/share';
 import { useEntriesList } from '../payments/paymentsData';
 import { useAdminWeek } from '../useAdminWeek';
 import { WeekPicker } from '../WeekPicker';
@@ -131,6 +133,21 @@ export default function RosterPage() {
         ))}
       </div>
 
+      {week && window?.mode === 'open' && counts.not_yet > 0 && (
+        <Button
+          variant="ghost"
+          onClick={async () =>
+            showToast(
+              (await copyText(groupReminder(week)))
+                ? { message: 'Reminder copied. Paste it into the group chat.' }
+                : { message: "Couldn't copy from this browser.", tone: 'error' },
+            )
+          }
+        >
+          Copy a reminder for the group chat
+        </Button>
+      )}
+
       {editing === 'new' ? (
         <PlayerForm
           player={null}
@@ -186,6 +203,11 @@ export default function RosterPage() {
                 week && canEnter ? `/admin/enter/${row.playerId}${sel.search(week.id)}` : null
               }
               onEdit={() => setEditing(row.playerId)}
+              reminderHref={
+                week && window?.mode === 'open' && row.phone
+                  ? smsLink(row.phone, entryReminder(row.displayName, week))
+                  : undefined
+              }
             />
           ),
         )}

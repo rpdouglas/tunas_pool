@@ -255,7 +255,7 @@ type GameResult = 'home' | 'away' | 'tie';
 | `onEntryWritten` | Recount `entryCount` and `paidCount` when an entry is created or deleted (not on edits). |
 | `onPaymentWritten` | Recount when a `payment/current` is created or its `paymentStatus` changes. |
 | `onResultsWritten` | When a week's `results` or `mnfTotal` change, write each entry's `record`. Ignores every other change to the week (status, counters). |
-| `sendSaturdayReminder` (scheduled, Phase 4) | Email reminder to players who haven't entered and have an email on file. Guests have none, so the admin reminder list (Sprint 8) is the main path. |
+| `sendSaturdayReminder` (scheduled, not built) | Email reminder to players who haven't entered and have an email on file. Carried over until an email-sending service is set up (D-079). The commissioner's tap-to-text reminders are the working path (D-078). |
 
 ---
 

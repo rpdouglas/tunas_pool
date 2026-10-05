@@ -14,13 +14,22 @@ export interface RosterRowProps {
   /** False when there is no week to compare against, so no Entered / Not yet is shown. */
   showStatus: boolean;
   onEdit: () => void;
+  /** An `sms:` link with a friendly reminder filled in, for a player who isn't in yet. */
+  reminderHref?: string;
 }
 
 /**
  * One player on the roster (DESIGN_SYSTEM §6): name, whether they are in this week, and one button
  * to enter their picks. Answers "did you get mine?" at a glance (PERSONAS: Rosalie).
  */
-export function RosterRow({ row, enterHref, late, showStatus, onEdit }: RosterRowProps) {
+export function RosterRow({
+  row,
+  enterHref,
+  late,
+  showStatus,
+  onEdit,
+  reminderHref,
+}: RosterRowProps) {
   const { entry } = row;
   const source =
     entry && entry.source !== 'web' ? SOURCE_LABELS[entry.source as EntrySource] : null;
@@ -73,14 +82,25 @@ export function RosterRow({ row, enterHref, late, showStatus, onEdit }: RosterRo
           </Link>
         )}
       </div>
-      <button
-        type="button"
-        className="min-h-touch self-start text-body text-ink-emphasis underline"
-        onClick={onEdit}
-        aria-label={`Details for ${row.displayName}`}
-      >
-        Details
-      </button>
+      <div className="flex flex-wrap items-center gap-x-5">
+        <button
+          type="button"
+          className="min-h-touch text-body text-ink-emphasis underline"
+          onClick={onEdit}
+          aria-label={`Details for ${row.displayName}`}
+        >
+          Details
+        </button>
+        {reminderHref && !entry && row.active && (
+          <a
+            href={reminderHref}
+            className="inline-flex min-h-touch items-center text-body text-ink-emphasis underline"
+            aria-label={`Text a reminder to ${row.displayName}`}
+          >
+            Text a reminder
+          </a>
+        )}
+      </div>
     </li>
   );
 }

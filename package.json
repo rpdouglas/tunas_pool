@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:a11y": "playwright test",
+    "test:smoke": "npm --prefix functions run build && VITE_USE_EMULATORS=true VITE_FIREBASE_API_KEY= vite build --outDir dist-smoke --logLevel error && firebase emulators:exec --only auth,firestore,functions --project demo-tunas-pool \"tsx scripts/e2e-smoke.ts\"",
     "test:e2e:emulator": "node scripts/e2e-emulator.mjs",
     "test:e2e:mock-week": "node scripts/e2e-mock-week.mjs",
     "test:e2e:paper-entry": "node scripts/e2e-paper-entry.mjs",

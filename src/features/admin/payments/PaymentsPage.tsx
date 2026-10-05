@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { paymentReminder, smsLink } from '@shared/messages';
 import { formatPoolDateTime } from '@shared/time';
 import { formatMoney } from '@shared/scoring';
 import type { PaymentMethod } from '@shared/types';
@@ -8,6 +9,7 @@ import { StatTile } from '../../../components/ui/StatTile';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { useToast } from '../../../components/ui/toastContext';
 import { friendlyError } from '../../../lib/errors';
+import { usePoolConfig } from '../../entry/entryData';
 import { useAdminWeek } from '../useAdminWeek';
 import { WeekPicker } from '../WeekPicker';
 import { useEntriesList, useSetPayment } from './paymentsData';
@@ -49,6 +51,7 @@ function PaymentsForWeek({ sel }: { sel: ReturnType<typeof useAdminWeek> }) {
   const list = useEntriesList(sel.year, week.id);
   const setPayment = useSetPayment(sel.year, week.id);
   const { showToast } = useToast();
+  const config = usePoolConfig();
   const [filter, setFilter] = useState<QueueFilter>('unpaid');
   const [query, setQuery] = useState('');
 
@@ -166,6 +169,15 @@ function PaymentsForWeek({ sel }: { sel: ReturnType<typeof useAdminWeek> }) {
               week.status === 'final'
                 ? undefined
                 : `/admin/enter/${row.playerId}${sel.search(week.id)}`
+            }
+            nudgeHref={
+              // Only while picks are open: after the lock there is nothing left to pay toward.
+              week.status === 'open' && row.phone && config.data
+                ? smsLink(
+                    row.phone,
+                    paymentReminder(row.displayName, week, config.data.etransferEmail),
+                  )
+                : undefined
             }
           />
         ))}

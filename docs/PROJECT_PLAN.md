@@ -150,9 +150,9 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 ### Phase 4 — Polish and automation
 
 #### Sprint 8: Print sheet, reminders, and sharing
-- Print-friendly weekly sheet generated from week data, with branding and a claim QR or code, so paper always matches the site.
+- Print-friendly weekly sheet generated from week data, with branding and a claim QR or code, so paper always matches the site. *Done with the claim address as text, no QR code (D-080).*
 - **Reminder list for the admin:** who hasn't entered this week (from the roster and recent players) and who hasn't paid, with tap-to-text and tap-to-copy a friendly message. Payment nudges are admin-triggered, never automatic (D-027).
-- Saturday reminder email via function, only to players who haven't entered **and** have an email on file (guests have none). SMS only if later approved for cost.
+- Saturday reminder email via function, only to players who haven't entered **and** have an email on file (guests have none). SMS only if later approved for cost. *Carried over (D-079): it needs an email-sending service set up first.*
 - **"My picks are in" share card:** display name, week, "Picks locked in," and good-luck copy. Before lock it never shows picks; after lock it may show picks and record. Never phone, email, or payment status (`PERSONAS.md` Kayla rule).
 - "Share this pool" button with a pre-written group-chat message.
 - Branding pass: Ravens palette (`DESIGN_SYSTEM.md`), mascot placement, and empty and loading states.

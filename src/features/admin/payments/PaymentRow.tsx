@@ -29,13 +29,15 @@ export interface PaymentRowProps {
   onUndo: () => void;
   /** Where "Picks" goes: the admin's entry screen for this player. Omit to leave the link out. */
   picksHref?: string;
+  /** An `sms:` link with a neutral note about payment, for an unpaid entry with a phone number. */
+  nudgeHref?: string;
 }
 
 /**
  * One entry in the payments queue (DESIGN_SYSTEM §6): name, phone, what they said, and one big
  * button. 56px high, built for one thumb at the counter (Commissioner Counter Test).
  */
-export function PaymentRow({ row, busy, onPay, onUndo, picksHref }: PaymentRowProps) {
+export function PaymentRow({ row, busy, onPay, onUndo, picksHref, nudgeHref }: PaymentRowProps) {
   const paid = row.paymentStatus === 'paid';
   const name = row.displayName;
   const source = sourceWord(row);
@@ -109,14 +111,27 @@ export function PaymentRow({ row, busy, onPay, onUndo, picksHref }: PaymentRowPr
         </div>
       )}
 
-      {picksHref && (
-        <Link
-          to={picksHref}
-          className="inline-flex min-h-touch items-center self-start text-body text-ink-emphasis underline"
-          aria-label={`Picks for ${name}`}
-        >
-          Picks
-        </Link>
+      {(picksHref || (nudgeHref && !paid)) && (
+        <div className="flex flex-wrap items-center gap-x-5">
+          {picksHref && (
+            <Link
+              to={picksHref}
+              className="inline-flex min-h-touch items-center text-body text-ink-emphasis underline"
+              aria-label={`Picks for ${name}`}
+            >
+              Picks
+            </Link>
+          )}
+          {nudgeHref && !paid && (
+            <a
+              href={nudgeHref}
+              className="inline-flex min-h-touch items-center text-body text-ink-emphasis underline"
+              aria-label={`Text ${name} about payment`}
+            >
+              Text about payment
+            </a>
+          )}
+        </div>
       )}
 
       {row.duplicates.map((d) => (

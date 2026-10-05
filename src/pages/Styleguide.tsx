@@ -18,6 +18,7 @@ import { PhotoField } from '../components/ui/PhotoField';
 import { PickRow } from '../components/ui/PickRow';
 import { LeaderboardRow } from '../components/ui/LeaderboardRow';
 import { ShareBar } from '../components/ui/ShareBar';
+import { ShareCard } from '../components/ui/ShareCard';
 import type { ClaimRow, EntryRow } from '@shared/adminTypes';
 import type { WeekWinner } from '@shared/types';
 import { Field } from '../components/ui/Field';
@@ -569,6 +570,26 @@ export default function Styleguide() {
               homeCount={19}
               awayPercent={50}
               homePercent={48}
+            />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-share">
+          <h2 id="sg-share" className="mb-3 font-heading text-h2 italic">
+            Share card
+          </h2>
+          <div className="flex max-w-player flex-col gap-3">
+            <ShareCard
+              displayName="Kayla"
+              weekNumber={5}
+              lockLabel="Saturday, Oct 10, 11:59 PM"
+              locked={false}
+            />
+            <ShareCard
+              displayName="Dale D."
+              weekNumber={5}
+              lockLabel="Saturday, Oct 10, 11:59 PM"
+              locked
             />
           </div>
         </section>
