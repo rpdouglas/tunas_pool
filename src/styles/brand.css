@@ -24,6 +24,7 @@
   .bg-gameday {
     position: relative;
     isolation: isolate;
+    overflow: clip; /* keeps the oversized watermark from adding a sideways scroll; sticky children still work */
     background-color: rgb(var(--black));
     background-image: linear-gradient(180deg, rgb(var(--purple-800)) 0%, rgb(var(--purple-900)) 55%, rgb(var(--black)) 100%);
   }
@@ -38,6 +39,20 @@
                               rgb(var(--white) / 0.85) 63% 64%, transparent 64% 100%),
       linear-gradient(115deg, transparent 0 8%, rgb(var(--purple-500) / 0.6) 8% 14%, transparent 14% 100%);
     opacity: 0.5;
+  }
+
+  /* Tuna's crest as a faint watermark, bottom right. Decorative, so it stays quiet behind the text. */
+  .bg-gameday::after {
+    content: '';
+    position: absolute;
+    right: -48%;
+    bottom: -14%;
+    z-index: -1;
+    pointer-events: none;
+    width: min(120vw, 640px);
+    aspect-ratio: 1;
+    background: url('../assets/brand/tuna-badge.webp') center / contain no-repeat;
+    opacity: 0.07;
   }
 
   /* ---- Wordmark: slab block, white keyline, black drop ------------------ */

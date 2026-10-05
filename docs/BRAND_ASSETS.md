@@ -56,22 +56,31 @@ Added 2026-10-05 (supplied by Ryan, AI-generated artwork).
 - **Cleared:** Ryan confirmed the crest, cannabis leaf and headdress imagery are fine (D-053).
 - **Likely use:** a "Sponsored by" footer, About page, or a fun alternate hero. Not part of the core Game Day screens.
 
-## Technical state of all three files
+## Web-ready files (built from the originals)
 
-- All are **flattened RGB PNGs with no alpha channel**. The grey-and-white checkerboard is baked into the pixels. They are not truly transparent, and will show a checkerboard on any coloured background.
-- All are about 2 MB, which is too heavy to ship as is.
-- To make them usable, each cleared asset needs a clean background removal (or a regeneration with a real transparent background), then export to WebP or PNG at 1x, 2x and a 1200×630 share variant.
-- Ask for **vector or layered originals** whenever possible (already a standing request in `DESIGN_SYSTEM.md` §10).
+The originals are flattened RGB PNGs with the grey-and-white checkerboard painted into the pixels, about 2 MB each. `scripts/brand/build-assets.sh` cuts the checkerboard out (`scripts/brand/cutout.py`) and writes the files below. Re-run it if an original is replaced; it needs ImageMagick plus `pip install pillow numpy scipy`. Check the output by eye on a purple background before committing. The helmet needs the `--holes` pass for the facemask, but that pass must not run on the wordmark, where it deletes the white "PICK EM" lettering.
 
-## Where each asset could go
+| File | From | Size | Used by |
+|---|---|---|---|
+| `src/assets/brand/wordmark.webp` | BA-01 | 720×472, ~60 KB | `WordmarkArt`: Home hero, styleguide |
+| `src/assets/brand/tuna-badge.webp` | BA-02 | 640×641, ~80 KB | `TunaBadge`: empty state, 404, styleguide. The Game Day background watermark (`.bg-gameday::after`) |
+| `src/assets/brand/pawn-shop-helmet.webp` | BA-03 | 640×510, ~60 KB | `PawnShopHelmet`: Home footer, styleguide |
+| `public/favicon-32.png`, `favicon-64.png` | BA-02 | round badge | browser tab icon |
+| `public/apple-touch-icon.png` | BA-02 | 180×180 on purple | iPhone home-screen icon |
+| `public/og-image.png` | BA-01 + BA-02 | 1200×630 | link previews (`og:image` in `index.html`) |
 
-| Place | Best asset | Ready? |
+All of these are imported through Vite (hashed, cacheable) except the `public/` ones, which must keep their fixed names. Components live in `src/components/ui/BrandArt.tsx`. Every one has an entry in `/styleguide`.
+
+## Where the artwork is used
+
+| Place | Asset | Notes |
 |---|---|---|
-| Sign-in and home hero | BA-01 | After background clean-up |
-| Social share image 1200×630 | BA-01 | After background clean-up |
-| Favicon and app icon | Tuna's face cropped from BA-02, or a "T" | After crop and clean-up |
-| Empty states, winner banner, 404 | Tuna from BA-02 | After background clean-up |
-| Sponsor footer or About | BA-03 | After background clean-up |
+| Player home hero | BA-01 plus the live `.ribbon` "Weekly Football Pool" | The `<h1>` stays as screen-reader text, so the image is decorative (`alt=""`). Other player screens keep the compact live-text wordmark. |
+| Game Day background | BA-02 as a 7% watermark, bottom right | Decorative and clipped (`overflow: clip`) so it never adds sideways scroll. Text sits on panels or on plain purple, so contrast is unaffected. |
+| Home empty state ("No week is open") and 404 page | BA-02 | |
+| Home footer | BA-03 | Alt text only. No claim is made about the shop's relationship to the pool. Add a caption if you want one. |
+| Favicon, iPhone icon, link preview | BA-02, BA-01 | |
+| Not yet used | winner banner, Back Office | Back Office stays calm (`DESIGN_SYSTEM.md` §7). Tuna on the winner banner is a good Sprint 6 idea. |
 
 ## Change log
 
@@ -79,3 +88,4 @@ Added 2026-10-05 (supplied by Ryan, AI-generated artwork).
 |---|---|
 | 2026-10-05 | Three originals added and cataloged. |
 | 2026-10-05 | Ryan cleared all three (D-053). BA-02 is an approved exception to §10. "2NA" means Tuna. |
+| 2026-10-05 | Backgrounds cut out, web files and icons built, artwork added to Home, 404, the Game Day background, page head tags and `/styleguide`. |

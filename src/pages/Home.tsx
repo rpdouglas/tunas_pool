@@ -4,7 +4,7 @@ import { formatPoolDateTime } from '@shared/time';
 import { Countdown } from '../components/ui/Countdown';
 import { Panel } from '../components/ui/Panel';
 import { StatTile } from '../components/ui/StatTile';
-import { WordmarkLockup } from '../components/ui/WordmarkLockup';
+import { PawnShopHelmet, TunaBadge, WordmarkArt } from '../components/ui/BrandArt';
 import { currentSeason } from '../lib/season';
 import { useGuestSession } from '../features/auth/useAuth';
 import { useCurrentWeek, useMyEntry } from '../features/entry/entryData';
@@ -29,7 +29,10 @@ export default function Home() {
     <main className="bg-gameday min-h-screen px-4 pb-16 pt-8">
       <div className="mx-auto flex max-w-player flex-col gap-6">
         <h1 className="sr-only">Tunas Weekly Football Pool Pick 'Em</h1>
-        <WordmarkLockup />
+        <div className="flex flex-col items-center gap-3">
+          <WordmarkArt className="w-72" />
+          <span className="ribbon text-xl">Weekly Football Pool</span>
+        </div>
 
         {current.isPending || (week && mine.isPending && session.user) ? (
           <Panel>
@@ -45,7 +48,10 @@ export default function Home() {
           </Panel>
         ) : !week ? (
           <Panel>
-            <p className="text-body">No week is open for picks right now. Check back soon!</p>
+            <div className="flex flex-col items-center gap-3 text-center">
+              <TunaBadge className="w-36" />
+              <p className="text-body">No week is open for picks right now. Check back soon!</p>
+            </div>
           </Panel>
         ) : (
           <>
@@ -137,6 +143,8 @@ export default function Home() {
             Played on another phone? Sign in with email
           </Link>
         )}
+
+        <PawnShopHelmet className="mx-auto mt-2 w-44" />
       </div>
     </main>
   );
