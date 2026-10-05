@@ -101,6 +101,8 @@ A claim never exposes the matched profile to the claimant. Only the admin sees `
 | `results` | `Record<gameId, 'home' \| 'away' \| 'tie'>` | Admin, via callable. |
 | `mnfTotal` | number \| null | Actual combined MNF points. |
 | `entryFeeCents` | number | Snapshotted from the season at week creation. |
+| `entryCount` | number | Function-written (`onEntryWritten`). Entries this week. Starts at 0. |
+| `paidCount` | number | Function-written (`onEntryWritten`). Entries with `paymentStatus == 'paid'`. Pot = `paidCount × entryFeeCents`. Starts at 0. |
 | `winner` | `WeekWinner \| null` | Function-written when published. |
 | `payoutSent` | boolean | Admin records that the winner was paid. |
 | `createdAt` / `updatedAt` | Timestamp | |
@@ -141,7 +143,7 @@ Public-ish document. **No picks, no tiebreaker, no phone.**
 | `source` | `'web' \| 'paper' \| 'text' \| 'phone'` | |
 | `paperPhotoPath` | string \| null | Storage path, admin only. |
 | `lateOverride` | `{ reason: string; by: string; at: Timestamp } \| null` | Set only by the override callable. |
-| `picksSubmittedAt` | Timestamp | |
+| `picksSubmittedAt` | Timestamp | Time of the latest submit or edit. Sprint 2 adds a rule requiring `request.time`, so it is server time. Basis of the confirmation code (§10). |
 | `createdAt` / `updatedAt` | Timestamp | |
 
 ### 3.7 `.../entries/{playerId}/private/picks`
@@ -204,7 +206,7 @@ type GameResult = 'home' | 'away' | 'tie';
 | `adminRejectClaim(claimId, note?)` | Reject with a friendly note. |
 | `adminUnlinkClaim(playerId)` | Undo a wrong approval. |
 | `adminMergePlayers(fromId, intoId)` | Manual merge, for example duplicate guests. |
-| `getDuplicateFlags(year, weekId)` | Entries sharing phone or normalized name. |
+| `getDuplicateFlags(year, weekId)` | Entries sharing phone, email, or normalized name, plus similar names (fuzzy match). Flags for a human check only, never a block. No device or IP signals (`DECISIONS.md` D-022). |
 
 **Player-callable (signed-in)**
 
@@ -217,8 +219,9 @@ type GameResult = 'home' | 'away' | 'tie';
 | Function | Purpose |
 |---|---|
 | `lockWeeks` (scheduled, every minute near lock) | At `lockAt`: set `status='locked'` and `revealed=true`. |
+| `onEntryWritten` (Sprint 3) | Recompute the week's `entryCount` and `paidCount` on any entry create, update, or delete. |
 | `onResultsWritten` | Recompute per-entry wins and the weekly leaderboard. |
-| `sendSaturdayReminder` (scheduled, Phase 4) | Email reminder to players who haven't entered. |
+| `sendSaturdayReminder` (scheduled, Phase 4) | Email reminder to players who haven't entered and have an email on file. Guests have none, so the admin reminder list (Sprint 8) is the main path. |
 
 ---
 
@@ -269,3 +272,17 @@ Example from the paper sheet: actual total 46. Player A predicts 58 (met or exce
 ## 9. Drafts and offline
 
 Picks drafts autosave to `localStorage`, keyed by `{year}:{weekId}`, from the first tap. They sync to Firestore only on explicit submit. Drafts hold no PII beyond what the player types, and they are cleared on successful submit.
+
+---
+
+## 10. Derived display values (not stored)
+
+Computed in shared code (`shared/`) so the web app and functions agree. Pure functions with unit tests.
+
+**Confirmation code.** Shown on the entry receipt and next to the entry in the admin view. Six characters from an unambiguous alphabet (no `0/O`, `1/I/L`), taken from a hash of `year`, `weekId`, `playerId`, and `picksSubmittedAt` in milliseconds. It changes on every edit, so a player's code always matches their latest saved picks. It is a reference for conversations ("my code was K7M3QX"), not a security token. The audit log stays the record of truth.
+
+**Best possible record.** `wins + gamesNotYetDecided`, shown next to the current record on the live leaderboard. A tied game counts per `config.pool.tieGameRule`.
+
+**Pick marks.** Per pick: correct (✔), wrong (✖), or not played yet (○), from `week.results`. Always icon plus color.
+
+**Pick share.** Per game after reveal: the percent of entries on each side. Never computed or shown before `revealed == true` (`DECISIONS.md` D-021).

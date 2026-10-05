@@ -113,6 +113,8 @@ export interface Week {
   results: Record<string, GameResult>;
   mnfTotal: number | null;
   entryFeeCents: number;
+  entryCount: number; // function-written (onEntryWritten)
+  paidCount: number; // function-written; pot = paidCount * entryFeeCents
   winner: WeekWinner | null;
   payoutSent: boolean;
   createdAt: TimestampLike;
@@ -132,7 +134,7 @@ export interface Entry {
   source: EntrySource;
   paperPhotoPath: string | null;
   lateOverride: { reason: string; by: string; at: TimestampLike } | null;
-  picksSubmittedAt: TimestampLike;
+  picksSubmittedAt: TimestampLike; // latest submit or edit; server time once Sprint 2 rules land
   createdAt: TimestampLike;
   updatedAt: TimestampLike;
 }
