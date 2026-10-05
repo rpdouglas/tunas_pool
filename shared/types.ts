@@ -127,6 +127,8 @@ export interface Week {
   paidCount: number; // function-written; pot = paidCount * entryFeeCents
   winner: WeekWinner | null;
   payoutSent: boolean;
+  /** Function-written by `adminCorrectResults`: when a result was last corrected after Final. */
+  correctedAt?: TimestampLike | null;
   createdAt: TimestampLike;
   updatedAt: TimestampLike;
 }

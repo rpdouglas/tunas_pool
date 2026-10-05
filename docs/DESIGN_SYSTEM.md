@@ -204,7 +204,8 @@ All use semantic tokens. Build in `src/components/ui/`, each shown in the dev-on
 | **Status badge** | `.badge-*`: paid (green), unpaid/pending (gold), open (purple), locked (red), final (solid purple), draft (gray). Word or icon always. | n/a |
 | **Stat tile** | `.stat-tile` | n/a |
 | **Countdown** | "1d 04h 12m to lock". Turns red-800 under 1 hour. | normal · urgent · locked |
-| **Leaderboard row** | Rank · name · record ("11 – 4") · paid badge (admin only). Winner gets the gold crown. | default · you · winner · tied |
+| **Leaderboard row** | Place ("1", or "Tied 3") · name · record ("11 – 4") · best possible while games remain. Opens to that player's picks. "You", the winner's crown, and "Late entry" are words or icons, never color alone. Paid badge is admin only. | default · you · winner · tied · late |
+| **Share bar** | How the pool split on one game: each team with its count and percent over a two-part bar. The winner gets a check and the word "Won". | undecided · decided |
 | **Winner banner** | Gold crown, name, record, tiebreaker points, pot. The only animated element. | n/a |
 | **Payments queue row** (admin) | Name, phone, declared method, one-tap **Paid** with undo. 56px. | unpaid · paid · flagged duplicate |
 | **Pick row** (admin) | One numbered line of the paper sheet: number, away, home. Two Pick buttons with no kickoff time, for copying a sheet top to bottom. Long team names wrap. | unpicked · picked |

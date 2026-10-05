@@ -109,6 +109,7 @@ A claim never exposes the matched profile to the claimant: the document holds on
 | `paidCount` | number | Function-written (`onPaymentWritten`). Entries with `paymentStatus == 'paid'`. Displayed pot = `paidCount × entryFeeCents`. Starts at 0. The published pot is recounted at publish time (D-046). |
 | `winner` | `WeekWinner \| null` | Function-written when published. |
 | `payoutSent` | boolean | Admin records that the winner was paid (`adminMarkPayout`). Who and when are in the audit log (D-042). |
+| `correctedAt` | Timestamp \| absent | Function-written by `adminCorrectResults` when a result is corrected after Final. Players see a "Result corrected" note with this time; the reason stays in the audit log. |
 | `createdAt` / `updatedAt` | Timestamp | |
 
 ```ts
@@ -218,6 +219,7 @@ type GameResult = 'home' | 'away' | 'tie';
 | `adminDeleteEntry(year, weekId, playerId, reason)` | Remove an entry with its picks and payment record. `reason` is required. Refused while the entry is marked paid (undo the payment first, so the pot never changes without its own audit entry, D-055) and once the week is `final`. The roster profile and any stored photo stay. Audit logged as `entry.delete` with everything that was removed. |
 | `adminSetWeekStatus(year, weekId, status)` | `draft → open` (only when `weekProblems` in `shared/weeks.ts` is empty, judged by the server clock), `open → draft` (only while the week has no entries), `open → locked` (lock early; also sets `revealed: true`). Audit logged as `week.status` with before and after. `final` is reached through results and the winner, not this callable. |
 | `adminEnterResults(year, weekId, results, mnfTotal)` | Replace the week's results (home, away, or tie per game) and the Monday night total. Only while the week is `locked`; refused once `final` (D-047, corrections arrive in Sprint 6). Unchanged input writes nothing. Audit logged as `week.results`. The records are written by `onResultsWritten`. |
+| `adminCorrectResults(year, weekId, results, mnfTotal, reason)` | Fix a result after the winner is published. Only for a `final` week, with every result, the Monday night total, and a typed reason (5 to 300 characters). Scores the week again with the same code that published it, from the entries' own picks and payments at that moment. Replaces `winner` if it changed (keeping the original `publishedAt`), sets `correctedAt`, rewrites every entry's `record`, and **clears `payoutSent` when the winner changes** (D-068). Unchanged results write nothing. Refused if no paid entry could win. The week stays `final`. Audit logged as `week.correction` with results and winner before and after, and the reason. |
 | `adminPreviewWinner(year, weekId)` | Read-only: standings, the pot, and the winner "if the games ended now" with a plain-words explanation, from the entries' own picks and payments (`shared/scoring.ts`). The same code publishes the winner. |
 | `adminPublishWinner(year, weekId, expectedPlayerIds)` | Needs a `locked` week with a result for every game and the Monday night total. Recomputes the winner from the picks and payments at that moment. If it differs from `expectedPlayerIds` (what the admin reviewed), nothing is published. Writes `winner`, sets `status='final'`, writes each entry's `record`. Audit logged as `week.winnerPublished`. Season standings and all-time stats are computed in Sprint 7 from the final weeks, not here. |
 | `adminMarkPayout(year, weekId, sent)` | Record that the payout was sent, or undo it. Only once the winner is published. Audit logged as `week.payout`. |
@@ -259,7 +261,7 @@ draft --(admin opens)--> open --(lockAt, automatic, or admin locks early)--> loc
 - **draft:** visible to admin only. Games and lock time are editable.
 - **open:** players can create and edit entries until `lockAt`.
 - **locked:** entries are read-only for players. `revealed=true`. Picks visible to all.
-- **final:** results entered and the winner published. Corrections are allowed but are audit logged and flagged.
+- **final:** results entered and the winner published. A wrong result is fixed with `adminCorrectResults`, which re-scores the week, is audit logged with a reason, and leaves a public "Result corrected" note. Entries cannot be added, changed, or removed in a final week (D-054).
 
 ---
 
@@ -319,5 +321,7 @@ Computed in shared code (`shared/`) so the web app and functions agree. Pure fun
 **Best possible record.** `wins + gamesNotYetDecided`, shown next to the current record on the live leaderboard. A tied game counts per `config.pool.tieGameRule`.
 
 **Pick marks.** Per pick: correct (✔), wrong (✖), or not played yet (○), from `week.results`. Always icon plus color.
+
+**Leaderboard.** After the reveal, every entry ranked by wins, with losses, games remaining, and best possible record (`shared/reveal.ts` `leaderboard`). Players level on wins share a place. It shows records only: who can win the pot also depends on who has paid, which players never see (D-036), so the published winner is the word on that (D-069).
 
 **Pick share.** Per game after reveal: the percent of entries on each side. Never computed or shown before `revealed == true` (`DECISIONS.md` D-021).

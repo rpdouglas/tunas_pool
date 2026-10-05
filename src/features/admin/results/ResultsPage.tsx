@@ -15,7 +15,13 @@ import { friendlyError } from '../../../lib/errors';
 import type { WeekView } from '../../../lib/weekModel';
 import { useAdminWeek } from '../useAdminWeek';
 import { WeekPicker } from '../WeekPicker';
-import { useEnterResults, useMarkPayout, usePreview, usePublishWinner } from './resultsData';
+import {
+  useCorrectResults,
+  useEnterResults,
+  useMarkPayout,
+  usePreview,
+  usePublishWinner,
+} from './resultsData';
 
 /** Results, the winner, and the payout: the second half of the commissioner's week (Sprint 3). */
 export default function ResultsPage() {
@@ -74,6 +80,12 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
   const [total, setTotal] = useState(week.mnfTotal === null ? '' : String(week.mnfTotal));
   const [confirming, setConfirming] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  // Fixing a result after the winner is published (Sprint 6): the games unlock, and saving needs a reason.
+  const [correcting, setCorrecting] = useState(false);
+  const [reason, setReason] = useState('');
+  const [reasonError, setReasonError] = useState<string>();
+  const correct = useCorrectResults(year, week.id);
+  const editable = locked || (final && correcting);
 
   const games = [...week.games].sort((a, b) => a.order - b.order);
   const entered = games.filter((g) => results[g.id]).length;
@@ -106,6 +118,48 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
         mnfTotal: parsedTotal,
       });
       showToast({ message: res.changed ? 'Results saved' : 'Nothing changed' });
+    } catch (err) {
+      showToast({ message: friendlyError(err), tone: 'error' });
+    }
+  }
+
+  function cancelCorrection() {
+    setCorrecting(false);
+    setReason('');
+    setReasonError(undefined);
+    setResults(week.results);
+    setTotal(week.mnfTotal === null ? '' : String(week.mnfTotal));
+  }
+
+  async function saveCorrection() {
+    if (parsedTotal === 'invalid' || parsedTotal === null || entered < games.length) {
+      showToast({
+        message: 'A final week needs every result and the Monday night total.',
+        tone: 'error',
+      });
+      return;
+    }
+    if (reason.trim().length < 5) {
+      setReasonError('Type a short reason, like "Game 9 was entered the wrong way round".');
+      return;
+    }
+    try {
+      const res = await correct.mutateAsync({
+        year,
+        weekId: week.id,
+        results,
+        mnfTotal: parsedTotal,
+        reason: reason.trim(),
+      });
+      setCorrecting(false);
+      setReason('');
+      showToast({
+        message: !res.changed
+          ? 'Nothing changed'
+          : res.winnerChanged
+            ? `Corrected. The winner is now ${res.winner?.displayNames.join(' and ')}. Check the payout.`
+            : 'Corrected. The winner is the same.',
+      });
     } catch (err) {
       showToast({ message: friendlyError(err), tone: 'error' });
     }
@@ -178,6 +232,14 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
               <strong>How this was decided:</strong> {data.winner.explanation}
             </p>
           )}
+          {week.correctedAtMs !== null && (
+            <p className="rounded-md bg-gold-50 p-3 text-body text-gold-800">
+              <span aria-hidden="true">ⓘ </span>
+              <strong>Result corrected</strong> on{' '}
+              {formatPoolDateTime(new Date(week.correctedAtMs), { weekday: 'short' })}. Players see
+              this note too. The reason is in the audit log.
+            </p>
+          )}
           {week.winner.leftoverCents > 0 && (
             <p className="rounded-md bg-gold-50 p-3 text-body text-gold-800">
               <strong>{formatMoney(week.winner.leftoverCents)} left over:</strong> the pot doesn't
@@ -246,8 +308,8 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
                   type="button"
                   className="pick"
                   aria-pressed={result === 'away'}
-                  data-state={locked ? undefined : 'locked'}
-                  disabled={!locked}
+                  data-state={editable ? undefined : 'locked'}
+                  disabled={!editable}
                   onClick={() => setResult(g.id, 'away')}
                 >
                   {g.away}
@@ -257,8 +319,8 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
                   className="pick min-w-16"
                   aria-pressed={result === 'tie'}
                   aria-label={`${g.away} at ${g.home} ended in a tie`}
-                  data-state={locked ? undefined : 'locked'}
-                  disabled={!locked}
+                  data-state={editable ? undefined : 'locked'}
+                  disabled={!editable}
                   onClick={() => setResult(g.id, 'tie')}
                 >
                   Tie
@@ -267,8 +329,8 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
                   type="button"
                   className="pick"
                   aria-pressed={result === 'home'}
-                  data-state={locked ? undefined : 'locked'}
-                  disabled={!locked}
+                  data-state={editable ? undefined : 'locked'}
+                  disabled={!editable}
                   onClick={() => setResult(g.id, 'home')}
                 >
                   {g.home}
@@ -288,7 +350,7 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
             pattern="[0-9]*"
             maxLength={3}
             value={total}
-            disabled={!locked}
+            disabled={!editable}
             onChange={(e) => {
               setConfirming(false);
               setTotal(e.target.value.replace(/\D/g, ''));
@@ -303,6 +365,51 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
             >
               {enter.isPending ? 'Saving…' : dirty ? 'Save results' : 'Results saved'}
             </Button>
+          )}
+          {final && !correcting && (
+            <>
+              <p className="text-body-sm text-ink-muted">
+                Spotted a wrong result? Correcting it scores the week again and can change the
+                winner. Players see a "Result corrected" note.
+              </p>
+              <Button variant="ghost" onClick={() => setCorrecting(true)}>
+                Correct a result
+              </Button>
+            </>
+          )}
+          {final && correcting && (
+            <div role="group" aria-label="Correct a result" className="flex flex-col gap-3">
+              <p className="rounded-md bg-gold-50 p-3 text-body text-gold-800">
+                <span aria-hidden="true">ⓘ </span>
+                <strong>You're correcting a published week.</strong> Change the results above, say
+                why, and save. If the winner changes, "payout sent" is cleared so you can check it.
+              </p>
+              <Field
+                label="Why is it being corrected?"
+                hint="For the audit log. Players only see that a result was corrected, and when."
+                value={reason}
+                maxLength={300}
+                onChange={(e) => {
+                  setReasonError(undefined);
+                  setReason(e.target.value);
+                }}
+                error={reasonError}
+              />
+              <Button
+                variant="primary"
+                disabled={!dirty || correct.isPending || parsedTotal === 'invalid'}
+                onClick={saveCorrection}
+              >
+                {correct.isPending
+                  ? 'Saving…'
+                  : dirty
+                    ? 'Save correction'
+                    : 'Change a result first'}
+              </Button>
+              <Button variant="ghost" onClick={cancelCorrection}>
+                Cancel
+              </Button>
+            </div>
           )}
         </div>
       </Panel>
@@ -416,7 +523,8 @@ function ResultsForWeek({ sel, week }: { sel: ReturnType<typeof useAdminWeek>; w
                       {outcome.playerIds.length > 1
                         ? `${formatMoney(outcome.shareCents)} each from a ${formatMoney(outcome.potCents)} pot.`
                         : `${formatMoney(outcome.potCents)} pot.`}{' '}
-                      Publishing makes the week final, and results can't be changed after that.
+                      Publishing makes the week final. A wrong result can still be corrected
+                      afterwards, with a note players can see.
                     </p>
                     <Button variant="primary" disabled={publish.isPending} onClick={doPublish}>
                       {publish.isPending ? 'Publishing…' : 'Publish winner'}

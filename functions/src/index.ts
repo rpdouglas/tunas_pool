@@ -35,7 +35,14 @@ import { lockDueWeeks } from './lockWeeks';
 import { parsePaymentRequest } from './payments';
 import { sameResults } from './results';
 import { recountWeek } from './weekCounters';
-import { enterResults, markPayout, previewWinner, publishWinner, setPayment } from './weekActions';
+import {
+  correctResults,
+  enterResults,
+  markPayout,
+  previewWinner,
+  publishWinner,
+  setPayment,
+} from './weekActions';
 import { planStatusChange, toGameDraft } from './weekStatus';
 
 const app = initializeApp();
@@ -225,6 +232,19 @@ export const adminEnterResults = onCall(async (req) => {
     weekId: requireId(req.data?.weekId, 'weekId'),
     results: req.data?.results,
     mnfTotal: req.data?.mnfTotal ?? null,
+    actorUid: req.auth!.uid,
+  });
+});
+
+// ---- adminCorrectResults (Sprint 6): fix a result after the winner is published ----
+export const adminCorrectResults = onCall(async (req) => {
+  requireAdmin(req);
+  return correctResults(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    results: req.data?.results,
+    mnfTotal: req.data?.mnfTotal ?? null,
+    reason: req.data?.reason,
     actorUid: req.auth!.uid,
   });
 });

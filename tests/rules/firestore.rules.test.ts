@@ -651,3 +651,34 @@ describe('Sprint 5: asking to claim a profile reveals nothing', () => {
   });
 });
 
+
+describe('Sprint 6: the reveal and corrections', () => {
+  it('#47 once a week is revealed any player can list its entries and read every set of picks, but never a payment; before that, only the list', async () => {
+    const bob = env.authenticatedContext('bob').firestore();
+    const revealed = await assertSucceeds(getDocs(collection(bob, `${weekPath(REVEALED_WEEK)}/entries`)));
+    expect(revealed.docs.map((d) => d.id)).toEqual(['p1']);
+    await assertSucceeds(getDoc(doc(bob, `${weekPath(REVEALED_WEEK)}/entries/p1/private/picks`)));
+    await assertFails(getDoc(doc(bob, `${weekPath(REVEALED_WEEK)}/entries/p1/payment/current`)));
+    // The week itself is readable, so the page can show results and the winner.
+    await assertSucceeds(getDoc(doc(bob, weekPath(REVEALED_WEEK))));
+    // Not revealed yet: who is in, but not what they picked.
+    await assertSucceeds(getDocs(collection(bob, `${weekPath(OPEN_WEEK)}/entries`)));
+    await assertFails(getDoc(doc(bob, `${weekPath(OPEN_WEEK)}/entries/p1/private/picks`)));
+    // Revealed picks still cannot be changed by anyone from the client.
+    await assertFails(
+      setDoc(doc(bob, `${weekPath(REVEALED_WEEK)}/entries/p1/private/picks`), {
+        picks: { g01: 'away' }, tiebreakerTotal: 45, updatedAt: serverTimestamp(),
+      }),
+    );
+  });
+
+  it('#48 nobody corrects a published week from the client: results, the winner, and the correction note are function-written', async () => {
+    for (const client of [admin(), env.authenticatedContext('alice').firestore()]) {
+      const final = doc(client, weekPath('finalOpen'));
+      await assertFails(updateDoc(final, { correctedAt: serverTimestamp() }));
+      await assertFails(updateDoc(final, { results: { g01: 'away' } }));
+      await assertFails(updateDoc(final, { 'winner.playerIds': ['p1'] }));
+      await assertFails(updateDoc(final, { payoutSent: false }));
+    }
+  });
+});

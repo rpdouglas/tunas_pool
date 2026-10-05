@@ -111,3 +111,10 @@ export interface MergeResult {
   intoId: string;
   movedWeeks: string[];
 }
+
+export interface CorrectionResult {
+  /** False when the corrected results were the same as the saved ones: nothing was written. */
+  changed: boolean;
+  winnerChanged: boolean;
+  winner: PublishedWinner | null;
+}

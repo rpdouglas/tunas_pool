@@ -10,12 +10,13 @@ import {
   type Transaction,
 } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
-import type { PublishedWinner, WeekPreview } from '../../shared/adminTypes';
+import type { CorrectionResult, PublishedWinner, WeekPreview } from '../../shared/adminTypes';
 import type { Game } from '../../shared/types';
 import { auditInTransaction } from './audit';
 import { evaluateWeek, writeEntryRecords, type WeekEvaluation } from './evaluate';
 import { planPaymentChange, type PaymentPlan } from './payments';
 import { sameResults, validateResultsInput } from './results';
+import { parseReason } from '../../shared/paperEntry';
 
 const weekPath = (year: string, weekId: string) => `seasons/${year}/weeks/${weekId}`;
 
@@ -277,4 +278,128 @@ export async function markPayout(
     });
     return { changed: true, payoutSent: sent };
   });
+}
+
+/**
+ * `adminCorrectResults`: fix a result after the winner is published (PROJECT_PLAN Sprint 6). The
+ * week is scored again with the same code that published it, from the entries' own picks and
+ * payments. The winner is replaced if it changed, every entry's record is rewritten, and the week
+ * gets a public `correctedAt` so players see a "Result corrected" note (PERSONAS: Gerald). The
+ * typed reason and the before and after stay in the audit log.
+ *
+ * If the winner changes, "payout sent" is cleared: the money may have gone to the wrong person,
+ * and the commissioner has to look at it again.
+ */
+export async function correctResults(
+  db: Firestore,
+  input: WeekRef & { results: unknown; mnfTotal: unknown; reason: unknown },
+): Promise<CorrectionResult> {
+  const { year, weekId, actorUid } = input;
+  const reason = parseReason(input.reason, 'the correction');
+  if (!reason.ok) throw new HttpsError('invalid-argument', reason.message);
+
+  const weekRef = db.doc(weekPath(year, weekId));
+  const snap = await weekRef.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'That week does not exist.');
+  if (snap.get('status') !== 'final') {
+    throw new HttpsError(
+      'failed-precondition',
+      'Only a week with a published winner is corrected this way. Until then, just change the results.',
+    );
+  }
+  const gameIds = ((snap.get('games') ?? []) as Game[]).map((g) => g.id);
+  const valid = validateResultsInput(gameIds, input.results, input.mnfTotal ?? null);
+  if (!valid.ok) throw new HttpsError('invalid-argument', valid.message);
+  if (gameIds.some((id) => !valid.results[id]) || valid.mnfTotal === null) {
+    throw new HttpsError(
+      'invalid-argument',
+      `A final week needs all ${gameIds.length} results and the Monday night total.`,
+    );
+  }
+  const before = {
+    results: (snap.get('results') ?? {}) as Record<string, string>,
+    mnfTotal: (snap.get('mnfTotal') ?? null) as number | null,
+  };
+  if (sameResults(before.results, valid.results) && before.mnfTotal === valid.mnfTotal) {
+    return { changed: false, winnerChanged: false, winner: null };
+  }
+
+  const evaluation = await evaluateWeek(db, year, weekId, {
+    results: valid.results,
+    mnfTotal: valid.mnfTotal,
+  });
+  if (!evaluation?.winner.ok) {
+    throw new HttpsError(
+      'failed-precondition',
+      'With these results nobody with a paid entry can win. Check the payments first.',
+    );
+  }
+  const outcome = evaluation.winner.outcome;
+
+  const winnerChanged = await db.runTransaction(async (tx) => {
+    const fresh = await tx.get(weekRef);
+    if (
+      fresh.get('status') !== 'final' ||
+      !sameResults(fresh.get('results'), before.results) ||
+      (fresh.get('mnfTotal') ?? null) !== before.mnfTotal
+    ) {
+      throw new HttpsError(
+        'aborted',
+        'The results changed while you were working. Reload and try the correction again.',
+      );
+    }
+    const old = (fresh.get('winner') ?? null) as {
+      playerIds?: string[];
+      displayNames?: string[];
+      publishedAt?: unknown;
+    } | null;
+    const oldIds = old?.playerIds ?? [];
+    const changed =
+      oldIds.length !== outcome.playerIds.length ||
+      !outcome.playerIds.every((id) => oldIds.includes(id));
+
+    tx.update(weekRef, {
+      results: valid.results,
+      mnfTotal: valid.mnfTotal,
+      winner: { ...outcome, publishedAt: old?.publishedAt ?? FieldValue.serverTimestamp() },
+      correctedAt: FieldValue.serverTimestamp(),
+      ...(changed ? { payoutSent: false } : {}),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    auditInTransaction(tx, db, {
+      actorUid,
+      action: 'week.correction',
+      target: weekRef.path,
+      before: {
+        ...before,
+        winner: { playerIds: oldIds, displayNames: old?.displayNames ?? [] },
+        payoutSent: fresh.get('payoutSent') === true,
+      },
+      after: {
+        results: valid.results,
+        mnfTotal: valid.mnfTotal,
+        winner: {
+          playerIds: outcome.playerIds,
+          displayNames: outcome.displayNames,
+          record: outcome.record,
+          decision: outcome.decision,
+          potCents: outcome.potCents,
+          shareCents: outcome.shareCents,
+        },
+        winnerChanged: changed,
+        payoutSent: changed ? false : fresh.get('payoutSent') === true,
+      },
+      reason: reason.value,
+      year,
+      weekId,
+    });
+    return changed;
+  });
+
+  await writeEntryRecords(db, year, weekId);
+  return {
+    changed: true,
+    winnerChanged,
+    winner: { ...outcome, explanation: evaluation.explanation },
+  };
 }

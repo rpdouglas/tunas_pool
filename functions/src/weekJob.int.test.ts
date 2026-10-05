@@ -6,7 +6,14 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { evaluateWeek, writeEntryRecords } from './evaluate';
 import { lockDueWeeks } from './lockWeeks';
 import { listEntries } from './entriesList';
-import { enterResults, markPayout, previewWinner, publishWinner, setPayment } from './weekActions';
+import {
+  correctResults,
+  enterResults,
+  markPayout,
+  previewWinner,
+  publishWinner,
+  setPayment,
+} from './weekActions';
 import { recountWeek } from './weekCounters';
 import {
   ALL_HOME,
@@ -367,5 +374,109 @@ describe('the payments queue list', () => {
       { otherPlayerId: 'b', otherName: 'Dale Douglas', reasons: ['phone', 'similar_name'] },
     ]);
     expect(byId.c.duplicates).toEqual([]);
+  });
+});
+
+describe('adminCorrectResults', () => {
+  const correct = (
+    results: unknown,
+    mnfTotal: unknown,
+    reason: unknown = 'Game 15 was entered the wrong way round',
+  ) => correctResults(db, { ...ref, results, mnfTotal, reason });
+
+  /** Dale leads with all-home picks. Jen took the away team on Monday night, so she wins if that game flips. */
+  async function publishedWeek() {
+    await seedWeek(db);
+    await seedEntry(db, 'dale', { name: 'Dale D.', wins: 15, guess: 44, payment: 'paid' });
+    await seedEntry(db, 'jen', { name: 'Jen K.', wins: 14, guess: 40, payment: 'paid' });
+    await seedEntry(db, 'troy', { name: 'Troy T.', wins: 3, guess: 50, payment: 'unpaid' });
+    await enterResults(db, { ...ref, results: ALL_HOME, mnfTotal: 44 });
+    await publishWinner(db, { ...ref, expectedPlayerIds: ['dale'] });
+    await markPayout(db, { ...ref, sent: true });
+  }
+  const FLIPPED = { ...ALL_HOME, mnf: 'away' };
+
+  it('re-scores the week, replaces the winner, clears the payout, and leaves a public note', async () => {
+    await publishedWeek();
+    const published = (await db.doc(weekPath()).get()).get('winner').publishedAt.toMillis();
+
+    // Jen had picked the away team on Monday night: she goes from 14 to 15, Dale from 15 to 14.
+    const result = await correct(FLIPPED, 40);
+    expect(result).toMatchObject({ changed: true, winnerChanged: true });
+    expect(result.winner).toMatchObject({ playerIds: ['jen'], decision: 'most_wins' });
+    expect(result.winner?.explanation).toMatch(/Jen K\. had the most correct picks/);
+
+    const week = await db.doc(weekPath()).get();
+    expect(week.get('status')).toBe('final');
+    expect(week.get('results').mnf).toBe('away');
+    expect(week.get('mnfTotal')).toBe(40);
+    expect(week.get('winner')).toMatchObject({
+      playerIds: ['jen'],
+      displayNames: ['Jen K.'],
+      potCents: 4000,
+    });
+    expect(week.get('winner').publishedAt.toMillis()).toBe(published); // first published then, corrected now
+    expect(week.get('correctedAt').toMillis()).toBeGreaterThan(published);
+    expect(week.get('payoutSent')).toBe(false);
+
+    expect((await db.doc(`${weekPath()}/entries/dale`).get()).get('record')).toEqual({
+      wins: 14,
+      losses: 1,
+    });
+    expect((await db.doc(`${weekPath()}/entries/jen`).get()).get('record')).toEqual({
+      wins: 15,
+      losses: 0,
+    });
+
+    const log = (await db.collection('auditLog').orderBy('at').get()).docs.map((d) => d.data());
+    const entry = log[log.length - 1];
+    expect(entry).toMatchObject({
+      action: 'week.correction',
+      actorUid: ADMIN,
+      reason: 'Game 15 was entered the wrong way round',
+      before: { mnfTotal: 44, winner: { playerIds: ['dale'] }, payoutSent: true },
+      after: {
+        mnfTotal: 40,
+        winner: { playerIds: ['jen'] },
+        winnerChanged: true,
+        payoutSent: false,
+      },
+    });
+  });
+
+  it('keeps the winner and the payout when the correction does not change who won', async () => {
+    await publishedWeek();
+    const result = await correct({ ...ALL_HOME, g01: 'away' }, 44);
+    expect(result).toMatchObject({ changed: true, winnerChanged: false });
+    const week = await db.doc(weekPath()).get();
+    expect(week.get('winner').playerIds).toEqual(['dale']);
+    expect(week.get('winner').record).toEqual({ wins: 14, losses: 1 });
+    expect(week.get('payoutSent')).toBe(true);
+    expect(week.get('correctedAt')).toBeTruthy();
+  });
+
+  it('writes nothing when the results are the same', async () => {
+    await publishedWeek();
+    const before = (await auditActions()).length;
+    expect(await correct(ALL_HOME, 44)).toEqual({
+      changed: false,
+      winnerChanged: false,
+      winner: null,
+    });
+    expect((await auditActions()).length).toBe(before);
+    expect((await db.doc(weekPath()).get()).get('correctedAt')).toBeUndefined();
+  });
+
+  it('needs a reason, every result, and a week that is final', async () => {
+    await publishedWeek();
+    await expect(correct(FLIPPED, 40, '')).rejects.toThrow(/reason/);
+    await expect(correct(FLIPPED, 40, null)).rejects.toThrow(/reason/);
+    await expect(correct({ g01: 'home' }, 40)).rejects.toThrow(/all 15 results/);
+    await expect(correct(FLIPPED, null)).rejects.toThrow(/Monday night total/);
+    await expect(correct({ ...FLIPPED, g99: 'home' }, 40)).rejects.toThrow(/not a game/);
+    expect((await db.doc(weekPath()).get()).get('winner').playerIds).toEqual(['dale']);
+
+    await seedWeek(db, { status: 'locked' });
+    await expect(correct(FLIPPED, 40)).rejects.toThrow(/published winner/);
   });
 });
