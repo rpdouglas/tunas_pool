@@ -59,7 +59,11 @@ try {
 
   const adminUid = await uidForEmail('ryan@tunas.test');
   execSync(`npm run -s admin:claim -- ${adminUid}`, {
-    env: { ...process.env, FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099', GCLOUD_PROJECT: 'demo-tunas-pool' },
+    env: {
+      ...process.env,
+      FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+      GCLOUD_PROJECT: 'demo-tunas-pool',
+    },
     stdio: 'pipe',
   });
   await admin.getByRole('button', { name: 'Check again' }).click();
@@ -72,24 +76,79 @@ try {
 
   // ---- B. Week setup: paste, save draft, preview, open, back to draft, open ----------
   await admin.getByRole('link', { name: 'Set up week 1' }).click();
-  await admin.getByLabel('Matchups').fill(FULL_WEEK.replace('Colts at Commanders', 'Colts at Comanders'));
-  await admin.getByText('Line 2: "Comanders" isn\'t a team name. Did you mean Commanders?').waitFor();
+  await admin
+    .getByLabel('Matchups')
+    .fill(FULL_WEEK.replace('Colts at Commanders', 'Colts at Comanders'));
+  await admin
+    .getByText('Line 2: "Comanders" isn\'t a team name. Did you mean Commanders?')
+    .waitFor();
   check('B1 a typo is flagged with the line number and a suggestion', true);
-  check('B2 save is blocked while a line has a problem', await admin.getByRole('button', { name: 'Save draft' }).isDisabled());
+  check(
+    'B2 save is blocked while a line has a problem',
+    await admin.getByRole('button', { name: 'Save draft' }).isDisabled(),
+  );
+  // The schedule feed is stubbed: two Sunday games, one Monday night game (00:15 UTC the next day).
+  await admin.route('https://site.api.espn.com/**', (route) => {
+    const ymd = new URL(route.request().url()).searchParams.get('dates') ?? '';
+    const iso = `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`;
+    const game = (date, away, home) => ({
+      date,
+      competitions: [
+        {
+          competitors: [
+            { homeAway: 'home', team: { shortDisplayName: home } },
+            { homeAway: 'away', team: { shortDisplayName: away } },
+          ],
+        },
+      ],
+    });
+    const nextDay = new Date(Date.parse(`${iso}T00:15Z`) + 86_400_000).toISOString();
+    const events =
+      new Date(`${iso}T12:00Z`).getUTCDay() === 0
+        ? [game(`${iso}T17:00Z`, 'Bears', 'Packers'), game(`${iso}T17:00Z`, 'Browns', 'Jets')]
+        : [game(nextDay, 'Bills', 'Rams')];
+    return route.fulfill({ json: { events } });
+  });
+  await admin.getByRole('button', { name: "Get this week's games from ESPN" }).click();
+  await admin.getByText('Filled in 2 Sunday games and 1 Monday game from ESPN.').waitFor();
+  const filled = await admin.getByLabel('Matchups').inputValue();
+  check(
+    'B2a the schedule button fills the box with Sunday games, then Monday night',
+    /^Sun .* Bears at Packers\nSun .* Browns at Jets\nMon .* Bills at Rams$/.test(filled),
+    filled,
+  );
+  await admin.getByText('2 Sunday games and the Monday night game').waitFor();
+  check('B2b a short week shows as ready', true);
+  await admin.unroute('https://site.api.espn.com/**');
+
   await admin.getByLabel('Matchups').fill(FULL_WEEK);
   await admin.getByText('14 Sunday games and the Monday night game').waitFor();
   check('B3 a full sheet shows as ready', true);
-  const lockShown = await admin.getByText(/^Locks /).first().textContent();
-  check('B4 the default lock is Saturday 11:59 PM', /Saturday, Oct \d+, 11:59 PM/.test(lockShown ?? ''), lockShown ?? '');
+  const lockShown = await admin
+    .getByText(/^Locks /)
+    .first()
+    .textContent();
+  check(
+    'B4 the default lock is Saturday 11:59 PM',
+    /Saturday, Oct \d+, 11:59 PM/.test(lockShown ?? ''),
+    lockShown ?? '',
+  );
   await admin.getByRole('button', { name: 'Save draft' }).click();
   await admin.waitForURL('**/admin/weeks/2026/wk01');
   await admin.getByText('Draft saved.').waitFor();
   const saved = await getDoc('seasons/2026/weeks/wk01');
-  check('B5 the draft is saved with 15 games and counters at zero',
-    saved?.fields.games.arrayValue.values.length === 15 && saved.fields.status.stringValue === 'draft' &&
-    saved.fields.entryCount.integerValue === '0' && saved.fields.revealed.booleanValue === false);
+  check(
+    'B5 the draft is saved with 15 games and counters at zero',
+    saved?.fields.games.arrayValue.values.length === 15 &&
+      saved.fields.status.stringValue === 'draft' &&
+      saved.fields.entryCount.integerValue === '0' &&
+      saved.fields.revealed.booleanValue === false,
+  );
   const season = await getDoc('seasons/2026');
-  check('B6 the season doc is created on the first week', season?.fields.entryFeeCents.integerValue === '2000');
+  check(
+    'B6 the season doc is created on the first week',
+    season?.fields.entryFeeCents.integerValue === '2000',
+  );
 
   await admin.getByRole('button', { name: 'Preview as a player' }).click();
   const cards = await admin.locator('section[aria-label="Player preview"] li').count();
@@ -101,29 +160,48 @@ try {
   const opened = await getDoc('seasons/2026/weeks/wk01');
   check('B8 opening goes through the callable', opened?.fields.status.stringValue === 'open');
   let audit = await listDocs('auditLog');
-  const openAudit = audit.find((d) => d.fields.after?.mapValue.fields.status?.stringValue === 'open');
-  check('B9 the status change is audit logged with before and after',
+  const openAudit = audit.find(
+    (d) => d.fields.after?.mapValue.fields.status?.stringValue === 'open',
+  );
+  check(
+    'B9 the status change is audit logged with before and after',
     openAudit?.fields.action.stringValue === 'week.status' &&
-    openAudit.fields.before.mapValue.fields.status.stringValue === 'draft' &&
-    openAudit.fields.actorUid.stringValue === adminUid);
-  check('B10 an open week is read-only in the editor', await admin.getByLabel('Matchups').isDisabled());
+      openAudit.fields.before.mapValue.fields.status.stringValue === 'draft' &&
+      openAudit.fields.actorUid.stringValue === adminUid,
+  );
+  check(
+    'B10 an open week is read-only in the editor',
+    await admin.getByLabel('Matchups').isDisabled(),
+  );
 
   await admin.getByRole('button', { name: 'Back to draft' }).click();
   await admin.getByText('Back to draft.').waitFor();
-  check('B11 an open week with no entries goes back to draft',
-    (await getDoc('seasons/2026/weeks/wk01'))?.fields.status.stringValue === 'draft');
+  check(
+    'B11 an open week with no entries goes back to draft',
+    (await getDoc('seasons/2026/weeks/wk01'))?.fields.status.stringValue === 'draft',
+  );
   await admin.getByRole('button', { name: 'Open week' }).click();
   await admin.getByText('Week opened.').waitFor();
   audit = await listDocs('auditLog');
-  check('B12 every change is logged (3 so far)', audit.filter((d) => d.fields.action.stringValue === 'week.status').length === 3);
+  check(
+    'B12 every change is logged (3 so far)',
+    audit.filter((d) => d.fields.action.stringValue === 'week.status').length === 3,
+  );
 
   await admin.goto(`${APP}/admin/weeks`);
   await admin.getByRole('link', { name: 'Set up week 2' }).click();
   await admin.getByRole('button', { name: 'Copy games and lock from week 1' }).click();
   const cloned = await admin.getByLabel('Matchups').inputValue();
-  check('B13 clone copies last week\'s games as a starting point', cloned.split('\n').length === 15 && cloned.startsWith('Sun 9:30 AM Jaguars at Rams (London)'));
+  check(
+    "B13 clone copies last week's games as a starting point",
+    cloned.split('\n').length === 15 && cloned.startsWith('Sun 9:30 AM Jaguars at Rams (London)'),
+  );
   const sundayValue = await admin.getByLabel('Sunday').inputValue();
-  check('B14 the new week defaults to the following Sunday', sundayValue === '2026-10-18' || sundayValue === '2026-10-25', sundayValue);
+  check(
+    'B14 the new week defaults to the following Sunday',
+    sundayValue === '2026-10-18' || sundayValue === '2026-10-25',
+    sundayValue,
+  );
 
   // ---- C. Guest upgrade keeps the uid ------------------------------------------------
   const guest = await newPage();
@@ -138,18 +216,26 @@ try {
   await guest.goto(finishUrl(await oobFor('dale@tunas.test')));
   await guest.getByText('Your picks are saved to this email.').waitFor();
   const upgraded = await waitForUser(guest, (u) => u && !u.isAnonymous);
-  check('C2 upgrading to an email link keeps the same uid', upgraded?.uid === anon.uid && upgraded.email === 'dale@tunas.test');
+  check(
+    'C2 upgrading to an email link keeps the same uid',
+    upgraded?.uid === anon.uid && upgraded.email === 'dale@tunas.test',
+  );
 
   // ---- D. Email already has an account: sign in and move the guest profile --------
   const guest2 = await newPage();
   await guest2.goto(APP);
   const anon2 = await waitForUser(guest2);
   await fetch(`${FS}/players?documentId=${anon2.uid}`, {
-    method: 'POST', headers: OWNER,
-    body: JSON.stringify({ fields: {
-      displayName: { stringValue: 'Dale D.' }, claimedByUid: { stringValue: anon2.uid },
-      origin: { stringValue: 'self' }, active: { booleanValue: true },
-    } }),
+    method: 'POST',
+    headers: OWNER,
+    body: JSON.stringify({
+      fields: {
+        displayName: { stringValue: 'Dale D.' },
+        claimedByUid: { stringValue: anon2.uid },
+        origin: { stringValue: 'self' },
+        active: { booleanValue: true },
+      },
+    }),
   });
   await guest2.goto(`${APP}/account`);
   await guest2.getByLabel('Email').fill('dale@tunas.test');
@@ -157,9 +243,18 @@ try {
   await guest2.getByText('Check your email').waitFor();
   await guest2.goto(finishUrl(await oobFor('dale@tunas.test')));
   const outcome = await Promise.race([
-    guest2.getByText('the picks from this phone are now on your account').waitFor().then(() => 'moved'),
-    guest2.getByText('we sent you a fresh link').waitFor().then(() => 'resent'),
-    guest2.getByRole('alert').waitFor().then(async () => `error: ${await guest2.getByRole('alert').textContent()}`),
+    guest2
+      .getByText('the picks from this phone are now on your account')
+      .waitFor()
+      .then(() => 'moved'),
+    guest2
+      .getByText('we sent you a fresh link')
+      .waitFor()
+      .then(() => 'resent'),
+    guest2
+      .getByRole('alert')
+      .waitFor()
+      .then(async () => `error: ${await guest2.getByRole('alert').textContent()}`),
   ]);
   console.log(`     collision outcome on first link: ${outcome}`);
   if (outcome === 'resent') {
@@ -167,12 +262,18 @@ try {
     await guest2.getByText('the picks from this phone are now on your account').waitFor();
   }
   const moved = await getDoc(`players/${anon2.uid}`);
-  check('D1 the guest profile now belongs to the existing account',
-    moved?.fields.claimedByUid.stringValue === anon.uid, moved?.fields.claimedByUid.stringValue);
+  check(
+    'D1 the guest profile now belongs to the existing account',
+    moved?.fields.claimedByUid.stringValue === anon.uid,
+    moved?.fields.claimedByUid.stringValue,
+  );
   const signedIn2 = await waitForUser(guest2, (u) => u && !u.isAnonymous);
   check('D2 the phone is now signed in to the existing account', signedIn2?.uid === anon.uid);
   audit = await listDocs('auditLog');
-  check('D3 the move is audit logged', audit.some((d) => d.fields.action.stringValue === 'player.guestMoved'));
+  check(
+    'D3 the move is audit logged',
+    audit.some((d) => d.fields.action.stringValue === 'player.guestMoved'),
+  );
 
   // ---- E. Link opened on a different phone -----------------------------------------
   const asker = await newPage();
@@ -198,13 +299,19 @@ try {
   // ---- G. Pool settings (D-039) ---------------------------------------------------
   await admin.goto(`${APP}/admin/settings`);
   await admin.getByRole('heading', { name: 'Pool settings' }).waitFor();
-  check('G1 settings start from the contact address', (await admin.getByLabel('e-Transfer email').inputValue()) === 'tunasweeklypool2026@yahoo.com');
+  check(
+    'G1 settings start from the contact address',
+    (await admin.getByLabel('e-Transfer email').inputValue()) === 'tunasweeklypool2026@yahoo.com',
+  );
   await admin.getByLabel('e-Transfer email').fill('pay@tunas.test');
   await admin.getByRole('button', { name: 'Save settings' }).click();
   await admin.getByText('Settings saved.').waitFor();
   const config = await getDoc('config/pool');
-  check('G2 settings save to config/pool with the confirmed defaults',
-    config?.fields.etransferEmail.stringValue === 'pay@tunas.test' && config.fields.tieGameRule.stringValue === 'no_win');
+  check(
+    'G2 settings save to config/pool with the confirmed defaults',
+    config?.fields.etransferEmail.stringValue === 'pay@tunas.test' &&
+      config.fields.tieGameRule.stringValue === 'no_win',
+  );
   await admin.screenshot({ path: `${SHOTS}/e2e-settings.png`, fullPage: true });
 
   // ---- H. A new guest enters, at 375px, from the home screen ----------------------
@@ -212,16 +319,25 @@ try {
   const started = Date.now();
   await player.goto(APP);
   await player.getByRole('link', { name: 'Make your picks' }).waitFor();
-  check('H1 home shows the week, the countdown, and "No picks yet"',
-    (await player.getByText('No picks yet.').count()) === 1 && (await player.getByText(/to lock/).count()) > 0);
+  check(
+    'H1 home shows the week, the countdown, and "No picks yet"',
+    (await player.getByText('No picks yet.').count()) === 1 &&
+      (await player.getByText(/to lock/).count()) > 0,
+  );
   await player.screenshot({ path: `${SHOTS}/e2e-home-before.png`, fullPage: true });
   await player.getByRole('link', { name: 'Make your picks' }).click();
   await player.getByText('0 of 15 picked').waitFor();
-  check('H2 the submit button counts down games left', (await player.getByRole('button', { name: '15 games left' }).count()) === 1);
+  check(
+    'H2 the submit button counts down games left',
+    (await player.getByRole('button', { name: '15 games left' }).count()) === 1,
+  );
   const gameCards = player.locator('li[id^="game-"]');
   const ids = await gameCards.evaluateAll((els) => els.map((e) => e.id));
   for (const [i, id] of ids.entries()) {
-    await player.locator(`#${id} button.pick`).nth(i % 2).click();
+    await player
+      .locator(`#${id} button.pick`)
+      .nth(i % 2)
+      .click();
   }
   await player.getByText('All 15 picked').waitFor();
   // Tap again to clear a pick, then pick it back.
@@ -231,41 +347,65 @@ try {
   await player.locator('#game-g03 button.pick').nth(0).click();
   await player.getByRole('button', { name: 'Submit picks' }).click();
   await player.getByText('Enter a whole number from 0 to 200').waitFor();
-  check('H4 missing details are explained, not just blocked', (await player.getByText('Enter the name other players will see').count()) === 1);
+  check(
+    'H4 missing details are explained, not just blocked',
+    (await player.getByText('Enter the name other players will see').count()) === 1,
+  );
   await player.getByLabel('Tiebreaker: total points in this game').fill('45');
-  check('H4b fixing a field clears its error', (await player.getByText('Enter a whole number from 0 to 200').count()) === 0);
+  check(
+    'H4b fixing a field clears its error',
+    (await player.getByText('Enter a whole number from 0 to 200').count()) === 0,
+  );
   await player.getByLabel('Your name').fill('Dale D.');
   await player.getByLabel('Phone (optional)').fill('(613) 555-0123');
   await player.locator('label.pick', { hasText: 'e-Transfer' }).click();
-  check('H5 e-Transfer shows the address from Pool settings', (await player.getByLabel('e-Transfer email').inputValue()) === 'pay@tunas.test');
+  check(
+    'H5 e-Transfer shows the address from Pool settings',
+    (await player.getByLabel('e-Transfer email').inputValue()) === 'pay@tunas.test',
+  );
   await player.getByLabel("I'm 18 or older").check();
   await player.screenshot({ path: `${SHOTS}/e2e-entry-form.png`, fullPage: true });
   await player.getByRole('button', { name: 'Submit picks' }).click();
   await player.getByText('Picks submitted').waitFor();
   const seconds = (Date.now() - started) / 1000;
   const code = (await player.getByTestId('confirmation-code').textContent())?.trim() ?? '';
-  check('H6 the receipt shows a confirmation code and the Toronto submission time',
-    /^[A-HJKMNP-Z2-9]{6}$/.test(code) && (await player.getByText(/\(Toronto time\)/).count()) === 1, code);
+  check(
+    'H6 the receipt shows a confirmation code and the Toronto submission time',
+    /^[A-HJKMNP-Z2-9]{6}$/.test(code) && (await player.getByText(/\(Toronto time\)/).count()) === 1,
+    code,
+  );
   console.log(`     scripted entry took ${seconds.toFixed(1)}s from the home screen`);
   await player.screenshot({ path: `${SHOTS}/e2e-receipt.png`, fullPage: true });
 
   const playerUser = await pageUser(player);
   const profileDoc = await getDoc(`players/${playerUser.uid}`);
-  check('H7 the profile has the normalized phone and the server-stamped age check',
-    profileDoc?.fields.phone.stringValue === '+16135550123' && Boolean(profileDoc.fields.ageAttestedAt.timestampValue));
+  check(
+    'H7 the profile has the normalized phone and the server-stamped age check',
+    profileDoc?.fields.phone.stringValue === '+16135550123' &&
+      Boolean(profileDoc.fields.ageAttestedAt.timestampValue),
+  );
   const base = `seasons/2026/weeks/wk01/entries/${playerUser.uid}`;
   const entryDoc = await getDoc(base);
   const paymentDoc = await getDoc(`${base}/payment/current`);
   const picksDoc = await getDoc(`${base}/private/picks`);
-  check('H8 the public entry has no payment fields (D-036)',
-    entryDoc && !('paymentMethod' in entryDoc.fields) && !('paymentStatus' in entryDoc.fields));
-  check('H9 payment and picks are saved privately',
-    paymentDoc?.fields.paymentMethod.stringValue === 'etransfer' && paymentDoc.fields.paymentStatus.stringValue === 'unpaid' &&
-    Object.keys(picksDoc?.fields.picks.mapValue.fields ?? {}).length === 15 && picksDoc.fields.tiebreakerTotal.integerValue === '45');
+  check(
+    'H8 the public entry has no payment fields (D-036)',
+    entryDoc && !('paymentMethod' in entryDoc.fields) && !('paymentStatus' in entryDoc.fields),
+  );
+  check(
+    'H9 payment and picks are saved privately',
+    paymentDoc?.fields.paymentMethod.stringValue === 'etransfer' &&
+      paymentDoc.fields.paymentStatus.stringValue === 'unpaid' &&
+      Object.keys(picksDoc?.fields.picks.mapValue.fields ?? {}).length === 15 &&
+      picksDoc.fields.tiebreakerTotal.integerValue === '45',
+  );
 
   await player.goto(APP);
   await player.getByText('Picks in.').waitFor();
-  check('H10 home now shows "Picks in" and "Payment pending"', (await player.getByText('Payment pending').count()) === 1);
+  check(
+    'H10 home now shows "Picks in" and "Payment pending"',
+    (await player.getByText('Payment pending').count()) === 1,
+  );
   await player.screenshot({ path: `${SHOTS}/e2e-home-after.png`, fullPage: true });
 
   // ---- I. Resubmitting edits the same entry, with a new code ------------------------
@@ -279,7 +419,11 @@ try {
   const code2 = (await player.getByTestId('confirmation-code').textContent())?.trim();
   check('I2 the confirmation code changes on every edit', code2 !== code, `${code} → ${code2}`);
   const entries = await listDocs('seasons/2026/weeks/wk01/entries');
-  check('I3 still one entry for this player', entries.filter((d) => d.name.endsWith(`/${playerUser.uid}`)).length === 1 && entries.length === 1);
+  check(
+    'I3 still one entry for this player',
+    entries.filter((d) => d.name.endsWith(`/${playerUser.uid}`)).length === 1 &&
+      entries.length === 1,
+  );
   const picksAfter = await getDoc(`${base}/private/picks`);
   check('I4 the edit saved', picksAfter?.fields.picks.mapValue.fields.g01.stringValue === 'home');
 
@@ -306,7 +450,10 @@ try {
   await admin.getByText('Picks are locked.').waitFor();
   await player.goto(`${APP}/picks/2026/wk01`);
   await player.getByText('Picks are locked. Good luck!').waitFor();
-  check('K1 a locked week shows the saved picks read-only', (await player.getByRole('button', { name: /^Edit picks/ }).count()) === 0);
+  check(
+    'K1 a locked week shows the saved picks read-only',
+    (await player.getByRole('button', { name: /^Edit picks/ }).count()) === 0,
+  );
   await drafter.goto(`${APP}/picks/2026/wk01`);
   await drafter.getByText("you didn't enter this week").waitFor();
   check('K2 a player who never submitted is told the week is locked', true);

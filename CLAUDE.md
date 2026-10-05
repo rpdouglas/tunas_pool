@@ -128,4 +128,4 @@ Tracked in `docs/PROJECT_PLAN.md` §7. Do not guess on these. Ask Ryan, or use t
 
 ## 10. Out of scope for v1
 
-Multiple entries per person per week, phone OTP login, online payment processing, ESPN auto-import of schedules and scores (planned as a suggestion feature later), push notifications, auto-claim by verified email (designed for, switched off).
+Multiple entries per person per week, phone OTP login, online payment processing, ESPN auto-import of scores (planned as a suggestion feature later; the schedule suggestion in week setup is in, `DECISIONS.md` D-051), push notifications, auto-claim by verified email (designed for, switched off).
