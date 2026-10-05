@@ -1,7 +1,9 @@
+import { Link } from 'react-router-dom';
 import { DUPLICATE_REASON_TEXT } from '@shared/duplicates';
+import { SOURCE_LABELS } from '@shared/paperEntry';
 import { formatPhone } from '@shared/phone';
 import type { EntryRow } from '@shared/adminTypes';
-import type { PaymentMethod } from '@shared/types';
+import type { EntrySource, PaymentMethod } from '@shared/types';
 import { Button } from '../../../components/ui/Button';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 
@@ -13,20 +15,30 @@ function declaration(row: EntryRow): string {
   return `${METHOD_WORD[row.paymentMethod]} · ${intent}`;
 }
 
+/** "Paper", "Text", or "Phone" when the admin entered it for them. Nothing for a website entry. */
+function sourceWord(row: EntryRow): string | null {
+  return row.source !== 'web' && row.source in SOURCE_LABELS
+    ? SOURCE_LABELS[row.source as EntrySource]
+    : null;
+}
+
 export interface PaymentRowProps {
   row: EntryRow;
   busy: boolean;
   onPay: (method?: PaymentMethod) => void;
   onUndo: () => void;
+  /** Where "Picks" goes: the admin's entry screen for this player. Omit to leave the link out. */
+  picksHref?: string;
 }
 
 /**
  * One entry in the payments queue (DESIGN_SYSTEM §6): name, phone, what they said, and one big
  * button. 56px high, built for one thumb at the counter (Commissioner Counter Test).
  */
-export function PaymentRow({ row, busy, onPay, onUndo }: PaymentRowProps) {
+export function PaymentRow({ row, busy, onPay, onUndo, picksHref }: PaymentRowProps) {
   const paid = row.paymentStatus === 'paid';
   const name = row.displayName;
+  const source = sourceWord(row);
 
   return (
     <li className="flex flex-col gap-2 rounded-md border-2 border-line-subtle bg-surface p-3">
@@ -37,7 +49,10 @@ export function PaymentRow({ row, busy, onPay, onUndo }: PaymentRowProps) {
             {paid && <StatusBadge status="paid" />}
             {row.lateOverride && <span className="badge badge-pending">Late entry</span>}
           </p>
-          <p className="text-body text-ink-muted">{declaration(row)}</p>
+          <p className="text-body text-ink-muted">
+            {declaration(row)}
+            {source && ` · ${source}`}
+          </p>
           {row.phone && (
             <a
               href={`tel:${row.phone}`}
@@ -92,6 +107,16 @@ export function PaymentRow({ row, busy, onPay, onUndo }: PaymentRowProps) {
             Paid e-Transfer
           </Button>
         </div>
+      )}
+
+      {picksHref && (
+        <Link
+          to={picksHref}
+          className="inline-flex min-h-touch items-center self-start text-body text-ink-emphasis underline"
+          aria-label={`Picks for ${name}`}
+        >
+          Picks
+        </Link>
       )}
 
       {row.duplicates.map((d) => (

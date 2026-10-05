@@ -107,7 +107,11 @@ export async function waitForUser(page, predicate = (u) => Boolean(u)) {
 
 /** Opens Chromium and returns newPage(), which gives each caller its own phone-sized browser context. */
 export async function launch() {
-  const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM_PATH });
+  const browser = await chromium.launch({
+    executablePath: process.env.PW_CHROMIUM_PATH,
+    // Containers give /dev/shm 64 MB, which a dozen open pages overrun ("Page crashed").
+    args: ['--disable-dev-shm-usage'],
+  });
   const consoleErrors = [];
   let lastPage = null;
   return {

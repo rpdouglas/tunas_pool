@@ -162,6 +162,11 @@ function PaymentsForWeek({ sel }: { sel: ReturnType<typeof useAdminWeek> }) {
             busy={setPayment.isPending && setPayment.variables?.playerId === row.playerId}
             onPay={(method) => pay(row.playerId, row.displayName, method)}
             onUndo={() => undo(row.playerId, row.displayName)}
+            picksHref={
+              week.status === 'final'
+                ? undefined
+                : `/admin/enter/${row.playerId}${sel.search(week.id)}`
+            }
           />
         ))}
       </ul>

@@ -11,6 +11,10 @@ import { WordmarkLockup } from '../components/ui/WordmarkLockup';
 import { WinnerBanner } from '../components/ui/WinnerBanner';
 import { useToast } from '../components/ui/toastContext';
 import { PaymentRow } from '../features/admin/payments/PaymentRow';
+import { RosterRow } from '../features/admin/roster/RosterRow';
+import type { RosterRow as RosterRowData } from '../features/admin/roster/roster';
+import { PhotoField } from '../components/ui/PhotoField';
+import { PickRow } from '../components/ui/PickRow';
 import type { EntryRow } from '@shared/adminTypes';
 import type { WeekWinner } from '@shared/types';
 import { Field } from '../components/ui/Field';
@@ -26,6 +30,8 @@ const SAMPLE_ROW: EntryRow = {
   phone: '+16135550123',
   email: null,
   source: 'web',
+  enteredBy: 'self',
+  hasPaperPhoto: false,
   picksSubmittedAtMs: null,
   lateOverride: false,
   paymentMethod: 'etransfer',
@@ -34,6 +40,18 @@ const SAMPLE_ROW: EntryRow = {
   paidAtMs: null,
   record: null,
   duplicates: [],
+};
+
+const SAMPLE_ROSTER: RosterRowData = {
+  playerId: 'r1',
+  displayName: 'Rosalie M.',
+  phone: '+16135550144',
+  usualPayment: 'cash',
+  notes: 'Large-print sheet. Her daughter drops it off.',
+  active: true,
+  origin: 'admin',
+  claimed: false,
+  entry: null,
 };
 
 const SAMPLE_WINNER: WeekWinner = {
@@ -65,6 +83,8 @@ export default function Styleguide() {
   const [cardPick, setCardPick] = useState<'away' | 'home' | null>(null);
   const [method, setMethod] = useState<'cash' | 'etransfer' | null>('etransfer');
   const [adult, setAdult] = useState(false);
+  const [sheet, setSheet] = useState<Record<string, 'away' | 'home' | null>>({ g1: 'home' });
+  const [photo, setPhoto] = useState<File | null>(null);
   const NOW = Date.UTC(2026, 9, 10, 12, 0);
   const { showToast } = useToast();
 
@@ -325,6 +345,109 @@ export default function Styleguide() {
               busy={true}
               onPay={() => undefined}
               onUndo={() => undefined}
+            />
+          </ul>
+        </section>
+
+        <section aria-labelledby="sg-paper">
+          <h2 id="sg-paper" className="mb-3 font-heading text-h2 italic">
+            Paper entry (Back Office)
+          </h2>
+          <ol className="flex max-w-player flex-col gap-2">
+            {[
+              { id: 'g1', away: 'Colts', home: 'Commanders' },
+              { id: 'g2', away: 'Bills', home: 'Dolphins' },
+              { id: 'g3', away: 'Buccaneers', home: 'Cardinals' },
+            ].map((g, i) => (
+              <PickRow
+                key={g.id}
+                number={i + 1}
+                away={g.away}
+                home={g.home}
+                pick={sheet[g.id] ?? null}
+                onPick={(p) => setSheet((prev) => ({ ...prev, [g.id]: p }))}
+              />
+            ))}
+          </ol>
+          <div className="mt-4 flex max-w-player flex-col gap-4 rounded-lg bg-surface p-4">
+            <PhotoField
+              label="Photo of the sheet (optional)"
+              hint="Kept with the entry. Only the admin can see it."
+              file={photo}
+              hasSaved={false}
+              onChoose={setPhoto}
+              onRemove={() => setPhoto(null)}
+            />
+            <PhotoField
+              label="A photo already saved"
+              file={null}
+              hasSaved
+              viewHref="#sg-paper"
+              onChoose={() => undefined}
+              onRemove={() => undefined}
+            />
+            <PhotoField
+              label="When the upload fails"
+              file={null}
+              hasSaved={false}
+              onChoose={() => undefined}
+              onRemove={() => undefined}
+              error="The photo didn't upload. Try again."
+            />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-roster">
+          <h2 id="sg-roster" className="mb-3 font-heading text-h2 italic">
+            Roster row (Back Office)
+          </h2>
+          <ul className="flex max-w-player flex-col gap-2">
+            <RosterRow
+              row={SAMPLE_ROSTER}
+              enterHref="#sg-roster"
+              late={false}
+              showStatus
+              onEdit={() => undefined}
+            />
+            <RosterRow
+              row={{
+                ...SAMPLE_ROSTER,
+                playerId: 'r2',
+                displayName: 'Bernie T.',
+                notes: null,
+                entry: {
+                  ...SAMPLE_ROW,
+                  playerId: 'r2',
+                  source: 'text',
+                  enteredBy: 'admin',
+                  paymentStatus: 'paid',
+                  lateOverride: true,
+                },
+              }}
+              enterHref="#sg-roster"
+              late
+              showStatus
+              onEdit={() => undefined}
+            />
+            <RosterRow
+              row={{
+                ...SAMPLE_ROSTER,
+                playerId: 'r3',
+                displayName: 'Hank O.',
+                phone: null,
+                notes: null,
+              }}
+              enterHref="#sg-roster"
+              late
+              showStatus
+              onEdit={() => undefined}
+            />
+            <RosterRow
+              row={{ ...SAMPLE_ROSTER, playerId: 'r4', displayName: 'Old Timer', active: false }}
+              enterHref={null}
+              late={false}
+              showStatus={false}
+              onEdit={() => undefined}
             />
           </ul>
         </section>

@@ -3,13 +3,18 @@
  * pass the database in; everything that decides or writes lives here, so it runs against the
  * Firestore emulator in tests (functions/src/*.int.test.ts).
  */
-import { FieldValue, type Firestore } from 'firebase-admin/firestore';
+import {
+  FieldValue,
+  type DocumentReference,
+  type Firestore,
+  type Transaction,
+} from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import type { PublishedWinner, WeekPreview } from '../../shared/adminTypes';
 import type { Game } from '../../shared/types';
 import { auditInTransaction } from './audit';
 import { evaluateWeek, writeEntryRecords, type WeekEvaluation } from './evaluate';
-import { planPaymentChange } from './payments';
+import { planPaymentChange, type PaymentPlan } from './payments';
 import { sameResults, validateResultsInput } from './results';
 
 const weekPath = (year: string, weekId: string) => `seasons/${year}/weeks/${weekId}`;
@@ -43,33 +48,46 @@ export async function setPayment(
     if (plan.kind === 'error') throw new HttpsError('failed-precondition', plan.message);
     if (plan.kind === 'noop')
       return { changed: false, status: existing?.paymentStatus ?? 'unpaid' };
-
-    const fields: Record<string, unknown> = {
-      paymentMethod: plan.method,
-      paymentIntent: plan.intent,
-      paymentStatus: plan.status,
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-    if (plan.status === 'paid') {
-      fields.paidAt = FieldValue.serverTimestamp();
-      fields.paidBy = actorUid;
-    } else {
-      fields.paidAt = FieldValue.delete();
-      fields.paidBy = FieldValue.delete();
-    }
-    if (plan.mode === 'create') tx.set(paymentRef, fields);
-    else tx.update(paymentRef, fields);
-
-    auditInTransaction(tx, db, {
-      actorUid,
-      action: 'payment.set',
-      target: paymentRef.path,
-      before: plan.before ?? { paymentStatus: 'unpaid', paymentMethod: null },
-      after: plan.after,
-      year,
-      weekId,
-    });
+    writePaymentPlan(tx, db, paymentRef, plan, { year, weekId, actorUid });
     return { changed: true, status: plan.status };
+  });
+}
+
+/**
+ * Write a planned payment change and its audit entry inside a transaction. Shared by the payments
+ * queue and by admin entry, where the money is often handed over with the sheet.
+ */
+export function writePaymentPlan(
+  tx: Transaction,
+  db: Firestore,
+  paymentRef: DocumentReference,
+  plan: Extract<PaymentPlan, { kind: 'write' }>,
+  ref: WeekRef,
+): void {
+  const fields: Record<string, unknown> = {
+    paymentMethod: plan.method,
+    paymentIntent: plan.intent,
+    paymentStatus: plan.status,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  if (plan.status === 'paid') {
+    fields.paidAt = FieldValue.serverTimestamp();
+    fields.paidBy = ref.actorUid;
+  } else {
+    fields.paidAt = FieldValue.delete();
+    fields.paidBy = FieldValue.delete();
+  }
+  if (plan.mode === 'create') tx.set(paymentRef, fields);
+  else tx.update(paymentRef, fields);
+
+  auditInTransaction(tx, db, {
+    actorUid: ref.actorUid,
+    action: 'payment.set',
+    target: paymentRef.path,
+    before: plan.before ?? { paymentStatus: 'unpaid', paymentMethod: null },
+    after: plan.after,
+    year: ref.year,
+    weekId: ref.weekId,
   });
 }
 

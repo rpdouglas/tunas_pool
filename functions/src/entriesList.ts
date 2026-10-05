@@ -33,6 +33,8 @@ export async function listEntries(
       phone: (players[i].get('phone') as string | null | undefined) ?? null,
       email: (players[i].get('email') as string | null | undefined) ?? null,
       source: String(entry.get('source') ?? 'web'),
+      enteredBy: entry.get('enteredBy') === 'admin' ? 'admin' : 'self',
+      hasPaperPhoto: Boolean(entry.get('paperPhotoPath')),
       picksSubmittedAtMs: entry.get('picksSubmittedAt')?.toMillis() ?? null,
       lateOverride: Boolean(entry.get('lateOverride')),
       paymentMethod: pay.exists ? (pay.get('paymentMethod') ?? null) : null,

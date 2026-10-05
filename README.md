@@ -36,6 +36,7 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm run test:a11y` | Axe, font, and no-horizontal-scroll checks on a production build (Playwright) |
 | `npm run test:e2e:emulator` | Browser run of the sign-in, week-setup, and entry flows against running emulators (steps in `scripts/e2e-emulator.mjs`) |
 | `npm run test:e2e:mock-week` | The Phase 1 gate in a browser: 12 players, payments, results, winner, payout (needs the Functions emulator; see `scripts/e2e-mock-week.mjs`) |
+| `npm run test:e2e:paper-entry` | Sprint 4 in a browser: roster, a full paper sheet with a photo, blanks, edit, remove, and a late entry (needs the Functions and Storage emulators; see `scripts/e2e-paper-entry.mjs`) |
 | `npm run emulators` | Firebase emulators (Auth, Firestore, Functions, Hosting, Storage, UI) |
 | `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs a project and credentials, see step 6 below) |
 
@@ -98,8 +99,29 @@ goes through the real screens. Its made-up player profiles live outside the seas
 `npm run admin:seed-test-week -- 2026-test --remove-players` as well as deleting the season (see the script).
 
 
-For manual deploys, because the project is shared: always pass `--project prod` with an explicit `--only` list, and do not deploy
-`storage` (it would replace the rules on the bucket other apps use) until that is sorted out.
+For manual deploys, because the project is shared: always pass `--project prod` with an explicit `--only` list.
+
+**Paper-sheet photos (D-029, D-058).** Photos of paper sheets go in the pool's own bucket, `tunaspool-paper-sheets`,
+never the project's default bucket, which other apps use. `firebase.json` names the deploy target `paperSheets` and
+`.firebaserc` maps it to that bucket, so a Storage deploy can only reach it. Setting it up is a one-time manual job,
+and Ryan decides when:
+
+1. Create the bucket (one line; done 2026-10-05). If the name is taken, pick another and change it in
+   `shared/config.ts` and `.firebaserc`.
+
+   ```bash
+   gcloud storage buckets create gs://tunaspool-paper-sheets --project lilypad-strategy-design --location=US --uniform-bucket-level-access
+   ```
+2. Add it to Firebase, so the Storage SDK and rules apply to it (done 2026-10-05). The console's "Add bucket" option
+   is not always shown, so use the API:
+
+   ```bash
+   curl -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "x-goog-user-project: lilypad-strategy-design" -H "Content-Type: application/json" -d '{}' "https://firebasestorage.googleapis.com/v1beta/projects/lilypad-strategy-design/buckets/tunaspool-paper-sheets:addFirebase"
+   ```
+3. Deploy the rules to it (done 2026-10-05; repeat after any change to `storage.rules`): `firebase deploy --project prod --only storage`. Check the output names only
+   `tunaspool-paper-sheets`.
+
+Storage is not part of the automatic deploy, so a change to `storage.rules` needs step 3 again.
 
 ### Emulators in Codespaces
 Rules tests (`npm run test:rules`) run entirely inside the Codespace. Pointing the *browser* app at the emulators

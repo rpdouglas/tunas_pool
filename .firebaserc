@@ -2,5 +2,21 @@
   "projects": {
     "default": "demo-tunas-pool",
     "prod": "lilypad-strategy-design"
+  },
+  "targets": {
+    "demo-tunas-pool": {
+      "storage": {
+        "paperSheets": [
+          "tunaspool-paper-sheets"
+        ]
+      }
+    },
+    "lilypad-strategy-design": {
+      "storage": {
+        "paperSheets": [
+          "tunaspool-paper-sheets"
+        ]
+      }
+    }
   }
 }

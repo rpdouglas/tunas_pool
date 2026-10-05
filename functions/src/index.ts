@@ -3,7 +3,7 @@
  * Handlers here only check who is calling and validate the input; the decisions live in small
  * modules next to this file that take the database as a parameter, so they are unit tested and
  * run against the emulator in tests/functions. Every write that matters also writes auditLog
- * (CLAUDE.md principle 5). The stubs that remain (claims, paper entry) arrive in Sprints 4 and 5.
+ * (CLAUDE.md principle 5). The stubs that remain (claims and merges) arrive in Sprint 5.
  * Shared types and scoring: import from '../../shared/...'
  * Firestore: always getFirestore(FIRESTORE_DATABASE_ID) from '../../shared/config', never the
  * bare getFirestore(). Firestore triggers must also set `database: FIRESTORE_DATABASE_ID`.
@@ -18,6 +18,7 @@ import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '../../shared/config';
 import type { Game, WeekStatus } from '../../shared/types';
+import { deleteEntry, upsertEntry } from './adminEntries';
 import { auditInTransaction } from './audit';
 import { writeEntryRecords } from './evaluate';
 import { listEntries } from './entriesList';
@@ -69,10 +70,7 @@ const adminStub = (name: string) =>
 
 const weekPath = (year: string, weekId: string) => `seasons/${year}/weeks/${weekId}`;
 
-// ---- Admin callables still to come (Sprints 4-5) -----------------------------
-export const adminUpsertEntry = adminStub('adminUpsertEntry');
-export const adminLateOverride = adminStub('adminLateOverride');
-export const adminDeleteEntry = adminStub('adminDeleteEntry');
+// ---- Admin callables still to come (Sprint 5) --------------------------------
 export const adminListClaims = adminStub('adminListClaims');
 export const adminApproveClaim = adminStub('adminApproveClaim');
 export const adminRejectClaim = adminStub('adminRejectClaim');
@@ -122,6 +120,47 @@ export const adminSetWeekStatus = onCall(async (req) => {
   });
   if (to === 'locked') await recountWeek(db, year, weekId); // reconcile once no more entries can arrive
   return update;
+});
+
+// ---- adminUpsertEntry (Sprint 4): enter or edit someone's picks while the week is open ----
+export const adminUpsertEntry = onCall(async (req) => {
+  requireAdmin(req);
+  return upsertEntry(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    playerId: requireId(req.data?.playerId, 'playerId'),
+    entry: req.data?.entry,
+    late: false,
+    nowMs: Date.now(),
+    actorUid: req.auth!.uid,
+  });
+});
+
+// ---- adminLateOverride (Sprint 4): an entry or edit after the lock, with a typed reason ----
+export const adminLateOverride = onCall(async (req) => {
+  requireAdmin(req);
+  return upsertEntry(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    playerId: requireId(req.data?.playerId, 'playerId'),
+    entry: req.data?.entry,
+    late: true,
+    reason: req.data?.reason,
+    nowMs: Date.now(),
+    actorUid: req.auth!.uid,
+  });
+});
+
+// ---- adminDeleteEntry (Sprint 4): remove an entry, with a typed reason ----
+export const adminDeleteEntry = onCall(async (req) => {
+  requireAdmin(req);
+  return deleteEntry(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    playerId: requireId(req.data?.playerId, 'playerId'),
+    reason: req.data?.reason,
+    actorUid: req.auth!.uid,
+  });
 });
 
 // ---- adminSetPayment (Sprint 3): mark an entry paid or unpaid -----------------

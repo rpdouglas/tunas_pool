@@ -11,6 +11,8 @@ const row = (
   phone: null,
   email: null,
   source: 'web',
+  enteredBy: 'self',
+  hasPaperPhoto: false,
   picksSubmittedAtMs: null,
   lateOverride: false,
   paymentMethod: 'cash',

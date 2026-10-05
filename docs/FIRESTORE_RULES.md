@@ -82,12 +82,18 @@ service cloud.firestore {
           && isDisplayName(request.resource.data.displayName)
           && isNowOrNull(request.resource.data.get('ageAttestedAt', null)))
         ||
-        // Admin roster: unclaimed, admin-origin.
+        // Admin roster: unclaimed, admin-origin, with a name. No email or account is needed.
         (isAdmin()
           && request.resource.data.claimedByUid == null
-          && request.resource.data.origin == 'admin');
+          && request.resource.data.origin == 'admin'
+          && request.resource.data.keys().hasOnly([
+               'displayName', 'phone', 'email', 'claimedByUid', 'origin',
+               'usualPayment', 'notes', 'active', 'createdAt', 'updatedAt'])
+          && isDisplayName(request.resource.data.displayName)
+          && request.resource.data.active is bool);
 
-      // Owner may edit contact info only. Admin may edit anything except the link.
+      // Owner may edit contact info only. Admin may edit the roster details, never the link,
+      // the origin, or a merge (functions do those).
       allow update: if
         (ownsPlayer(playerId)
           && request.resource.data.diff(resource.data).affectedKeys()
@@ -97,7 +103,11 @@ service cloud.firestore {
               || request.resource.data.ageAttestedAt == request.time))
         ||
         (isAdmin()
-          && request.resource.data.claimedByUid == resource.data.claimedByUid);
+          && request.resource.data.claimedByUid == resource.data.claimedByUid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['displayName', 'phone', 'email', 'usualPayment', 'notes', 'active', 'updatedAt'])
+          && isDisplayName(request.resource.data.displayName)
+          && request.resource.data.active is bool);
 
       allow delete: if false; // deactivate via `active`; merges handled by functions
 
@@ -258,6 +268,7 @@ service cloud.firestore {
 - **Completeness (a pick for every game, up to 15)** is enforced in the UI. A missing pick scores as a loss.
 - **Self-serve profile ordering:** the client must create `players/{uid}` **before** its first entry write. Entry rules call `ownsPlayer()`, which needs the profile to exist.
 - **Admin entry edits:** the admin cannot write entries or picks directly from the client. Use `adminUpsertEntry` while open, or `adminLateOverride` (reason required) after lock.
+- **Roster (Sprint 4):** an admin adds and edits roster profiles directly from the client. A new roster profile must be unclaimed, `origin: 'admin'`, with a name of 1 to 60 characters and only the roster fields (rows 6, 7, 40). An admin edit may touch `displayName`, `phone`, `email`, `usualPayment`, `notes`, `active`, and `updatedAt` only: never the link, the origin, a merge, or the age confirmation (rows 8, 41). Profiles are never deleted; `active: false` retires one. Only an admin can list the roster (row 42). These writes are not audit logged (D-057).
 - **`claimedByUid` is never client-writable.** The owner-update rule limits affected keys, and the admin-update rule requires the field to be unchanged.
 - **Payment is private (D-036):** the public entry has no payment fields, so leaderboards and the reveal can read entries freely. Method and intent live in `payment/current`, which only the owner and admin can read, before or after the reveal. Players may change method and intent while the week is open; `paymentStatus`, `paidAt`, and `paidBy` are function-written.
 - **Function-written entry fields (Sprint 3):** `record` is written only by functions. It is not in the create or update key lists, so a player cannot set it (row 37). Results, the winner, the payout flag, and the status are never client-writable by anyone, admin included (row 38): the audited callables write them.
@@ -268,12 +279,19 @@ service cloud.firestore {
 
 ## 3. Storage rules
 
+Paper-sheet photos live in the pool's own bucket, `tunaspool-paper-sheets` (D-029, D-058), never the project's shared default bucket. `firebase.json` names the deploy target `paperSheets` and `.firebaserc` maps it to the bucket, so `firebase deploy --only storage` can only reach that bucket.
+
 ```
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Photos of paper sheets (D-029). Admin only, images only, 5 MB at most: the app shrinks a
+    // phone photo well below that before it uploads.
     match /paperSheets/{year}/{weekId}/{file} {
-      allow read, write: if request.auth != null && request.auth.token.admin == true;
+      allow read, delete: if request.auth != null && request.auth.token.admin == true;
+      allow create, update: if request.auth != null && request.auth.token.admin == true
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
     }
     match /{allPaths=**} {
       allow read, write: if false;
@@ -281,6 +299,8 @@ service firebase.storage {
   }
 }
 ```
+
+The app shrinks a phone photo to about 1600px before it uploads, so 5 MB is generous. The path is `paperSheets/{year}/{weekId}/{playerId}-{time}.jpg`, and `adminUpsertEntry` only accepts a `paperPhotoPath` inside that week's folder.
 
 ## 4. Admin claim bootstrap
 
@@ -340,3 +360,7 @@ Each row is at least one passing and one failing test.
 | 37 | Player writes `record` on an entry (create or update); any signed-in user reads it | deny / allow |
 | 38 | Admin writes `results`, `mnfTotal`, `winner`, `payoutSent`, or `status` on a week from the client | deny |
 | 39 | Admin reads any entry's `payment/current` and `private/picks` and lists entries; another player reads `payment/current` | allow / deny |
+| 40 | Admin creates a roster player with only a name; with an empty or over-long name, a non-boolean `active`, `mergedInto`, or `origin: 'self'`; a player creates one | allow / deny / deny |
+| 41 | Admin edits roster details and `active`; changes `origin`, `mergedInto`, or `ageAttestedAt`, blanks the name, or deletes the profile | allow / deny |
+| 42 | Admin lists all `players`; a player lists them, filters by `origin`, or reads a roster profile | allow / deny |
+| 43 | Storage: admin uploads a paper-sheet photo that is not an image, or is over 5 MB; uploads, replaces, and deletes an image; a player deletes one | deny / allow / deny |
