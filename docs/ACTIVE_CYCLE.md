@@ -42,6 +42,7 @@ Run a full mock week end to end in the emulator and then in production under a t
 - **Schedule suggestion added mid-sprint** (D-051, was parked): typing 14 matchups by hand each week was the slowest part of setup. The feed refuses a date range, so Sunday and Monday are fetched separately. `npm run test:e2e:emulator` stubs the feed (checks B2a, B2b).
 
 ---
+- **Brand artwork added between sprints** (D-052, D-053, `docs/BRAND_ASSETS.md`): checkerboards cut out of the three supplied logos, web-sized WebPs, favicon, iPhone icon and a link-preview image built by `scripts/brand/build-assets.sh`, then used on Home (hero, empty state, footer), the 404 page, a faint watermark on the Game Day background, and `/styleguide`. Lesson: the cut-out step must not remove enclosed light patches on the wordmark (it deleted the white PICK EM lettering), so that pass is helmet-only. Another lesson: a change to `firebase.json` triggers a functions redeploy in CI, so the image cache-header tweak was left out.
 
 ## Sprint 2 (closed 2026-10-05)
 

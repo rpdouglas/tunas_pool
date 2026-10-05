@@ -35,6 +35,7 @@ docs/
   FIRESTORE_RULES.md       <- security rules + rationale + test matrix
   PERSONAS.md              <- ten personas, anti-personas, persona tests (build every feature against these)
   DESIGN_SYSTEM.md         <- colors, type, components, voice, accessibility
+  BRAND_ASSETS.md          <- catalog of supplied artwork and what is cleared to use (originals in brand/originals/)
   PROJECT_PLAN.md          <- phases, sprints, acceptance criteria
   ACTIVE_CYCLE.md          <- current sprint (create at Sprint 0; update every sprint)
   DECISIONS.md             <- ADR-style log of decisions (create at Sprint 0)
@@ -55,7 +56,7 @@ Rules for docs:
 6. **Clients never write derived data.** Standings, stats, `revealed`, and the winner are written by functions only.
 7. **Admin = custom claim `admin: true`.** No separate admin login. Set the claim with a one-off script, never from client code.
 8. **Mobile first.** Design at 375px wide, thumb-reachable tap targets (min 44px), then scale up. Most players are on phones, and the admin is often at the shop counter.
-9. **No NFL logos or league IP.** Use team names and brand colors only. The site uses the Baltimore Ravens palette (purple `#241773`, black, gold, red for urgency only), defined in `src/styles/tokens.css`. The sheet's layout language is kept. The mascot is used only recolored, with all NFL marks removed. See `docs/DESIGN_SYSTEM.md` §10.
+9. **No NFL logos or league IP.** Use team names and brand colors only. The site uses the Baltimore Ravens palette (purple `#241773`, black, gold, red for urgency only), defined in `src/styles/tokens.css`. The sheet's layout language is kept. The mascot is used only recolored, with all NFL marks removed, except the artwork the commissioner cleared in `docs/BRAND_ASSETS.md` (D-053). See `docs/DESIGN_SYSTEM.md` §10.
 10. **The design system is the only source of visual decisions.** Colors, fonts, radii, and shadows come from `tokens.css` and `tailwind.preset.cjs`. No hard-coded hex values and no default Tailwind palette (it is intentionally removed). Prefer semantic utilities (`bg-surface`, `text-ink-muted`, `bg-action-primary`).
 
 ## 5. Conventions

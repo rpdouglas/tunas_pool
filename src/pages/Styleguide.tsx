@@ -6,6 +6,7 @@ import { Countdown } from '../components/ui/Countdown';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { SegmentedChoice } from '../components/ui/SegmentedChoice';
 import { StatTile } from '../components/ui/StatTile';
+import { PawnShopHelmet, TunaBadge, WordmarkArt } from '../components/ui/BrandArt';
 import { WordmarkLockup } from '../components/ui/WordmarkLockup';
 import { WinnerBanner } from '../components/ui/WinnerBanner';
 import { useToast } from '../components/ui/toastContext';
@@ -182,6 +183,18 @@ export default function Styleguide() {
           <div className="bg-gameday flex flex-col items-center gap-6 rounded-lg p-6">
             <WordmarkLockup />
             <WordmarkLockup size="compact" />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-art">
+          <h2 id="sg-art" className="mb-3 font-heading text-h2 italic">
+            Brand art
+          </h2>
+          <div className="bg-gameday flex flex-col items-center gap-6 rounded-lg p-6">
+            <WordmarkArt />
+            <TunaBadge />
+            <TunaBadge className="w-20" alt="Tuna, the pool mascot" />
+            <PawnShopHelmet />
           </div>
         </section>
 

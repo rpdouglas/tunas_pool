@@ -12,6 +12,7 @@ Start with **CLAUDE.md**, then `docs/`:
 | `docs/DATA_MODEL.md` | Collections, fields, scoring, Cloud Function contracts |
 | `docs/FIRESTORE_RULES.md` | Security rules, rationale, test matrix |
 | `docs/DESIGN_SYSTEM.md` | Ravens palette, type, components, accessibility |
+| `docs/BRAND_ASSETS.md` | Supplied artwork, what is cleared to use, and what is blocked |
 | `docs/PERSONAS.md` | Personas and the persona tests every feature must pass |
 
 ## Quick start
