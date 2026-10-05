@@ -37,6 +37,7 @@ Run a full mock week end to end in the emulator and then in production under a t
 - The queue loads in one call (`adminListEntries`) and refreshes every minute; marking paid updates the screen at once and rolls back if the server refuses. At about 100 entries that is roughly 200 reads per refresh, which is fine for now; revisit with real traffic.
 - Payments with no declared method show "Hasn't said how they'll pay" with Paid cash and Paid e-Transfer buttons. Creating that payment from the admin is audited like any other.
 - The three-across Pot / Paid / Unpaid tiles use a compact StatTile so they fit at 375px.
+- **The first production deploy of Sprint 3 failed** and deployed nothing (so production stayed on Sprint 2): the web build (`npm run build`) typechecks the functions' tests through `tsconfig.json`, but the `deploy` job installed only the root dependencies, while `verify` installs both. Fixed by installing `functions/` dependencies before the build in the deploy job. Any job that runs the web build needs both installs; the README's local setup already says so. Reproduced locally by hiding `functions/node_modules`, and the fix checked in a clean copy of the repo.
 
 ---
 
