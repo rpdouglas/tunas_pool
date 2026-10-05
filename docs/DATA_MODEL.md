@@ -100,7 +100,7 @@ A claim never exposes the matched profile to the claimant. Only the admin sees `
 | `status` | `'draft' \| 'open' \| 'locked' \| 'final'` | See §6. |
 | `lockAt` | Timestamp | Players cannot write at or after this time. |
 | `revealed` | boolean | Function flips to `true` at lock. Unlocks picks for everyone. |
-| `games` | `Game[]` | 14 Sunday games + MNF, ordered. See below. |
+| `games` | `Game[]` | Up to 14 Sunday games + MNF, ordered. Short weeks (byes, Thursday or Saturday games) have fewer (D-050). See below. |
 | `mnfGameId` | string | The game whose total points is the tiebreaker. |
 | `results` | `Record<gameId, 'home' \| 'away' \| 'tie'>` | Admin, via callable. |
 | `mnfTotal` | number \| null | Actual combined MNF points. |
@@ -219,7 +219,7 @@ type GameResult = 'home' | 'away' | 'tie';
 | `adminSetWeekStatus(year, weekId, status)` | `draft → open` (only when `weekProblems` in `shared/weeks.ts` is empty, judged by the server clock), `open → draft` (only while the week has no entries), `open → locked` (lock early; also sets `revealed: true`). Audit logged as `week.status` with before and after. `final` is reached through results and the winner, not this callable. |
 | `adminEnterResults(year, weekId, results, mnfTotal)` | Replace the week's results (home, away, or tie per game) and the Monday night total. Only while the week is `locked`; refused once `final` (D-047, corrections arrive in Sprint 6). Unchanged input writes nothing. Audit logged as `week.results`. The records are written by `onResultsWritten`. |
 | `adminPreviewWinner(year, weekId)` | Read-only: standings, the pot, and the winner "if the games ended now" with a plain-words explanation, from the entries' own picks and payments (`shared/scoring.ts`). The same code publishes the winner. |
-| `adminPublishWinner(year, weekId, expectedPlayerIds)` | Needs a `locked` week with all 15 results and the Monday night total. Recomputes the winner from the picks and payments at that moment. If it differs from `expectedPlayerIds` (what the admin reviewed), nothing is published. Writes `winner`, sets `status='final'`, writes each entry's `record`. Audit logged as `week.winnerPublished`. Season standings and all-time stats are computed in Sprint 7 from the final weeks, not here. |
+| `adminPublishWinner(year, weekId, expectedPlayerIds)` | Needs a `locked` week with a result for every game and the Monday night total. Recomputes the winner from the picks and payments at that moment. If it differs from `expectedPlayerIds` (what the admin reviewed), nothing is published. Writes `winner`, sets `status='final'`, writes each entry's `record`. Audit logged as `week.winnerPublished`. Season standings and all-time stats are computed in Sprint 7 from the final weeks, not here. |
 | `adminMarkPayout(year, weekId, sent)` | Record that the payout was sent, or undo it. Only once the winner is published. Audit logged as `week.payout`. |
 | `adminListClaims()` | Returns pending claims with `suggestedPlayerId`. |
 | `adminApproveClaim(claimId, playerId)` | Link `claimedByUid`, merge if needed. |
@@ -254,7 +254,7 @@ draft --(admin opens)--> open --(lockAt, automatic, or admin locks early)--> loc
   +--(admin, no entries)---+
 ```
 
-- **Setting up a draft:** the admin pastes one game per line (`shared/weeks.ts` `parseMatchups`). No day or time means Sunday 1:00 PM; the last line is Monday night, 8:15 PM by default. The default lock is Saturday 11:59 PM Toronto time. A week opens only with 14 Sunday games, one Monday night game as the tiebreaker, no team twice, and a lock that is in the future and before the first kickoff.
+- **Setting up a draft:** the admin pastes one game per line (`shared/weeks.ts` `parseMatchups`). No day or time means Sunday 1:00 PM; the last line is Monday night, 8:15 PM by default. The default lock is Saturday 11:59 PM Toronto time. A week opens only with 1 to 14 Sunday games (D-050), one Monday night game as the tiebreaker, no team twice, and a lock that is in the future and before the first kickoff.
 
 - **draft:** visible to admin only. Games and lock time are editable.
 - **open:** players can create and edit entries until `lockAt`.
@@ -265,7 +265,7 @@ draft --(admin opens)--> open --(lockAt, automatic, or admin locks early)--> loc
 
 ## 7. Scoring and tiebreaker
 
-**Record:** one win per correct pick across all 15 games. The record is shown as `wins - losses`, for example `11 – 4`. A pick that is missing, or wrong, is a loss. **A tied game is not a win for anyone** (`config.pool.tieGameRule`, default `no_win`, D-008) and counts toward losses, so every record adds up to the games decided (D-046). The pool setting can also be `win_for_all` or `half_win`; `shared/scoring.ts` supports all three.
+**Record:** one win per correct pick across all of the week's games (15 on a full sheet). The record is shown as `wins - losses`, for example `11 – 4`. A pick that is missing, or wrong, is a loss. **A tied game is not a win for anyone** (`config.pool.tieGameRule`, default `no_win`, D-008) and counts toward losses, so every record adds up to the games decided (D-046). The pool setting can also be `win_for_all` or `half_win`; `shared/scoring.ts` supports all three.
 
 **Eligibility:** only `paymentStatus == 'paid'` entries count toward the pot. Whether unpaid entries are *eligible to win* is `config.pool.unpaidEligibleToWin` (see open decisions; default `false`).
 

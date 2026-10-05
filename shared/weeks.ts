@@ -12,8 +12,9 @@ import type { GameSlot, WeekStatus } from './types';
 import { resolveTeam, suggestTeam } from './teams';
 import { addDays, formatClock, toZonedParts, weekdayOf, zonedTimeToUtc } from './time';
 
-export const SUNDAY_GAMES = 14;
-export const GAMES_PER_WEEK = SUNDAY_GAMES + 1;
+/** The paper sheet has 14 Sunday rows. Bye weeks and Thursday or Saturday games leave some weeks with fewer (D-050). */
+export const MAX_SUNDAY_GAMES = 14;
+export const MAX_GAMES_PER_WEEK = MAX_SUNDAY_GAMES + 1;
 export const MNF_GAME_ID = 'mnf';
 export const DEFAULT_ENTRY_FEE_CENTS = 2000;
 
@@ -149,7 +150,7 @@ export function parseMatchups(
     const slot: GameSlot = resolvedDay === 'mon' ? 'mnf' : 'sunday';
     const time = clock ?? (slot === 'mnf' ? DEFAULT_MNF : DEFAULT_SUNDAY);
     const date = slot === 'mnf' ? addDays(sundayIsoDate, 1) : sundayIsoDate;
-    const order = slot === 'mnf' ? GAMES_PER_WEEK : ++sundayOrder;
+    const order = slot === 'mnf' ? MAX_GAMES_PER_WEEK : ++sundayOrder;
 
     games.push({
       id: gameIdFor(order, slot),
@@ -204,8 +205,12 @@ export function weekProblems(
   const sunday = week.games.filter((g) => g.slot === 'sunday');
   const mnf = week.games.filter((g) => g.slot === 'mnf');
 
-  if (sunday.length !== SUNDAY_GAMES) {
-    problems.push(`The sheet needs ${SUNDAY_GAMES} Sunday games. This week has ${sunday.length}.`);
+  if (sunday.length === 0) {
+    problems.push('The sheet needs at least one Sunday game.');
+  } else if (sunday.length > MAX_SUNDAY_GAMES) {
+    problems.push(
+      `The sheet has room for ${MAX_SUNDAY_GAMES} Sunday games. This week has ${sunday.length}.`,
+    );
   }
   if (mnf.length !== 1) {
     problems.push(`The sheet needs exactly one Monday night game. This week has ${mnf.length}.`);

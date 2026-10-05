@@ -60,7 +60,7 @@ describe('planStatusChange', () => {
   it("refuses to open a week that isn't ready, and says why", () => {
     const plan = planStatusChange(week({ games: [] }), 'open', NOW, 0);
     expect(plan.ok).toBe(false);
-    if (!plan.ok) expect(plan.message).toContain('The sheet needs 14 Sunday games.');
+    if (!plan.ok) expect(plan.message).toContain('The sheet needs at least one Sunday game.');
     expect(planStatusChange(week(), 'open', lockAtMs + 1, 0).ok).toBe(false);
   });
 

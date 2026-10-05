@@ -38,6 +38,7 @@ Run a full mock week end to end in the emulator and then in production under a t
 - Payments with no declared method show "Hasn't said how they'll pay" with Paid cash and Paid e-Transfer buttons. Creating that payment from the admin is audited like any other.
 - The three-across Pot / Paid / Unpaid tiles use a compact StatTile so they fit at 375px.
 - **The first production deploy of Sprint 3 failed** and deployed nothing (so production stayed on Sprint 2): the web build (`npm run build`) typechecks the functions' tests through `tsconfig.json`, but the `deploy` job installed only the root dependencies, while `verify` installs both. Fixed by installing `functions/` dependencies before the build in the deploy job. Any job that runs the web build needs both installs; the README's local setup already says so. Reproduced locally by hiding `functions/node_modules`, and the fix checked in a clean copy of the repo.
+- **The first real week could not be opened**: week 5 has 13 Sunday games (two byes and a Thursday game), and the week check insisted on exactly 14. A week now opens with 1 to 14 Sunday games plus Monday night (D-050). Every test sheet had been a full 15, so nothing caught it; `shared/weeks.test.ts` now covers a short week.
 
 ---
 
