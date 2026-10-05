@@ -72,6 +72,8 @@ Storage: `paperSheets/{year}/{weekId}/{playerId}.jpg`, admin only.
 
 `weeksPlayed`, `wins` (correct picks), `losses`, `weeklyTitles`, `bestWeekRecord`, `lastPlayedWeek`, `updatedAt`.
 
+Written by `recomputeAllTime` for every player with an entry in a final week of a real season, guests included. Test seasons (`-test`) never count. Readable by the player and the admin only; other players see a player's season line through the standings (§3.8).
+
 ### 3.3 `claims/{claimId}`
 
 | Field | Type | Notes |
@@ -178,7 +180,13 @@ Readable by the owner and admin. Readable by everyone once `week.revealed == tru
 
 ### 3.8 `seasons/{year}/standings/{playerId}` (function-written)
 
-`displayName`, `weeksPlayed`, `wins`, `losses`, `weeklyTitles`, `weekRecords: Record<weekId, {wins, losses}>`, `updatedAt`. Only players with a claimed profile **or** an admin-roster profile appear. Guest-only (unclaimed self-serve) players are weekly-only by design. They show on weekly leaderboards but not season standings.
+`displayName`, `weeksPlayed`, `wins`, `losses`, `weeklyTitles`, `weekRecords: Record<weekId, {wins, losses}>`, `updatedAt`.
+
+- **Only final weeks count.** A week in progress is on the week page, not here.
+- **Who appears (D-073):** a player on the roster (`origin: 'admin'`), or one whose profile is linked to a saved login (email link). Guest-only players are weekly only: they show on each week's leaderboard but not here, and see a prompt to save their account.
+- **Worked out again from the entries every time, never added to** (`functions/src/season.ts`, `shared/standings.ts`), so a correction, a merge, or a retried call cannot leave them off. Refreshed after a winner is published or corrected and after a claim, unlink, or merge, and on request with `adminRecomputeStandings`.
+- **Ranked** by correct picks, then win rate, then name. Players level on correct picks share a place.
+- Readable by any signed-in player: this document is the public player profile (a name and a record). It holds no phone, email, or payment.
 
 ### 3.9 `config/pool`
 
@@ -224,6 +232,8 @@ type GameResult = 'home' | 'away' | 'tie';
 | `adminPreviewWinner(year, weekId)` | Read-only: standings, the pot, and the winner "if the games ended now" with a plain-words explanation, from the entries' own picks and payments (`shared/scoring.ts`). The same code publishes the winner. |
 | `adminPublishWinner(year, weekId, expectedPlayerIds)` | Needs a `locked` week with a result for every game and the Monday night total. Recomputes the winner from the picks and payments at that moment. If it differs from `expectedPlayerIds` (what the admin reviewed), nothing is published. Writes `winner`, sets `status='final'`, writes each entry's `record`. Audit logged as `week.winnerPublished`. Season standings and all-time stats are computed in Sprint 7 from the final weeks, not here. |
 | `adminMarkPayout(year, weekId, sent)` | Record that the payout was sent, or undo it. Only once the winner is published. Audit logged as `week.payout`. |
+| `adminRecomputeStandings(year)` | Work the season's standings and everyone's all-time stats out again from the final weeks. They refresh on their own after `adminPublishWinner`, `adminCorrectResults`, `adminApproveClaim`, `adminUnlinkClaim`, and `adminMergePlayers`; a failure there is logged, not thrown, so this is the way to run it again. Returns how many players are on the standings. |
+| `adminSeasonReport(year)` | The Reports screen in one round trip (`shared/reports.ts`): for each week that is not a draft, entries, paid and unpaid counts, the pot, the winner and each share, payout sent, new and returning players, average correct picks, the most-picked team, the biggest upset, and the names of unpaid players. Admin only. |
 | `adminListClaims()` | The pending claims, oldest first. Each has what the player typed, their email, the website profile their login already has (if any, with weeks played), and up to five likely roster matches, best first: same phone, then same name, then a similar name (`shared/claims.ts`), each with weeks played and whether it is already linked. `suggestedPlayerId` is the best match that can still be claimed. A match that is already linked is shown but cannot be approved, and `sharedSuggestion` marks two requests pointing at one profile. Only roster profiles (`origin: 'admin'`) are offered. |
 | `adminApproveClaim(claimId, playerId)` | Link the claimant's login to a roster profile by setting `claimedByUid`. The claim must be pending, and the profile must be a live roster profile with no login. If the claimant's login already has a website profile, it is merged into the roster profile in the same transaction (see `adminMergePlayers`). Sets the claim to `approved` with `resolvedPlayerId`. Audit logged as `claim.approved`, plus `player.merged` when a merge happened. Never automatic (D-004). |
 | `adminRejectClaim(claimId, note?)` | Set a pending claim to `rejected`, with an optional friendly note the claimant sees. Links nothing. Audit logged as `claim.rejected`. |

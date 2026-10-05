@@ -10,6 +10,7 @@ import type {
   WeekPreview,
 } from '@shared/adminTypes';
 import type { AdminEntry } from '@shared/paperEntry';
+import type { SeasonReport } from '@shared/reports';
 import type { GameResult, PaymentMethod } from '@shared/types';
 import { functions } from './firebase';
 
@@ -61,6 +62,11 @@ export const adminApi = {
   deleteEntry: callable<WeekArgs & { playerId: string; reason: string }, { deleted: true }>(
     'adminDeleteEntry',
   ),
+  seasonReport: callable<{ year: string }, SeasonReport>('adminSeasonReport'),
+  recomputeStandings: callable<
+    { year: string },
+    { year: string; players: number; removed: number; allTime: number }
+  >('adminRecomputeStandings'),
   listClaims: callable<Record<string, never>, ClaimsList>('adminListClaims'),
   approveClaim: callable<{ claimId: string; playerId: string }, ApproveClaimResult>(
     'adminApproveClaim',

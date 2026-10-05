@@ -7,6 +7,8 @@ import EntryPage from './features/entry/EntryPage';
 const ClaimPage = lazy(() => import('./features/claims/ClaimPage'));
 const HistoryPage = lazy(() => import('./features/claims/HistoryPage'));
 const WeekPage = lazy(() => import('./features/leaderboard/WeekPage'));
+const StandingsPage = lazy(() => import('./features/leaderboard/StandingsPage'));
+const PlayerPage = lazy(() => import('./features/leaderboard/PlayerPage'));
 const Styleguide = lazy(() => import('./pages/Styleguide'));
 import NotFound from './pages/NotFound';
 import { AdminLayout } from './features/admin/AdminLayout';
@@ -20,6 +22,7 @@ const WeekEditorPage = lazy(() => import('./features/admin/weeks/WeekEditorPage'
 const PoolSettingsPage = lazy(() => import('./features/admin/settings/PoolSettingsPage'));
 const RosterPage = lazy(() => import('./features/admin/roster/RosterPage'));
 const ClaimsPage = lazy(() => import('./features/admin/claims/ClaimsPage'));
+const ReportsPage = lazy(() => import('./features/admin/reports/ReportsPage'));
 const PaperEntryPage = lazy(() => import('./features/admin/entries/PaperEntryPage'));
 
 // The styleguide is visible in dev, and in builds where VITE_ENABLE_STYLEGUIDE=true (CI a11y checks).
@@ -38,6 +41,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/picks/:year/:weekId" element={<EntryPage />} />
         <Route path="/week/:year/:weekId" element={<WeekPage />} />
+        <Route path="/standings" element={<StandingsPage />} />
+        <Route path="/player/:playerId" element={<PlayerPage />} />
         <Route path="/account" element={<SaveAccount />} />
         <Route path="/claim" element={<ClaimPage />} />
         <Route path="/history" element={<HistoryPage />} />
@@ -56,6 +61,7 @@ export default function App() {
           <Route path="enter/:playerId" element={<PaperEntryPage />} />
           <Route path="results" element={<ResultsPage />} />
           <Route path="weeks" element={<WeeksPage />} />
+          <Route path="reports" element={<ReportsPage />} />
           <Route path="weeks/:year/:weekId" element={<WeekEditorPage />} />
           <Route path="settings" element={<PoolSettingsPage />} />
         </Route>

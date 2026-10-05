@@ -691,3 +691,39 @@ describe('Sprint 6: the reveal and corrections', () => {
     await assertSucceeds(updateDoc(doc(admin(), weekPath('wk09')), { games: [] }));
   });
 });
+
+describe('Sprint 7: standings and stats', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, `seasons/${YEAR}/standings/p1`), {
+        displayName: 'Alice A.', weeksPlayed: 2, wins: 19, losses: 11, weeklyTitles: 1, weekRecords: {},
+      });
+      await setDoc(doc(db, 'players/p1/stats/allTime'), { weeksPlayed: 2, wins: 19, losses: 11, weeklyTitles: 1 });
+    });
+  });
+
+  it('#50 any signed-in player reads the season standings (a name and a record); nobody writes them from a client', async () => {
+    const bob = env.authenticatedContext('bob').firestore();
+    const all = await assertSucceeds(getDocs(collection(bob, `seasons/${YEAR}/standings`)));
+    expect(Object.keys(all.docs[0].data()).sort()).toEqual([
+      'displayName', 'losses', 'weekRecords', 'weeklyTitles', 'weeksPlayed', 'wins',
+    ]);
+    await assertSucceeds(getDoc(doc(bob, `seasons/${YEAR}/standings/p1`)));
+    await assertFails(getDocs(collection(env.unauthenticatedContext().firestore(), `seasons/${YEAR}/standings`)));
+    for (const client of [bob, admin(), env.authenticatedContext('alice').firestore()]) {
+      await assertFails(setDoc(doc(client, `seasons/${YEAR}/standings/p1`), { displayName: 'Alice A.', wins: 99 }));
+      await assertFails(updateDoc(doc(client, `seasons/${YEAR}/standings/p1`), { wins: 99 }));
+    }
+  });
+
+  it('#51 all-time stats are for the player and the admin only, and function-written', async () => {
+    const alice = env.authenticatedContext('alice').firestore();
+    await assertSucceeds(getDoc(doc(alice, 'players/p1/stats/allTime')));
+    await assertSucceeds(getDoc(doc(admin(), 'players/p1/stats/allTime')));
+    await assertFails(getDoc(doc(env.authenticatedContext('bob').firestore(), 'players/p1/stats/allTime')));
+    await assertFails(setDoc(doc(alice, 'players/p1/stats/allTime'), { wins: 99 }));
+    await assertFails(setDoc(doc(admin(), 'players/p1/stats/allTime'), { wins: 99 }));
+  });
+});
+

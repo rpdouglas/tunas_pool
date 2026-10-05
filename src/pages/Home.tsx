@@ -9,11 +9,13 @@ import { currentSeason } from '../lib/season';
 import { useGuestSession } from '../features/auth/useAuth';
 import { useCurrentWeek, useMyEntry } from '../features/entry/entryData';
 import { useLastWinner } from '../features/leaderboard/revealData';
+import { useSeasonLeader } from '../features/leaderboard/standingsData';
+import { formatRecord } from '@shared/scoring';
 import { WinnerBanner } from '../components/ui/WinnerBanner';
 
 /**
  * The weekly home screen (D-020): this week at a glance, your status, and the one next step.
- * The latest published winner sits under it (Sprint 6). The season leader arrives in Sprint 7.
+ * The latest published winner (Sprint 6) and the season leader (Sprint 7) sit under it.
  */
 export default function Home() {
   // Every player is signed in, as a guest if nothing else, before they make picks.
@@ -23,6 +25,7 @@ export default function Home() {
   const week = current.data ?? null;
   const mine = useMyEntry(year, week?.id, session.user?.uid);
   const lastWinner = useLastWinner(year, Boolean(session.user)).data ?? null;
+  const leader = useSeasonLeader(year, Boolean(session.user)).data ?? null;
 
   const open = Boolean(week && week.status === 'open' && Date.now() < week.lockAtMs);
   const entry = mine.data?.entry ?? null;
@@ -166,6 +169,19 @@ export default function Home() {
           </Link>
         )}
 
+        {leader && (
+          <Link
+            to="/standings"
+            className="flex min-h-touch items-center justify-center rounded-md bg-surface px-3 py-2 text-center text-body"
+          >
+            <span>
+              Season leader: <strong>{leader.displayName}</strong>,{' '}
+              {formatRecord(leader.wins, leader.losses)}.{' '}
+              <span className="text-ink-emphasis underline">See the standings</span>
+            </span>
+          </Link>
+        )}
+
         <nav aria-label="Your account" className="flex flex-col items-center">
           <Link
             to="/history"
@@ -173,6 +189,14 @@ export default function Home() {
           >
             Your history
           </Link>
+          {!leader && (
+            <Link
+              to="/standings"
+              className="inline-flex min-h-touch items-center justify-center text-body text-ink-inverse underline"
+            >
+              Season standings
+            </Link>
+          )}
           {mine.data?.profile?.origin !== 'admin' && (
             <Link
               to="/claim"

@@ -141,7 +141,7 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 - **Past weeks:** a week picker that opens any earlier week's reveal view (picks, results, winner, pot, your record). Every week stays viewable forever.
 - **Player profiles:** season record, weeks won, win %, best week. Other players see display name and record only; never phone, email, or payment status. No streak stats (D-023). `players/{id}/stats/allTime` is owner and admin only today, so showing it to others needs a rules change with tests (or a public copy written by functions).
 - Home screen gains the current season leader.
-- **Google sign-in** (redirect flow) as a second upgrade option, now that season standings make an account worth having (D-024).
+- **Google sign-in** (redirect flow) as a second upgrade option, now that season standings make an account worth having (D-024). *Carried over (D-077): it needs a real sign-in on the live site to prove, and browser runs are parked.*
 - Guest-only players appear weekly only, with a "Save your picks and track your season" upgrade prompt.
 - Admin reports: weekly pot, payouts, and unpaid entries, with CSV export. Also: participation by week, returning vs. new players, pot history, average weekly score, most-picked team, and biggest upset (the last two reuse the Sprint 6 pick-trend data). Tables first; charts are parked.
 

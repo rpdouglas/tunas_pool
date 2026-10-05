@@ -10,6 +10,7 @@ const NAV = [
   { to: '/admin/claims', label: 'Claims', end: false },
   { to: '/admin/results', label: 'Results', end: false },
   { to: '/admin/weeks', label: 'Weeks', end: false },
+  { to: '/admin/reports', label: 'Reports', end: false },
   { to: '/admin/settings', label: 'Settings', end: false },
 ];
 
