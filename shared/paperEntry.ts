@@ -125,15 +125,20 @@ export function blankGames<G extends { id: string }>(
   return games.filter((g) => picks[g.id] !== 'home' && picks[g.id] !== 'away');
 }
 
-export type EntryWindow = { mode: 'open' } | { mode: 'late' } | { mode: 'closed'; message: string };
+export type EntryWindow =
+  { mode: 'open' } | { mode: 'late' } | { mode: 'backfill' } | { mode: 'closed'; message: string };
 
 /**
  * Which callable applies right now. While the week is open and the lock time has not passed, it is
  * a normal admin entry. Once picks are locked it is a late entry with a reason, until the winner is
- * published (corrections after that arrive in Sprint 6, D-047).
+ * published (corrections after that are results only, D-068).
+ *
+ * A backfilled week (D-071) is one set up after it was played, to bring earlier paper weeks onto
+ * the site. Its sheets are entered as normal admin entries while it is locked, with no reason and no
+ * late badge on each: the week itself says publicly that it was entered afterwards.
  */
 export function entryWindow(
-  week: { status: string; lockAtMs: number },
+  week: { status: string; lockAtMs: number; backfilled?: boolean },
   nowMs: number,
 ): EntryWindow {
   if (week.status === 'draft') {
@@ -146,5 +151,6 @@ export function entryWindow(
     };
   }
   if (week.status === 'open' && nowMs < week.lockAtMs) return { mode: 'open' };
+  if (week.backfilled === true) return { mode: 'backfill' };
   return { mode: 'late' };
 }

@@ -113,6 +113,22 @@ describe('entryWindow', () => {
     expect(entryWindow({ status: 'locked', lockAtMs: NOW - 5 }, NOW)).toEqual({ mode: 'late' });
   });
 
+  it('a backfilled week takes normal entries while locked, and closes like any other once final', () => {
+    expect(entryWindow({ status: 'locked', lockAtMs: NOW - 5, backfilled: true }, NOW)).toEqual({
+      mode: 'backfill',
+    });
+    expect(entryWindow({ status: 'final', lockAtMs: NOW - 5, backfilled: true }, NOW).mode).toBe(
+      'closed',
+    );
+    // The mark changes nothing while a week is still open, or when it is absent or false.
+    expect(entryWindow({ status: 'open', lockAtMs: NOW + 1, backfilled: true }, NOW)).toEqual({
+      mode: 'open',
+    });
+    expect(entryWindow({ status: 'locked', lockAtMs: NOW - 5, backfilled: false }, NOW)).toEqual({
+      mode: 'late',
+    });
+  });
+
   it('is closed for a draft and once the winner is published', () => {
     expect(entryWindow({ status: 'draft', lockAtMs: NOW + 1 }, NOW).mode).toBe('closed');
     expect(entryWindow({ status: 'final', lockAtMs: NOW - 5 }, NOW).mode).toBe('closed');

@@ -135,17 +135,20 @@ service cloud.firestore {
         // Admin may build/edit a week only while it is a draft (or create it).
         // Opening, locking, results, and winner go through callables.
         // Derived fields (revealed, counters, results, winner) start empty and are function-written.
+        // `backfilled` lets sheets be entered after the lock without a reason (D-071), so no client
+        // may set it, even on a draft.
         allow create: if isAdmin()
           && request.resource.data.status == 'draft'
           && request.resource.data.revealed == false
           && request.resource.data.entryCount == 0
           && request.resource.data.paidCount == 0
-          && request.resource.data.winner == null;
+          && request.resource.data.winner == null
+          && !request.resource.data.keys().hasAny(['backfilled', 'correctedAt']);
         allow update: if isAdmin()
           && resource.data.status == 'draft'
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
                'status', 'revealed', 'entryCount', 'paidCount', 'results', 'mnfTotal',
-               'winner', 'payoutSent']);
+               'winner', 'payoutSent', 'backfilled', 'correctedAt']);
         allow delete: if isAdmin() && resource.data.status == 'draft';
 
         // ----- entries (one per person per week; doc ID = playerId) -----

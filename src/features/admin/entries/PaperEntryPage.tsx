@@ -85,6 +85,7 @@ function EntryForWeek({
       week={week}
       view={view.data}
       late={window.mode === 'late'}
+      backfill={window.mode === 'backfill'}
       backHref={backHref}
       onSaved={({ name, paid, late }) => {
         showToast({

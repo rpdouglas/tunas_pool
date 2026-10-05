@@ -186,6 +186,14 @@ function Revealed({
         </Panel>
       )}
 
+      {week.backfilled && (
+        <p className="rounded-md bg-surface p-3 text-body">
+          <span aria-hidden="true">ⓘ </span>
+          This week was played before the pool moved online. Its picks were entered from the paper
+          sheets afterwards.
+        </p>
+      )}
+
       <div role="group" aria-label="Show" className="grid grid-cols-2 gap-2">
         {(
           [

@@ -154,17 +154,20 @@ service cloud.firestore {
         // Admin may build/edit a week only while it is a draft (or create it).
         // Opening, locking, results, and winner go through callables.
         // Derived fields (revealed, counters, results, winner) start empty and are function-written.
+        // `backfilled` lets sheets be entered after the lock without a reason (D-071), so no client
+        // may set it, even on a draft.
         allow create: if isAdmin()
           && request.resource.data.status == 'draft'
           && request.resource.data.revealed == false
           && request.resource.data.entryCount == 0
           && request.resource.data.paidCount == 0
-          && request.resource.data.winner == null;
+          && request.resource.data.winner == null
+          && !request.resource.data.keys().hasAny(['backfilled', 'correctedAt']);
         allow update: if isAdmin()
           && resource.data.status == 'draft'
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
                'status', 'revealed', 'entryCount', 'paidCount', 'results', 'mnfTotal',
-               'winner', 'payoutSent']);
+               'winner', 'payoutSent', 'backfilled', 'correctedAt']);
         allow delete: if isAdmin() && resource.data.status == 'draft';
 
         // ----- entries (one per person per week; doc ID = playerId) -----
@@ -269,6 +272,7 @@ service cloud.firestore {
 - **Self-serve profile ordering:** the client must create `players/{uid}` **before** its first entry write. Entry rules call `ownsPlayer()`, which needs the profile to exist.
 - **Admin entry edits:** the admin cannot write entries or picks directly from the client. Use `adminUpsertEntry` while open, or `adminLateOverride` (reason required) after lock.
 - **Roster (Sprint 4):** an admin adds and edits roster profiles directly from the client. A new roster profile must be unclaimed, `origin: 'admin'`, with a name of 1 to 60 characters and only the roster fields (rows 6, 7, 40). An admin edit may touch `displayName`, `phone`, `email`, `usualPayment`, `notes`, `active`, and `updatedAt` only: never the link, the origin, a merge, or the age confirmation (rows 8, 41). Profiles are never deleted; `active: false` retires one. Only an admin can list the roster (row 42). These writes are not audit logged (D-057).
+- **Backfilled weeks (D-071):** `backfilled: true` on a week lets the admin enter sheets after the lock as normal entries. That would be a way round the lock if a client could set it, so the week rules refuse it on create and on every update, drafts included (row 49). Only a script with the Admin SDK sets it. `correctedAt` is kept out of client writes the same way.
 - **Reveal and corrections (Sprint 6):** no rule changed. The week page reads the entries list and each entry's `private/picks` only after `revealed == true`, which the picks rule has always required (rows 20, 21, 47). A correction to a final week is `adminCorrectResults` with the Admin SDK: the week update rule only allows draft edits, so no client can write `correctedAt`, results, or the winner (row 48).
 - **Claims (Sprint 5):** no rule changed. Rows 44 to 46 pin down that asking reveals nothing: the claim document is readable only by its requester and the admin and is never client-writable, and a roster profile, its picks, and its payment are readable only by the login in `claimedByUid`. Approval and unlinking are the Admin SDK changing that one field.
 - **`claimedByUid` is never client-writable.** The owner-update rule limits affected keys, and the admin-update rule requires the field to be unchanged.
@@ -371,3 +375,4 @@ Each row is at least one passing and one failing test.
 | 46 | Once `claimedByUid` is set to a login (approval), it reads the profile, finds it by query, reads its picks and payment, and edits the entry while open, but cannot hand the profile on or mark it paid; once cleared (unlink), all of that is denied again | allow / deny / deny |
 | 47 | Any signed-in player lists a revealed week's entries and reads each entry's picks; reads a payment there; reads picks in a week not yet revealed; rewrites revealed picks | allow / deny / deny / deny |
 | 48 | Admin or player writes `correctedAt`, `results`, `winner`, or `payoutSent` on a final week from the client | deny |
+| 49 | Admin creates a draft week with `backfilled` or `correctedAt` set, or sets `backfilled` on a draft or a locked week; creates and edits a plain draft | deny / allow |
