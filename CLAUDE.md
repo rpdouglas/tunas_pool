@@ -118,7 +118,7 @@ Deployment targets (see `DECISIONS.md` D-015):
 
 **Definition of done:** typechecks clean, tests pass, rules tests cover new paths, the functions' integration tests cover new callables, docs updated, and the smoke run passes with the changed screens looked at (375px).
 
-**Browser check: one quick smoke run (D-082).** At the end of a task that adds or changes a screen, run `npm run test:smoke` once. It seeds a small season into the emulators, serves the built site, opens each screen at 375px, checks it loads, fits, and throws no script error, and saves screenshots to `test-results/smoke/`. It takes about a minute. Look at the screenshots of the screens you touched, and add a `visit(...)` line for any new screen. If it fails, fix what it found; if a page crashes for no reason in the code, say so and move on rather than debugging the machine.
+**Browser check: one quick smoke run (D-082).** At the end of a task that adds or changes a screen, run `npm run test:smoke` once. It seeds a small season into the emulators, serves the built site, opens each screen at 375px, checks it loads, fits (also at the largest text size), passes the WCAG 2.2 AA rules, and throws no script error, and saves screenshots to `test-results/smoke/`. It takes about a minute. Look at the screenshots of the screens you touched, and add a `visit(...)` line for any new screen. If it fails, fix what it found; if a page crashes for no reason in the code, say so and move on rather than debugging the machine.
 
 The four long `test:e2e:*` flows stay parked (D-066): do not write new ones or run them as part of finishing a task. They need a dev server and many pages at once, which the Codespace cannot hold. Run one only when Ryan asks.
 

@@ -18,6 +18,10 @@ import App from './App';
 import { queryClient } from './lib/queryClient';
 import { AuthProvider } from './features/auth/AuthProvider';
 import { ToastProvider } from './components/ui/ToastProvider';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { reportError, watchForErrors } from './lib/errorReporting';
+
+watchForErrors();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -25,7 +29,9 @@ createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <ToastProvider>
           <BrowserRouter>
-            <App />
+            <ErrorBoundary onError={reportError}>
+              <App />
+            </ErrorBoundary>
           </BrowserRouter>
         </ToastProvider>
       </AuthProvider>

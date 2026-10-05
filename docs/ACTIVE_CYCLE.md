@@ -1,11 +1,54 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 8: Print sheet, reminders, and sharing** · Phase 4 (Polish and automation) · Started: 2026-10-05
+**Sprint 9: Hardening** · Phase 4 (Polish and automation) · Started: 2026-10-05
 
 ## Goal
-The paper sheet comes off the site so it always matches the week, the commissioner can nudge the people who aren't in or haven't paid in one tap, and a player can tell their friends they're in without giving anything away.
+The pool holds up for the people it is hardest on: someone with large text on an older phone, someone on a weak signal, someone who opened the link inside Facebook, and the commissioner on the day something breaks.
 
 ## Persona check
+- **Primary persona:** Rosalie's family and the older regulars (large text, older phones) and Dale (weak signal, 20 minutes to lock). Secondary: Kayla and Jen (links opened inside Facebook or Messenger), the Commissioner (results on Sunday night, and knowing when something is broken), Gerald (results he can trust).
+- **Dale Deadline Test:** the home screen paints its backdrop and name from the stylesheet alone, before the app's code arrives, and no player downloads the Google sign-in helper unless they tap that button.
+- **Rosalie Inclusion Test / accessibility:** every screen passes the WCAG 2.2 AA rules with real data in it and fits a phone at Extra large text. The Text size control is on the home screen, where it can be found, not in a settings page.
+- **Welcome Test:** inside an app's built-in browser, the sign-in screen says so in plain words and what to do, instead of offering a button that cannot work.
+- **Gerald Trust Test:** results filled in from the scores feed are a suggestion the commissioner checks and saves. What is entered by hand is never overwritten, and the audit log records the save as before.
+- **Commissioner Counter Test:** "Fill in finished games from ESPN" is one tap on Sunday night, then a look, then Save. A screen that breaks shows a plain message with Reload, and the error reaches the logs.
+- **Privacy test:** an error report carries the page path without its query string (which can hold a sign-in code), and no picks, names, or payments. A season export holds private data and is written only to a folder that is never committed.
+
+## Tasks
+- [x] Accessibility audit on the real screens: the smoke run now applies the WCAG 2.2 AA rules to all 22 screens (no violations) and checks each at Extra large text. Three overflows fixed (results rows, the printed results table, the week picker row)
+- [x] Text size control on the home screen (Normal, Large, Extra large), applied before first paint
+- [x] Performance: a first paint from `index.html`, Auth without the popup helper, and the week's space held while it loads (D-084)
+- [x] In-app browsers: detected, with a plain note in place of the Google button (`src/lib/inAppBrowser.ts`, tested against real user-agent strings)
+- [x] Results suggestion from the scores feed on the Results screen (`shared/schedule.ts`, 4 tests; D-085)
+- [x] Error monitoring: error boundary, uncaught errors reported to the `reportClientError` callable and the functions' log (D-086)
+- [x] Backups: `npm run admin:export`; the missing database backups are written up for Ryan (D-089, README)
+- [x] Docs: DECISIONS D-084 to D-089, DATA_MODEL §5, DESIGN_SYSTEM §6, README, CLAUDE.md
+- [ ] **Acceptance, performance:** Lighthouse mobile 90 or higher. It was 53 before this sprint and can only be measured again on the live site after release
+- [ ] **Acceptance, in-app browsers:** open the pool from a link inside Facebook and Messenger on a real phone, make picks, and save an account with the email link
+- [ ] Turn on scheduled backups and delete protection for `db-tunaspool` (Ryan; commands in the README)
+- [ ] Confirm the provisional decisions D-084, D-086, D-088, D-089 with the commissioner
+
+## Acceptance (from PROJECT_PLAN.md)
+Lighthouse mobile scores of 90 or higher for performance and accessibility. Sign-in works from Facebook and Messenger in-app browsers.
+
+## Notes / learned
+- **Accessibility was already 100 on Lighthouse and clean on every real screen.** The gaps were at large text, which no check had covered: the setting existed in the stylesheet with no way to turn it on.
+- Verified with typecheck, lint, 181 unit tests, 110 rules and function tests, the build, `test:a11y`, and the smoke run (22 screens, with the accessibility and large-text checks, about 75 seconds).
+- The smoke run now names the element that makes a screen scroll sideways. That turned a hunt into a one-line fix (the week picker row did not wrap).
+- **Not verified:** the performance score after the changes; Google sign-in after Auth was set up without the popup helper (the smoke run covers guest and email-link sign-in, not a Google popup, so "Continue with Google" needs trying again on the live site); the scores feed against a live Sunday (the unit tests use a made-up response in the feed's shape); the error report reaching Cloud Logging in production.
+- The Firestore SDK is now the biggest thing a player downloads (about 160 KB gzipped). Cutting it means the lighter "lite" SDK or fewer features on the first screen, which is a design choice, not a tweak.
+- A season export holds phone numbers and payments. It was not run against production in this sprint.
+
+---
+
+## Sprint 8 (released 2026-10-05, PR #26; follow-ups open)
+
+**Sprint 8: Print sheet, reminders, and sharing** · Phase 4 (Polish and automation) · Started: 2026-10-05
+
+### Goal
+The paper sheet comes off the site so it always matches the week, the commissioner can nudge the people who aren't in or haven't paid in one tap, and a player can tell their friends they're in without giving anything away.
+
+### Persona check
 - **Primary persona:** Rosalie (the paper sheet and printed results) and the Commissioner (reminders). Secondary: Kayla (sharing), Jen (privacy), Troy (payment wording), Bernie (a text is how he hears from the pool).
 - **Rosalie Inclusion Test:** the sheet is built from the same week as the entry screens, numbered in the same order, with a Large print switch. The week's results print on one page for the counter. Neither needs her to touch a screen.
 - **Commissioner Counter Test:** a reminder is one tap from the list he is already looking at. It opens his own text app with the words filled in, so he sees what goes out and sends it himself. No new tab.
@@ -16,7 +59,7 @@ The paper sheet comes off the site so it always matches the week, the commission
 - **Dale Deadline Test:** nothing is added to the form. The share card sits under the receipt, after the picks are safely in.
 - **Responsible-Play Check:** no message mentions owing, tabs, or catching up. One entry, one fee.
 
-## Tasks
+### Tasks
 - [x] Message wording as shared, tested code: the entry reminder, the group reminder, the payment note, "picks are in", and the pool invitation (`shared/messages.ts`, 7 tests)
 - [x] Paper sheet (`/sheet/:year/:weekId`) with Large print, and printed results (`/sheet/:year/:weekId/results`). Linked from the week editor, the home screen, and the week page
 - [x] Reminders: "Text a reminder" and "Copy a reminder for the group chat" on the roster; "Text about payment" in the payments queue. While picks are open only
@@ -29,10 +72,10 @@ The paper sheet comes off the site so it always matches the week, the commission
 - [ ] Send yourself one reminder text from an iPhone and from an Android phone, to see the message arrive filled in
 - [ ] Confirm the provisional decisions D-078 to D-080 with the commissioner
 
-## Acceptance (from PROJECT_PLAN.md)
+### Acceptance (from PROJECT_PLAN.md)
 None is written for Sprint 8 in the plan. The working test: the commissioner prints a week's sheet that matches the site game for game, texts a reminder from the roster in one tap, and a player shares that they're in without a pick showing.
 
-## Notes / learned
+### Notes / learned
 - **Browser checks are back, in a small form** (D-082): `npm run test:smoke` opens 21 screens at 375px in about 70 seconds. It passed, and it is the first time the Sprint 6, 7, and 8 screens were seen in a browser. Looking at its screenshots found two things: the home screen named one of two tied players as "the" season leader (it now says they are tied), and the paper sheet's Phone line was squeezed to nothing (Name, Phone, and the tiebreaker total each have their own line now).
 - Also verified with typecheck, lint, 168 unit tests, the production build, and `test:a11y`. No functions or rules changed, so `test:rules` was not re-run. The sheet has been seen on screen but **not printed on paper**.
 - The `sms:` link format with the message filled in (`sms:+1…?&body=…`) is the common form for both iPhone and Android, but it is written from knowledge, not tried on a phone.

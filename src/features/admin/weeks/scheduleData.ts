@@ -5,7 +5,15 @@
  * the two dates.
  */
 import { useMutation } from '@tanstack/react-query';
-import { readEspnScoreboard, scheduleToText, type ScheduleText } from '@shared/schedule';
+import {
+  readEspnScoreboard,
+  readEspnScores,
+  scheduleToText,
+  suggestResults,
+  type ResultSuggestion,
+  type ScheduleText,
+} from '@shared/schedule';
+import { sundayOf, type GameDraft } from '@shared/weeks';
 import { addDays } from '@shared/time';
 
 const SCOREBOARD_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
@@ -24,4 +32,22 @@ export async function fetchWeekSchedule(sundayIsoDate: string): Promise<Schedule
 
 export function useWeekSchedule() {
   return useMutation({ mutationFn: fetchWeekSchedule });
+}
+
+/** Final scores for a week's Sunday and Monday, as suggested results for the commissioner to check. */
+export async function fetchResultSuggestion(games: GameDraft[]): Promise<ResultSuggestion> {
+  const sunday = sundayOf(games);
+  if (!sunday) throw new Error('This week has no Sunday game to look up.');
+  const days = await Promise.all(
+    [sunday, addDays(sunday, 1)].map(async (isoDate) => {
+      const response = await fetch(`${SCOREBOARD_URL}?dates=${isoDate.replaceAll('-', '')}`);
+      if (!response.ok) throw new Error(`Scores feed answered ${response.status}`);
+      return readEspnScores(await response.json());
+    }),
+  );
+  return suggestResults(games, days.flat());
+}
+
+export function useResultSuggestion() {
+  return useMutation({ mutationFn: fetchResultSuggestion });
 }

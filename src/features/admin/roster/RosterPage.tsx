@@ -77,7 +77,7 @@ export default function RosterPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-heading text-h2">Roster</h1>
         {week && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={week.status} />
             <WeekPicker weeks={sel.weeks} value={week.id} onChange={sel.select} />
           </div>

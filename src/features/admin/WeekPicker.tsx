@@ -13,13 +13,13 @@ export function WeekPicker({
   onChange: (weekId: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <label htmlFor="week-picker" className="field-label">
         Week
       </label>
       <select
         id="week-picker"
-        className="field w-auto"
+        className="field w-auto max-w-full"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >

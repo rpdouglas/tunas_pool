@@ -19,6 +19,7 @@ import { PickRow } from '../components/ui/PickRow';
 import { LeaderboardRow } from '../components/ui/LeaderboardRow';
 import { ShareBar } from '../components/ui/ShareBar';
 import { ShareCard } from '../components/ui/ShareCard';
+import { TextSizeControl } from '../components/ui/TextSizeControl';
 import type { ClaimRow, EntryRow } from '@shared/adminTypes';
 import type { WeekWinner } from '@shared/types';
 import { Field } from '../components/ui/Field';
@@ -591,6 +592,20 @@ export default function Styleguide() {
               lockLabel="Saturday, Oct 10, 11:59 PM"
               locked
             />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-textsize">
+          <h2 id="sg-textsize" className="mb-3 font-heading text-h2 italic">
+            Text size
+          </h2>
+          <div className="flex max-w-player flex-col gap-4">
+            <div className="rounded-lg bg-surface p-4">
+              <TextSizeControl />
+            </div>
+            <div className="rounded-lg bg-purple-800 p-4">
+              <TextSizeControl onDark />
+            </div>
           </div>
         </section>
 

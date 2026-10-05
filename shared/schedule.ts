@@ -92,3 +92,81 @@ export function scheduleToText(games: ScheduleGame[], sundayIsoDate: string): Sc
 
   return { text: lines.join('\n'), sundayGames, mondayGames };
 }
+
+export interface FeedScore {
+  away: string;
+  home: string;
+  /** The game is over and both scores are numbers. */
+  final: boolean;
+  awayPoints: number;
+  homePoints: number;
+}
+
+/** Final scores out of an ESPN scoreboard response, by the pool's own team names. Trusts nothing. */
+export function readEspnScores(payload: unknown): FeedScore[] {
+  const events = asRecord(payload)?.events;
+  if (!Array.isArray(events)) return [];
+  const scores: FeedScore[] = [];
+  for (const rawEvent of events) {
+    const competitions = asRecord(rawEvent)?.competitions;
+    const competition = Array.isArray(competitions) ? asRecord(competitions[0]) : null;
+    const competitors = competition?.competitors;
+    if (!competition || !Array.isArray(competitors)) continue;
+    const sides: Record<string, { name: string | null; points: number }> = {};
+    for (const rawSide of competitors) {
+      const side = asRecord(rawSide);
+      const team = asRecord(side?.team);
+      const name = team?.shortDisplayName ?? team?.displayName;
+      if (typeof side?.homeAway !== 'string') continue;
+      sides[side.homeAway] = {
+        name: typeof name === 'string' ? resolveTeam(name) : null,
+        points: Number(side.score),
+      };
+    }
+    if (!sides.away?.name || !sides.home?.name) continue;
+    const completed = asRecord(asRecord(competition.status)?.type)?.completed === true;
+    scores.push({
+      away: sides.away.name,
+      home: sides.home.name,
+      final: completed && Number.isFinite(sides.away.points) && Number.isFinite(sides.home.points),
+      awayPoints: sides.away.points,
+      homePoints: sides.home.points,
+    });
+  }
+  return scores;
+}
+
+export interface ResultSuggestion {
+  /** A result for every game on the sheet that the feed says is final. */
+  results: Record<string, 'home' | 'away' | 'tie'>;
+  /** Combined points of the Monday night game, once it is final. */
+  mnfTotal: number | null;
+  /** Games on the sheet with no final score in the feed, as "Away at Home". */
+  notFinal: string[];
+}
+
+/**
+ * Suggested results for a week's sheet from the feed's final scores (D-085). Only a suggestion:
+ * the commissioner reviews it and saves, and what they enter by hand always wins.
+ */
+export function suggestResults(
+  games: { id: string; away: string; home: string; slot: string }[],
+  scores: FeedScore[],
+): ResultSuggestion {
+  const suggestion: ResultSuggestion = { results: {}, mnfTotal: null, notFinal: [] };
+  for (const game of games) {
+    const score = scores.find((s) => s.away === game.away && s.home === game.home);
+    if (!score?.final) {
+      suggestion.notFinal.push(`${game.away} at ${game.home}`);
+      continue;
+    }
+    suggestion.results[game.id] =
+      score.homePoints === score.awayPoints
+        ? 'tie'
+        : score.homePoints > score.awayPoints
+          ? 'home'
+          : 'away';
+    if (game.slot === 'mnf') suggestion.mnfTotal = score.homePoints + score.awayPoints;
+  }
+  return suggestion;
+}

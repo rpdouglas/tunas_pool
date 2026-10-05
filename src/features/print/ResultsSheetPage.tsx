@@ -106,17 +106,17 @@ export default function ResultsSheetPage() {
           </p>
         )}
 
-        <table className="w-full border-collapse text-left">
+        <table className="w-full table-fixed border-collapse text-left">
           <caption className="sr-only">Standings for week {w.weekNumber}</caption>
           <thead>
             <tr className="border-b-4 border-black">
-              <th scope="col" className="py-1 pr-2">
+              <th scope="col" className="w-24 py-1 pr-2">
                 Place
               </th>
               <th scope="col" className="py-1 pr-2">
                 Player
               </th>
-              <th scope="col" className="py-1 text-right">
+              <th scope="col" className="w-24 py-1 text-right">
                 Record
               </th>
             </tr>
@@ -125,7 +125,7 @@ export default function ResultsSheetPage() {
             {rows.map((row) => (
               <tr key={row.playerId} className="border-b border-black">
                 <td className="py-1 pr-2">{rankLabel(row)}</td>
-                <td className="py-1 pr-2">
+                <td className="break-words py-1 pr-2">
                   {row.displayName}
                   {row.late ? ' (late entry)' : ''}
                 </td>

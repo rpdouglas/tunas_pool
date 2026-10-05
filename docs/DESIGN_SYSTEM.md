@@ -214,6 +214,8 @@ All use semantic tokens. Build in `src/components/ui/`, each shown in the dev-on
 | **Claim request** (admin) | Who is asking (typed name, phone, email), the likely roster matches as radio buttons with the best one chosen, then **Link to …** (gold) and Reject. Gold "Check" notes for a merge or a shared match. Reject opens an optional friendly note. | suggested · no match · already linked · rejecting |
 | **Share card** | Purple card with the pool name and week, the player's display name, a "Picks locked in" sticker, and good-luck copy. Made to be screenshotted: never a pick, phone, email, or payment. | before lock · locked |
 | **Paper sheet** (print) | Black on white, no backgrounds: the wordmark as text, week, fee, and lock time, numbered games with a tick box per team, tiebreaker, name, phone, and payment boxes. Large print raises the type one step. Controls are hidden when printing. | regular · large |
+| **Text size control** | Three pill buttons: Normal, Large, Extra large. Sets `data-text-size` on `<html>` and remembers it on the device. On the home screen, in a light and an on-dark version. | normal · large · extra large |
+| **Error screen** | Game Day backdrop, a panel titled "Something went wrong", one sentence, Reload the page, and Back to this week. | n/a |
 | **Toast** | Bottom, `shadow-raised`. Same verb as the button. | success · error |
 | **Empty state** | `.icon-badge` + one sentence + one action | n/a |
 

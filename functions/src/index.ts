@@ -19,6 +19,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '../../shared/config';
 import type { Game, WeekStatus } from '../../shared/types';
 import { deleteEntry, upsertEntry } from './adminEntries';
+import { createRateLimit, tidyClientError } from './clientErrors';
 import { auditInTransaction } from './audit';
 import {
   approveClaim,
@@ -415,6 +416,24 @@ export const requestClaim = onCall(async (req) => {
     data: req.data,
     nowMs: Date.now(),
   });
+});
+
+/**
+ * reportClientError (Sprint 9). The web app sends script errors here so a broken screen shows up in
+ * the logs. Any signed-in login may call it, guests included, since they are who hits the errors.
+ * Limited per instance, cut to length, and it never fails the caller.
+ */
+const allowClientError = createRateLimit(30);
+export const reportClientError = onCall(async (req) => {
+  requireSignedIn(req);
+  const report = tidyClientError(req.data);
+  if (!report || !allowClientError(Date.now())) return { logged: false };
+  logger.error(`Client error: ${report.message}`, {
+    ...report,
+    uid: req.auth!.uid,
+    guest: req.auth!.token.firebase?.sign_in_provider === 'anonymous',
+  });
+  return { logged: true };
 });
 
 // ---- Firestore triggers (Sprint 3) -------------------------------------------
