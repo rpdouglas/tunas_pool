@@ -22,10 +22,10 @@ The commissioner can run the whole weekly job from a phone: see who has entered 
 - [x] Functions: `adminSetPayment`, `adminListEntries`, `lockWeeks`, `onEntryWritten` and `onPaymentWritten` (week counters), `adminEnterResults`, `onResultsWritten`, `adminPreviewWinner`, `adminPublishWinner`, `adminMarkPayout`. Decisions live in small modules that take the database as a parameter; 13 integration tests run them against the Firestore emulator
 - [x] Back Office: payments queue as the home screen (filters, search, live pot, duplicate flags, undo), Toast, results screen, winner banner, payout toggle. All new components are in `/styleguide`
 - [x] Player home gains the pot and the number of players in
-- [x] CI: functions deploy after the site deploy when `functions/`, `shared/`, or `firebase.json` changed (D-041). Not yet exercised: it needs the service-account roles (README)
+- [x] CI: functions deploy after the site deploy when `functions/`, `shared/`, or `firebase.json` changed (D-041). Not yet proven: the step failed on the #12 and #14 merges ("We failed to modify the IAM policy for the project"), the manual workflow then succeeded with the same credentials, and no merge has triggered the automatic step since
 - [x] Mock week in the emulator with 12 players, an independent check of the winner, and the paper-sheet tiebreak case (`npm run test:e2e:mock-week`, 42 checks at 375px)
 - [ ] Production test run in a separate `2026-test` season, then removed with `npm run admin:delete-season -- 2026-test` (D-044), after the functions are deployed (Ryan; steps in the README)
-- [ ] Ops carried from Sprint 1 and 2: service-account roles, first functions deploy, admin claim, save Pool settings once (Ryan)
+- [x] Ops carried from Sprint 1 and 2: service-account roles, first functions deploy, admin claim, save Pool settings once (Ryan). Checked against production on 2026-10-05: all 21 functions active (manual **Deploy functions** run from `efbad0d`), `lockWeeks` firing every minute, rules and indexes match the repo, one admin claim, `config/pool` saved
 
 ## Acceptance (from PROJECT_PLAN.md)
 Run a full mock week end to end in the emulator and then in production under a test season: 10 or more mixed players, payments confirmed, results entered, winner published with the correct tiebreaker outcome. Admin can do the whole weekly job from a phone.
