@@ -5,3 +5,10 @@
  * to other apps in the project.
  */
 export const FIRESTORE_DATABASE_ID = 'db-tunaspool';
+
+/**
+ * Cloud Functions region (DECISIONS.md D-028). Firestore triggers must run where the database
+ * lives, and db-tunaspool is in nam5, so everything runs in us-central1. Used by both the
+ * functions' global options and the web app's callable client, so they cannot drift.
+ */
+export const FUNCTIONS_REGION = 'us-central1';

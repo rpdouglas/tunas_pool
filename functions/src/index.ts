@@ -11,9 +11,10 @@ import { initializeApp } from 'firebase-admin/app';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { FUNCTIONS_REGION } from '../../shared/config';
 
 initializeApp();
-setGlobalOptions({ region: 'northamerica-northeast1', maxInstances: 10 });
+setGlobalOptions({ region: FUNCTIONS_REGION, maxInstances: 10 });
 
 function requireAdmin(req: CallableRequest): void {
   if (req.auth?.token.admin !== true) {
