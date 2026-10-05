@@ -3,6 +3,8 @@
 Source of truth for Firestore collections, field shapes, enums, scoring, and Cloud Function contracts.
 Update this file in the same commit as any schema change.
 
+**Where it lives:** every collection below is in the named Firestore database **`db-tunaspool`** (location `nam5`) of the shared project `lilypad-strategy-design`, never in `(default)`. Code gets the ID from `FIRESTORE_DATABASE_ID` in `shared/config.ts`. See `DECISIONS.md` D-015, D-016, D-018.
+
 ---
 
 ## 1. Identity model

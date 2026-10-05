@@ -1,6 +1,8 @@
 /**
  * One-off: grant the admin custom claim to a Firebase Auth user.
  *   npm run admin:claim -- <uid>
+ * For the live pool: GCLOUD_PROJECT=lilypad-strategy-design npm run admin:claim -- <uid>
+ * That project is shared (DECISIONS.md D-015), so the claim is visible to every app in it.
  * Needs credentials: GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json (never commit the key),
  * or run against the Auth emulator with FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099.
  * The user must sign out and back in to pick up the claim.

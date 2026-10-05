@@ -80,8 +80,21 @@ npm run test           # Vitest
 npm run test:rules     # rules unit tests (emulator)
 npm run typecheck      # tsc --noEmit across web + functions
 npm run build          # production build
-firebase deploy --only hosting,firestore:rules,functions
+firebase deploy --project prod --only hosting,firestore:rules,functions
 ```
+
+Deployment targets (see `DECISIONS.md` D-015):
+
+| Thing | Value |
+|---|---|
+| Firebase project | `lilypad-strategy-design` (alias `prod`). **Shared with other apps.** |
+| Hosting site | `tunaspool` → https://tunaspool.web.app |
+| Firestore database | `db-tunaspool` (named, location `nam5`). Never `(default)`. |
+| Local and CI | `demo-tunas-pool` (emulator only, the `.firebaserc` default) |
+
+- Always pass `--project prod` and an explicit `--only` list. Never run a bare `firebase deploy`.
+- Never deploy `storage` or anything targeting the `(default)` database without asking Ryan: those are shared with other apps in the project.
+- Get every Firestore handle with `FIRESTORE_DATABASE_ID` from `shared/config.ts`.
 
 ## 7. Workflow (Recursive Build Methodology)
 

@@ -4,6 +4,8 @@
  * Implement them in the sprint noted in docs/PROJECT_PLAN.md. Admin-sensitive writes must
  * also write auditLog (CLAUDE.md principle 5).
  * Shared types: import type { ... } from '../../shared/types'
+ * Firestore: always getFirestore(FIRESTORE_DATABASE_ID) from '../../shared/config', never the
+ * bare getFirestore(). Firestore triggers must also set `database: FIRESTORE_DATABASE_ID`.
  */
 import { initializeApp } from 'firebase-admin/app';
 import { setGlobalOptions } from 'firebase-functions/v2';

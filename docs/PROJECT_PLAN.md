@@ -38,7 +38,7 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 ### Phase 0 — Foundation
 
 #### Sprint 0: Project setup
-- Create repo, Firebase project, Hosting site, and emulator config.
+- Create repo, Firebase project, Hosting site, and emulator config. (Uses the shared `lilypad-strategy-design` project, site `tunaspool`, database `db-tunaspool`: D-015.)
 - Scaffold Vite + React 19 + TypeScript strict + Tailwind v3 + TanStack Query.
 - Add `CLAUDE.md` and the `docs/` files from this package. Create `ACTIVE_CYCLE.md` and `DECISIONS.md`.
 - Shared types package from `DATA_MODEL.md`.
@@ -190,7 +190,7 @@ Defaults are in bold. Do not guess. Confirm with Ryan, or apply the default and 
 5. **Default lock time.** **Saturday 11:59 PM America/Toronto**, editable per week. Games and the London early kickoff on Sunday are covered by this.
 6. **e-Transfer email, instructions, and contact email** for `config/pool`. Pull from the paper sheet (`tunasweeklypool2026@yahoo.com` is the contact), but confirm the e-Transfer address.
 7. **Season standings eligibility.** **Players with a claimed or admin-roster profile.** Guest-only players are weekly only.
-8. **Pool name and domain.** "Tunas Weekly Football Pool Pick 'Em" in the UI. Choose a domain or use the Firebase default at soft launch.
+8. **Pool name and domain.** "Tunas Weekly Football Pool Pick 'Em" in the UI. Choose a domain or use the Firebase default at soft launch. *Decided (D-017): soft launch on `https://tunaspool.web.app`.*
 9. **Mascot and artwork.** **Use Tuna recolored to the Ravens palette (purple, black, gold) with all NFL marks removed.** Ask the artwork source for vector or layered originals. See `DESIGN_SYSTEM.md` §10 and §12. Needed by Sprint 2.
 11. **Ravens palette details.** **Use the brighter UI gold `#D9AF26` for buttons** (the official `#9E7C0C` fails contrast), and keep Ravens red `#C60C30` for urgency and errors only. See `DESIGN_SYSTEM.md` §1.2 and §12.
 10. **Typefaces.** **Alfa Slab One, Barlow Condensed, and Barlow** as the closest open match to the sheet. Confirm against the original artwork. Swapping fonts is a token change only.

@@ -31,18 +31,27 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm run typecheck` | `tsc` for the web app and Cloud Functions |
 | `npm run lint` | ESLint |
 | `npm test` | Unit and component tests (Vitest + Testing Library) |
-| `npm run test:rules` | Firestore rules tests in the emulator (needs Java) |
+| `npm run test:rules` | Firestore rules tests in the emulator (needs Java 21+) |
 | `npm run emulators` | Firebase emulators (Auth, Firestore, Functions, Hosting, Storage, UI) |
 | `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs credentials) |
 
 ## Firebase setup (one time)
 
-1. Create a Firebase project. Create Firestore in **Montreal (`northamerica-northeast1`) or Toronto**, and enable Storage.
-2. Authentication: enable **Anonymous**, **Google**, and **Email link (passwordless)**.
-3. Add a Web app and copy its config into `.env.local` (see `.env.example`).
-4. In the terminal: `npx firebase login --no-localhost`, then `npx firebase use --add`.
-5. Deploy: `npm run build && npx firebase deploy --only hosting,firestore:rules,firestore:indexes`.
-6. Cloud Functions and the scheduler need the Blaze (pay-as-you-go) plan.
+The pool runs inside the existing **`lilypad-strategy-design`** project, which is shared with other apps
+(`DECISIONS.md` D-015). It has its own Hosting site (`tunaspool`, https://tunaspool.web.app) and its own named
+Firestore database (`db-tunaspool`, location `nam5`). Both are pinned in `firebase.json`; the project is the
+`prod` alias in `.firebaserc`. The default alias stays `demo-tunas-pool` so emulators and tests never touch it.
+
+1. Authentication: enable **Anonymous**, **Google**, and **Email link (passwordless)**, and add
+   `tunaspool.web.app` under Authentication > Settings > Authorized domains.
+2. Add a Web app (linked to the `tunaspool` Hosting site) and copy its config into `.env.local` (see `.env.example`).
+3. In the terminal: `npx firebase login --no-localhost`.
+4. Deploy: `npm run build && npx firebase deploy --project prod --only hosting,firestore:rules,firestore:indexes`.
+5. Cloud Functions and the scheduler need the Blaze (pay-as-you-go) plan.
+6. Grant admin: `GCLOUD_PROJECT=lilypad-strategy-design npm run admin:claim -- <uid>`.
+
+Because the project is shared: always pass `--project prod` with an explicit `--only` list, and do not deploy
+`storage` (it would replace the rules on the bucket other apps use) until that is sorted out.
 
 ### Emulators in Codespaces
 Rules tests (`npm run test:rules`) run entirely inside the Codespace. Pointing the *browser* app at the emulators
