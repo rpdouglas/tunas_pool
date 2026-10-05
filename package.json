@@ -22,7 +22,8 @@
     "emulators": "firebase emulators:start --project demo-tunas-pool --import=.emulator-data --export-on-exit",
     "functions:build": "npm --prefix functions run build",
     "admin:claim": "tsx scripts/set-admin-claim.ts",
-    "admin:delete-season": "tsx scripts/delete-season.ts"
+    "admin:delete-season": "tsx scripts/delete-season.ts",
+    "admin:seed-test-week": "tsx scripts/seed-test-week.ts"
   },
   "dependencies": {
     "@fontsource/alfa-slab-one": "^5.3.0",

@@ -43,6 +43,8 @@ Run a full mock week end to end in the emulator and then in production under a t
 
 - **A rules test failed at random in CI** (PR #16, a docs-only change): row 34 sent `Timestamp.now()` and expected the rules to refuse it, but a phone time that lands in the same millisecond as `request.time` is accepted, correctly. The "phone made it up" cases in rows 34 and 35 now send a time a minute old. The cause was read from the test and the rule, not reproduced.
 
+- **A finished week can be seeded in a test season** (`npm run admin:seed-test-week`, README): 25 made-up players, real games, the weekly job run with the functions' own code. Used on 2026-10-05 to put a finished week in production's `2026-test`; the deployed `lockWeeks` scheduler locked it, its first lock in production. It is not the production test run above (nobody used the real screens). Lesson: a script that runs the functions' code must load the Admin SDK from `functions/`, or server timestamps made by one copy are refused by the other.
+
 ---
 - **Brand artwork added between sprints** (D-052, D-053, `docs/BRAND_ASSETS.md`): checkerboards cut out of the three supplied logos, web-sized WebPs, favicon, iPhone icon and a link-preview image built by `scripts/brand/build-assets.sh`, then used on Home (hero, empty state, footer), the 404 page, a faint watermark on the Game Day background, and `/styleguide`. Lesson: the cut-out step must not remove enclosed light patches on the wordmark (it deleted the white PICK EM lettering), so that pass is helmet-only. Another lesson: a change to `firebase.json` triggers a functions redeploy in CI, so the image cache-header tweak was left out.
 

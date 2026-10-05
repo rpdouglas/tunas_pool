@@ -91,6 +91,12 @@ season" badge and keeps the season while you navigate), enter picks at `/picks/2
 Players' home screen only ever shows the current season. Remove it afterward with `npm run admin:delete-season --
 2026-test` (needs credentials, see the script).
 
+To look at a finished week without entering it by hand, `npm run admin:seed-test-week -- 2026-test <a past Sunday>`
+builds one in a test season: that week's real games, 25 made-up players with random picks and a mix of payments, then
+the lock, results, and winner through the functions' own code. It does not replace the test run above, because nobody
+goes through the real screens. Its made-up player profiles live outside the season, so remove them with
+`npm run admin:seed-test-week -- 2026-test --remove-players` as well as deleting the season (see the script).
+
 
 For manual deploys, because the project is shared: always pass `--project prod` with an explicit `--only` list, and do not deploy
 `storage` (it would replace the rules on the bucket other apps use) until that is sorted out.
