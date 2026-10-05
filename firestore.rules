@@ -36,6 +36,11 @@ service cloud.firestore {
     }
 
     function isPaymentMethod(v) { return v in ['cash', 'etransfer']; }
+
+    // Times the client claims must be the server's (DECISIONS.md D-040).
+    function isNowOrNull(v) { return v == null || v == request.time; }
+
+    function isDisplayName(v) { return v is string && v.size() > 0 && v.size() <= 60; }
     function isPaymentIntent(v) { return v in ['will_do', 'already_did']; }
 
     // ---------- players (roster + self-serve profiles) ----------
@@ -54,10 +59,9 @@ service cloud.firestore {
           && request.resource.data.origin == 'self'
           && request.resource.data.keys().hasOnly([
                'displayName', 'phone', 'email', 'claimedByUid', 'origin',
-               'usualPayment', 'active', 'createdAt', 'updatedAt'])
-          && request.resource.data.displayName is string
-          && request.resource.data.displayName.size() > 0
-          && request.resource.data.displayName.size() <= 60)
+               'usualPayment', 'ageAttestedAt', 'active', 'createdAt', 'updatedAt'])
+          && isDisplayName(request.resource.data.displayName)
+          && isNowOrNull(request.resource.data.get('ageAttestedAt', null)))
         ||
         // Admin roster: unclaimed, admin-origin.
         (isAdmin()
@@ -68,7 +72,10 @@ service cloud.firestore {
       allow update: if
         (ownsPlayer(playerId)
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['displayName', 'phone', 'email', 'usualPayment', 'updatedAt']))
+               .hasOnly(['displayName', 'phone', 'email', 'usualPayment', 'ageAttestedAt', 'updatedAt'])
+          && isDisplayName(request.resource.data.displayName)
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['ageAttestedAt'])
+              || request.resource.data.ageAttestedAt == request.time))
         ||
         (isAdmin()
           && request.resource.data.claimedByUid == resource.data.claimedByUid);
@@ -133,37 +140,59 @@ service cloud.firestore {
 
         // ----- entries (one per person per week; doc ID = playerId) -----
         match /entries/{playerId} {
-          // Names, payment declaration, and paid badge are not secret. Picks are.
+          // Public part: what leaderboards need. No payment details (D-036), no picks.
           allow read: if signedIn();
 
           allow create: if ownsPlayer(playerId)
             && weekIsOpen(year, weekId)
+            && request.resource.data.keys().hasOnly([
+                 'playerId', 'displayName', 'enteredBy', 'source', 'paperPhotoPath',
+                 'lateOverride', 'picksSubmittedAt', 'createdAt', 'updatedAt'])
             && request.resource.data.playerId == playerId
             && request.resource.data.enteredBy == 'self'
             && request.resource.data.source == 'web'
-            && request.resource.data.paymentStatus == 'unpaid'
             && request.resource.data.lateOverride == null
-            && isPaymentMethod(request.resource.data.paymentMethod)
-            && isPaymentIntent(request.resource.data.paymentIntent)
-            && request.resource.data.displayName is string
-            && request.resource.data.displayName.size() > 0
-            && request.resource.data.displayName.size() <= 60
-            && request.resource.data.keys().hasOnly([
-                 'playerId', 'displayName', 'paymentMethod', 'paymentIntent',
-                 'paymentStatus', 'enteredBy', 'source', 'paperPhotoPath',
-                 'lateOverride', 'picksSubmittedAt', 'createdAt', 'updatedAt']);
+            && request.resource.data.get('paperPhotoPath', null) == null
+            && isDisplayName(request.resource.data.displayName)
+            && request.resource.data.picksSubmittedAt == request.time;
 
-          // Player edits: only their declaration and name, only while open.
+          // Player edits: their name and a fresh submission time, only while open.
           allow update: if ownsPlayer(playerId)
             && weekIsOpen(year, weekId)
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['displayName', 'paymentMethod', 'paymentIntent',
-                           'picksSubmittedAt', 'updatedAt'])
-            && isPaymentMethod(request.resource.data.paymentMethod)
-            && isPaymentIntent(request.resource.data.paymentIntent);
+                 .hasOnly(['displayName', 'picksSubmittedAt', 'updatedAt'])
+            && isDisplayName(request.resource.data.displayName)
+            && request.resource.data.picksSubmittedAt == request.time;
 
           // Players can withdraw before lock. Admin deletes go through a callable.
           allow delete: if ownsPlayer(playerId) && weekIsOpen(year, weekId);
+
+          // ----- private payment declaration and status (D-036) -----
+          // Never revealed. paymentStatus, paidAt, and paidBy are function-written.
+          match /payment/{doc} {
+            allow read: if doc == 'current' && (isAdmin() || ownsPlayer(playerId));
+
+            allow create: if doc == 'current'
+              && ownsPlayer(playerId)
+              && weekIsOpen(year, weekId)
+              && request.resource.data.keys().hasOnly([
+                   'paymentMethod', 'paymentIntent', 'paymentStatus', 'updatedAt'])
+              && request.resource.data.paymentStatus == 'unpaid'
+              && isPaymentMethod(request.resource.data.paymentMethod)
+              && isPaymentIntent(request.resource.data.paymentIntent);
+
+            allow update: if doc == 'current'
+              && ownsPlayer(playerId)
+              && weekIsOpen(year, weekId)
+              && request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['paymentMethod', 'paymentIntent', 'updatedAt'])
+              && isPaymentMethod(request.resource.data.paymentMethod)
+              && isPaymentIntent(request.resource.data.paymentIntent);
+
+            allow delete: if doc == 'current'
+              && ownsPlayer(playerId)
+              && weekIsOpen(year, weekId);
+          }
 
           // ----- private picks + tiebreaker -----
           match /private/{doc} {
@@ -179,7 +208,8 @@ service cloud.firestore {
               && request.resource.data.picks.size() <= 15
               && request.resource.data.tiebreakerTotal is int
               && request.resource.data.tiebreakerTotal >= 0
-              && request.resource.data.tiebreakerTotal <= 200;
+              && request.resource.data.tiebreakerTotal <= 200
+              && request.resource.data.updatedAt == request.time;
 
             allow delete: if doc == 'picks'
               && ownsPlayer(playerId)

@@ -165,6 +165,12 @@ export function parseMatchups(
   return { games, problems };
 }
 
+/** "Sun 1:00 PM" / "Mon 8:15 PM", in pool time. */
+export function kickoffLabel(game: Pick<GameDraft, 'kickoffMs'>): string {
+  const { hour, minute, weekday } = toZonedParts(new Date(game.kickoffMs));
+  return `${weekday === 1 ? 'Mon' : 'Sun'} ${formatClock(hour, minute)}`;
+}
+
 /** Turn saved games back into pasteable text, for editing or cloning a week. */
 export function gamesToText(games: GameDraft[]): string {
   return [...games]

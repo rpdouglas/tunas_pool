@@ -33,7 +33,7 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm test` | Unit and component tests (Vitest + Testing Library) |
 | `npm run test:rules` | Firestore rules tests in the emulator (needs Java 21+) |
 | `npm run test:a11y` | Axe, font, and no-horizontal-scroll checks on a production build (Playwright) |
-| `npm run test:e2e:emulator` | Browser run of the sign-in and week-setup flows against running emulators (steps in `scripts/e2e-emulator.mjs`) |
+| `npm run test:e2e:emulator` | Browser run of the sign-in, week-setup, and entry flows against running emulators (steps in `scripts/e2e-emulator.mjs`) |
 | `npm run emulators` | Firebase emulators (Auth, Firestore, Functions, Hosting, Storage, UI) |
 | `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs credentials) |
 

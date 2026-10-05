@@ -46,6 +46,7 @@ export interface Player {
   claimedByUid: string | null; // never client-writable
   origin: PlayerOrigin;
   usualPayment: PaymentMethod | null;
+  ageAttestedAt?: TimestampLike | null; // server time of "I'm 18 or older" (D-037)
   notes?: string | null; // admin-only
   mergedInto?: string | null;
   active: boolean;
@@ -123,20 +124,26 @@ export interface Week {
 }
 
 // ---- entries ---------------------------------------------------------------
+/** Public: readable by every signed-in player. No payment, picks, or phone (D-036). */
 export interface Entry {
   playerId: string; // equals the document ID
   displayName: string;
+  enteredBy: 'self' | 'admin';
+  source: EntrySource;
+  paperPhotoPath: string | null;
+  lateOverride: { reason: string; by: string; at: TimestampLike } | null;
+  picksSubmittedAt: TimestampLike; // server time of the latest submit or edit (D-040)
+  createdAt: TimestampLike;
+  updatedAt: TimestampLike;
+}
+
+/** entries/{playerId}/payment/current: owner and admin only, never revealed (D-036). */
+export interface EntryPayment {
   paymentMethod: PaymentMethod;
   paymentIntent: PaymentIntent;
   paymentStatus: PaymentStatus; // admin/functions only
   paidAt?: TimestampLike;
   paidBy?: string;
-  enteredBy: 'self' | 'admin';
-  source: EntrySource;
-  paperPhotoPath: string | null;
-  lateOverride: { reason: string; by: string; at: TimestampLike } | null;
-  picksSubmittedAt: TimestampLike; // latest submit or edit; server time once Sprint 2 rules land
-  createdAt: TimestampLike;
   updatedAt: TimestampLike;
 }
 

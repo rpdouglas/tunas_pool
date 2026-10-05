@@ -116,3 +116,18 @@ export function daysBetween(fromIsoDate: string, toIsoDate: string): number {
   });
   return Math.round((b - a) / 86_400_000);
 }
+
+/** "1d 04h 12m", "3h 05m", "12m", or "Under a minute" until the given instant; null once it has passed. */
+export function countdownText(untilMs: number, nowMs: number): string | null {
+  const left = untilMs - nowMs;
+  if (left <= 0) return null;
+  const minutes = Math.floor(left / 60_000);
+  if (minutes < 1) return 'Under a minute';
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins = minutes % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  if (days > 0) return `${days}d ${pad(hours)}h ${pad(mins)}m`;
+  if (hours > 0) return `${hours}h ${pad(mins)}m`;
+  return `${mins}m`;
+}

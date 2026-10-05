@@ -1,5 +1,12 @@
 import { useState } from 'react';
 import { Button } from '../components/ui/Button';
+import { Checkbox } from '../components/ui/Checkbox';
+import { CopyField } from '../components/ui/CopyField';
+import { Countdown } from '../components/ui/Countdown';
+import { ProgressBar } from '../components/ui/ProgressBar';
+import { SegmentedChoice } from '../components/ui/SegmentedChoice';
+import { StatTile } from '../components/ui/StatTile';
+import { WordmarkLockup } from '../components/ui/WordmarkLockup';
 import { Field } from '../components/ui/Field';
 import { GameCard } from '../components/ui/GameCard';
 import { Panel } from '../components/ui/Panel';
@@ -21,6 +28,9 @@ const SWATCHES: Array<{ name: string; className: string; hex: string }> = [
 export default function Styleguide() {
   const [pick, setPick] = useState<'away' | 'home' | null>('home');
   const [cardPick, setCardPick] = useState<'away' | 'home' | null>(null);
+  const [method, setMethod] = useState<'cash' | 'etransfer' | null>('etransfer');
+  const [adult, setAdult] = useState(false);
+  const NOW = Date.UTC(2026, 9, 10, 12, 0);
 
   return (
     <div className="min-h-screen bg-page-backoffice">
@@ -128,6 +138,88 @@ export default function Styleguide() {
               kickoffLabel="Sun 1:00 PM (read-only preview)"
             />
           </ol>
+        </section>
+
+        <section aria-labelledby="sg-lockup">
+          <h2 id="sg-lockup" className="mb-3 font-heading text-h2 italic">
+            Wordmark lockup
+          </h2>
+          <div className="bg-gameday flex flex-col items-center gap-6 rounded-lg p-6">
+            <WordmarkLockup />
+            <WordmarkLockup size="compact" />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-progress">
+          <h2 id="sg-progress" className="mb-3 font-heading text-h2 italic">
+            Progress bar
+          </h2>
+          <div className="flex flex-col gap-2 overflow-hidden rounded-lg">
+            <ProgressBar done={9} total={15} onNext={() => undefined} />
+            <ProgressBar done={15} total={15} />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-segmented">
+          <h2 id="sg-segmented" className="mb-3 font-heading text-h2 italic">
+            Segmented choice
+          </h2>
+          <div className="flex flex-col gap-4">
+            <SegmentedChoice
+              legend="How will you pay?"
+              options={[
+                { value: 'cash', label: 'Cash' },
+                { value: 'etransfer', label: 'e-Transfer' },
+              ]}
+              value={method}
+              onChange={setMethod}
+            />
+            <SegmentedChoice
+              legend="Locked"
+              options={[
+                { value: 'will_do', label: 'Will do' },
+                { value: 'already_did', label: 'Already did' },
+              ]}
+              value="already_did"
+              onChange={() => undefined}
+              disabled
+            />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-copy">
+          <h2 id="sg-copy" className="mb-3 font-heading text-h2 italic">
+            Copy field and checkbox
+          </h2>
+          <div className="flex flex-col gap-4">
+            <CopyField label="e-Transfer email" value="tunasweeklypool2026@yahoo.com" />
+            <Checkbox
+              label="I'm 18 or older"
+              checked={adult}
+              onChange={(e) => setAdult(e.target.checked)}
+            />
+            <Checkbox
+              label="I'm 18 or older (error)"
+              checked={false}
+              onChange={() => undefined}
+              error="Confirm you're 18 or older to enter."
+            />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-stats">
+          <h2 id="sg-stats" className="mb-3 font-heading text-h2 italic">
+            Stat tiles and countdown
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            <StatTile label="Week" value="6" />
+            <StatTile label="Entry fee" value="$20" accent />
+          </div>
+          <div className="mt-4 flex flex-col gap-3 rounded-lg bg-surface p-4">
+            <Countdown lockAtMs={NOW + (26 * 60 + 12) * 60_000} nowMs={NOW} />
+            <Countdown lockAtMs={NOW + 40 * 60_000} nowMs={NOW} />
+            <Countdown lockAtMs={NOW - 1} nowMs={NOW} />
+          </div>
         </section>
 
         <section aria-labelledby="sg-badges">

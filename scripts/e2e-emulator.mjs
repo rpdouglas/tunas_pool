@@ -1,7 +1,9 @@
 /**
- * End-to-end check of the Sprint 1 flows against the emulators: admin sign-in and claim, week setup,
- * open / back to draft / open, guest upgrade, the "email already has an account" move, and a link
- * opened on another device. Not run in CI (it needs the Functions emulator and a dev server).
+ * End-to-end check against the emulators, at 375px: admin sign-in and claim, week setup, open / back
+ * to draft / open, guest upgrade, the "email already has an account" move, a link opened on another
+ * device (Sprint 1), Pool settings, a guest's full entry with receipt, editing it, the on-device
+ * draft, and the locked state (Sprint 2). Not run in CI (it needs the Functions emulator and a dev
+ * server).
  *
  *   1. npm --prefix functions run build
  *   2. npx firebase emulators:start --only auth,firestore,functions --project demo-tunas-pool
@@ -266,6 +268,122 @@ try {
   await bad.goto(`${APP}/auth/finish`);
   await bad.getByText("This isn't a sign-in link.").waitFor();
   check('E3 a plain /auth/finish visit explains itself', true);
+
+  // ---- G. Pool settings (D-039) ---------------------------------------------------
+  await admin.goto(`${APP}/admin/settings`);
+  await admin.getByRole('heading', { name: 'Pool settings' }).waitFor();
+  check('G1 settings start from the contact address', (await admin.getByLabel('e-Transfer email').inputValue()) === 'tunasweeklypool2026@yahoo.com');
+  await admin.getByLabel('e-Transfer email').fill('pay@tunas.test');
+  await admin.getByRole('button', { name: 'Save settings' }).click();
+  await admin.getByText('Settings saved.').waitFor();
+  const config = await getDoc('config/pool');
+  check('G2 settings save to config/pool with the confirmed defaults',
+    config?.fields.etransferEmail.stringValue === 'pay@tunas.test' && config.fields.tieGameRule.stringValue === 'no_win');
+  await admin.screenshot({ path: `${SHOTS}/e2e-settings.png`, fullPage: true });
+
+  // ---- H. A new guest enters, at 375px, from the home screen ----------------------
+  const player = await newPage();
+  const started = Date.now();
+  await player.goto(APP);
+  await player.getByRole('link', { name: 'Make your picks' }).waitFor();
+  check('H1 home shows the week, the countdown, and "No picks yet"',
+    (await player.getByText('No picks yet.').count()) === 1 && (await player.getByText(/to lock/).count()) > 0);
+  await player.screenshot({ path: `${SHOTS}/e2e-home-before.png`, fullPage: true });
+  await player.getByRole('link', { name: 'Make your picks' }).click();
+  await player.getByText('0 of 15 picked').waitFor();
+  check('H2 the submit button counts down games left', (await player.getByRole('button', { name: '15 games left' }).count()) === 1);
+  const gameCards = player.locator('li[id^="game-"]');
+  const ids = await gameCards.evaluateAll((els) => els.map((e) => e.id));
+  for (const [i, id] of ids.entries()) {
+    await player.locator(`#${id} button.pick`).nth(i % 2).click();
+  }
+  await player.getByText('All 15 picked').waitFor();
+  // Tap again to clear a pick, then pick it back.
+  await player.locator('#game-g03 button.pick').nth(0).click();
+  await player.getByText('14 of 15 picked').waitFor();
+  check('H3 tapping a picked team clears it', true);
+  await player.locator('#game-g03 button.pick').nth(0).click();
+  await player.getByRole('button', { name: 'Submit picks' }).click();
+  await player.getByText('Enter a whole number from 0 to 200').waitFor();
+  check('H4 missing details are explained, not just blocked', (await player.getByText('Enter the name other players will see').count()) === 1);
+  await player.getByLabel('Tiebreaker: total points in this game').fill('45');
+  check('H4b fixing a field clears its error', (await player.getByText('Enter a whole number from 0 to 200').count()) === 0);
+  await player.getByLabel('Your name').fill('Dale D.');
+  await player.getByLabel('Phone (optional)').fill('(613) 555-0123');
+  await player.locator('label.pick', { hasText: 'e-Transfer' }).click();
+  check('H5 e-Transfer shows the address from Pool settings', (await player.getByLabel('e-Transfer email').inputValue()) === 'pay@tunas.test');
+  await player.getByLabel("I'm 18 or older").check();
+  await player.screenshot({ path: `${SHOTS}/e2e-entry-form.png`, fullPage: true });
+  await player.getByRole('button', { name: 'Submit picks' }).click();
+  await player.getByText('Picks submitted').waitFor();
+  const seconds = (Date.now() - started) / 1000;
+  const code = (await player.getByTestId('confirmation-code').textContent())?.trim() ?? '';
+  check('H6 the receipt shows a confirmation code and the Toronto submission time',
+    /^[A-HJKMNP-Z2-9]{6}$/.test(code) && (await player.getByText(/\(Toronto time\)/).count()) === 1, code);
+  console.log(`     scripted entry took ${seconds.toFixed(1)}s from the home screen`);
+  await player.screenshot({ path: `${SHOTS}/e2e-receipt.png`, fullPage: true });
+
+  const playerUser = await pageUser(player);
+  const profileDoc = await getDoc(`players/${playerUser.uid}`);
+  check('H7 the profile has the normalized phone and the server-stamped age check',
+    profileDoc?.fields.phone.stringValue === '+16135550123' && Boolean(profileDoc.fields.ageAttestedAt.timestampValue));
+  const base = `seasons/2026/weeks/wk01/entries/${playerUser.uid}`;
+  const entryDoc = await getDoc(base);
+  const paymentDoc = await getDoc(`${base}/payment/current`);
+  const picksDoc = await getDoc(`${base}/private/picks`);
+  check('H8 the public entry has no payment fields (D-036)',
+    entryDoc && !('paymentMethod' in entryDoc.fields) && !('paymentStatus' in entryDoc.fields));
+  check('H9 payment and picks are saved privately',
+    paymentDoc?.fields.paymentMethod.stringValue === 'etransfer' && paymentDoc.fields.paymentStatus.stringValue === 'unpaid' &&
+    Object.keys(picksDoc?.fields.picks.mapValue.fields ?? {}).length === 15 && picksDoc.fields.tiebreakerTotal.integerValue === '45');
+
+  await player.goto(APP);
+  await player.getByText('Picks in.').waitFor();
+  check('H10 home now shows "Picks in" and "Payment pending"', (await player.getByText('Payment pending').count()) === 1);
+  await player.screenshot({ path: `${SHOTS}/e2e-home-after.png`, fullPage: true });
+
+  // ---- I. Resubmitting edits the same entry, with a new code ------------------------
+  await player.getByRole('link', { name: 'See or edit your picks' }).click();
+  await player.getByRole('button', { name: /^Edit picks until/ }).click();
+  await player.getByText('All 15 picked').waitFor();
+  check('I1 editing starts from the saved picks', true);
+  await player.locator('#game-g01 button.pick').nth(1).click();
+  await player.getByRole('button', { name: 'Save changes' }).click();
+  await player.getByText('Picks submitted').waitFor();
+  const code2 = (await player.getByTestId('confirmation-code').textContent())?.trim();
+  check('I2 the confirmation code changes on every edit', code2 !== code, `${code} → ${code2}`);
+  const entries = await listDocs('seasons/2026/weeks/wk01/entries');
+  check('I3 still one entry for this player', entries.filter((d) => d.name.endsWith(`/${playerUser.uid}`)).length === 1 && entries.length === 1);
+  const picksAfter = await getDoc(`${base}/private/picks`);
+  check('I4 the edit saved', picksAfter?.fields.picks.mapValue.fields.g01.stringValue === 'home');
+
+  // ---- J. Picks are saved on the phone from the first tap ---------------------------
+  const drafter = await newPage();
+  await drafter.goto(APP);
+  await drafter.getByRole('link', { name: 'Make your picks' }).click();
+  await drafter.getByText('0 of 15 picked').waitFor();
+  await drafter.locator('#game-g01 button.pick').nth(0).click();
+  await drafter.locator('#game-g02 button.pick').nth(1).click();
+  await drafter.locator('#game-mnf button.pick').nth(0).click();
+  await drafter.reload();
+  await drafter.getByText('3 of 15 picked').waitFor();
+  check('J1 a reload keeps the picks made so far', true);
+  await drafter.getByRole('button', { name: 'Next game' }).click();
+  await drafter.waitForTimeout(600);
+  const focused = await drafter.evaluate(() => document.activeElement?.closest('li')?.id);
+  check('J2 "Next game" jumps to the first game without a pick', focused === 'game-g03', focused);
+
+  // ---- K. After the lock, everything is read-only ---------------------------------
+  await admin.goto(`${APP}/admin/weeks/2026/wk01`);
+  await admin.getByRole('button', { name: 'Lock now' }).click();
+  await admin.getByRole('button', { name: 'Yes, lock picks now' }).click();
+  await admin.getByText('Picks are locked.').waitFor();
+  await player.goto(`${APP}/picks/2026/wk01`);
+  await player.getByText('Picks are locked. Good luck!').waitFor();
+  check('K1 a locked week shows the saved picks read-only', (await player.getByRole('button', { name: /^Edit picks/ }).count()) === 0);
+  await drafter.goto(`${APP}/picks/2026/wk01`);
+  await drafter.getByText("you didn't enter this week").waitFor();
+  check('K2 a player who never submitted is told the week is locked', true);
 
   check('F1 no uncaught page errors', consoleErrors.length === 0, consoleErrors.join(' | '));
 } catch (err) {

@@ -1,27 +1,59 @@
 {
   "indexes": [
     {
-      "collectionGroup": "entries",
+      "collectionGroup": "payment",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "paymentStatus", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "paymentStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
-      "collectionGroup": "entries",
+      "collectionGroup": "payment",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "paymentMethod", "order": "ASCENDING" },
-        { "fieldPath": "paymentStatus", "order": "ASCENDING" }
+        {
+          "fieldPath": "paymentMethod",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "paymentStatus",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "weeks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "weekNumber",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "claims",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],

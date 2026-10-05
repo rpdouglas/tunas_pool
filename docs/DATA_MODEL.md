@@ -37,6 +37,7 @@ claims/{claimId}
 seasons/{year}
   weeks/{weekId}
     entries/{playerId}                       (one per person per week)
+      payment/current                        (owner + admin only, never revealed)
       private/picks                          (hidden until revealed)
   standings/{playerId}                       (function-written)
 config/pool                                  (admin-written settings)
@@ -55,12 +56,13 @@ Storage: `paperSheets/{year}/{weekId}/{playerId}.jpg`, admin only.
 
 | Field | Type | Notes |
 |---|---|---|
-| `displayName` | string | Shown on leaderboards. |
-| `phone` | string \| null | Private. Normalized E.164 (`+1613...`). Used for duplicate flags. |
+| `displayName` | string | Shown on leaderboards. Defaults to first name and last initial; a nickname is fine (D-038). |
+| `phone` | string \| null | Private, optional. Any North American number, normalized to E.164 (`+1613...`) by `shared/phone.ts`. Used for duplicate flags. |
 | `email` | string \| null | Private. Optional. |
 | `claimedByUid` | string \| null | Client can never change this. |
 | `origin` | `'self' \| 'admin'` | How the profile was created. |
-| `usualPayment` | `PaymentMethod \| null` | Roster convenience for admin entry. |
+| `usualPayment` | `PaymentMethod \| null` | Roster convenience for admin entry, and the form's default. |
+| `ageAttestedAt` | Timestamp \| null | Server time the player confirmed "I'm 18 or older" (D-037). Asked once. |
 | `notes` | string \| null | Admin-only notes. Never shown to players. |
 | `mergedInto` | string \| null | Set if this profile was merged into another. |
 | `active` | boolean | Carries across seasons. |
@@ -131,30 +133,38 @@ type WeekWinner = {
 
 ### 3.6 `seasons/{year}/weeks/{weekId}/entries/{playerId}`
 
-Public-ish document. **No picks, no tiebreaker, no phone.**
+Public document, readable by every signed-in player. **No picks, no tiebreaker, no phone, no payment** (D-036).
 
 | Field | Type | Notes |
 |---|---|---|
 | `playerId` | string | Must equal the document ID. |
 | `displayName` | string | Denormalized for leaderboards. |
-| `paymentMethod` | `'cash' \| 'etransfer'` | |
-| `paymentIntent` | `'will_do' \| 'already_did'` | Player-declared. |
-| `paymentStatus` | `'unpaid' \| 'paid'` | **Admin only.** Only `paid` counts toward the pot. |
-| `paidAt` / `paidBy` | Timestamp / string | Function-written. |
 | `enteredBy` | `'self' \| 'admin'` | |
 | `source` | `'web' \| 'paper' \| 'text' \| 'phone'` | |
 | `paperPhotoPath` | string \| null | Storage path, admin only. |
 | `lateOverride` | `{ reason: string; by: string; at: Timestamp } \| null` | Set only by the override callable. |
-| `picksSubmittedAt` | Timestamp | Time of the latest submit or edit. Sprint 2 adds a rule requiring `request.time`, so it is server time. Basis of the confirmation code (§10). |
+| `picksSubmittedAt` | Timestamp | Server time of the latest submit or edit (rules require `request.time`, D-040). Basis of the confirmation code (§10). |
 | `createdAt` / `updatedAt` | Timestamp | |
+
+### 3.6b `.../entries/{playerId}/payment/current`
+
+Private to the owner and admin, before and after the reveal (D-036). Absent until the player says how they'll pay: payment never blocks an entry, so an entry can be submitted first and the payment choice added in a later edit.
+
+| Field | Type | Notes |
+|---|---|---|
+| `paymentMethod` | `'cash' \| 'etransfer'` | Player-declared; editable while open. |
+| `paymentIntent` | `'will_do' \| 'already_did'` | Player-declared; editable while open. |
+| `paymentStatus` | `'unpaid' \| 'paid'` | **Admin only, via `adminSetPayment`.** Only `paid` counts toward the pot. |
+| `paidAt` / `paidBy` | Timestamp / string | Function-written. |
+| `updatedAt` | Timestamp | |
 
 ### 3.7 `.../entries/{playerId}/private/picks`
 
 | Field | Type | Notes |
 |---|---|---|
 | `picks` | `Record<gameId, 'home' \| 'away'>` | Up to 15 keys. |
-| `tiebreakerTotal` | number | MNF predicted combined points. |
-| `updatedAt` | Timestamp | |
+| `tiebreakerTotal` | number | MNF predicted combined points, a whole number from 0 to 200. |
+| `updatedAt` | Timestamp | Server time (D-040). |
 
 Readable by the owner and admin. Readable by everyone once `week.revealed == true`.
 
@@ -195,7 +205,7 @@ type GameResult = 'home' | 'away' | 'tie';
 
 | Function | Purpose |
 |---|---|
-| `adminSetPayment(year, weekId, playerId, status)` | Mark paid or unpaid. Audit logged. |
+| `adminSetPayment(year, weekId, playerId, status)` | Mark paid or unpaid on `payment/current`. Audit logged. |
 | `adminUpsertEntry(year, weekId, playerId, entryFields, picksDoc)` | Enter or edit picks for a player. Allowed while open. Rejects after lock. |
 | `adminLateOverride(year, weekId, playerId, entryFields, picksDoc, reason)` | Post-lock entry or edit. `reason` required. Sets `lateOverride`. |
 | `adminDeleteEntry(year, weekId, playerId, reason)` | Remove an entry. |
@@ -222,7 +232,7 @@ type GameResult = 'home' | 'away' | 'tie';
 | Function | Purpose |
 |---|---|
 | `lockWeeks` (scheduled, every minute near lock) | At `lockAt`: set `status='locked'` and `revealed=true`. |
-| `onEntryWritten` (Sprint 3) | Recompute the week's `entryCount` and `paidCount` on any entry create, update, or delete. |
+| `onEntryWritten` (Sprint 3) | Recompute the week's `entryCount` on any entry create or delete, and `paidCount` on any `payment/current` write. |
 | `onResultsWritten` | Recompute per-entry wins and the weekly leaderboard. |
 | `sendSaturdayReminder` (scheduled, Phase 4) | Email reminder to players who haven't entered and have an email on file. Guests have none, so the admin reminder list (Sprint 8) is the main path. |
 
@@ -268,8 +278,9 @@ Example from the paper sheet: actual total 46. Player A predicts 58 (met or exce
 
 ## 8. Indexes (initial)
 
-- `entries` collection group: `paymentStatus ASC, createdAt DESC` (payments queue)
-- `entries` collection group: `paymentMethod ASC, paymentStatus ASC`
+- `payment` collection group: `paymentStatus ASC, updatedAt DESC` (payments queue)
+- `payment` collection group: `paymentMethod ASC, paymentStatus ASC`
+- `weeks`: `status ASC, weekNumber DESC` (players' current-week lookup, filtered to open, locked, and final)
 - `claims`: `status ASC, createdAt DESC`
 - `players`: `phone ASC` (duplicate flags), `displayName ASC` (roster search)
 - `auditLog`: `at DESC`
@@ -278,7 +289,9 @@ Example from the paper sheet: actual total 46. Player A predicts 58 (met or exce
 
 ## 9. Drafts and offline
 
-Picks drafts autosave to `localStorage`, keyed by `{year}:{weekId}`, from the first tap. They sync to Firestore only on explicit submit. Drafts hold no PII beyond what the player types, and they are cleared on successful submit.
+Picks drafts autosave to `localStorage`, keyed by `{year}:{weekId}`, from the first tap. They sync to Firestore only on explicit submit. Drafts hold no PII beyond what the player types, and they are cleared on successful submit. The player's name, phone, and usual payment are also remembered on the device so the next week's form starts filled in.
+
+**Submit order:** find the profile with `where('claimedByUid', '==', uid)` (D-034); create `players/{uid}` if there is none, or update its name, phone, usual payment, and age confirmation. Then, in one batch: the entry (create, or update its name and `picksSubmittedAt`), `payment/current`, and `private/picks`. The profile must be committed first because the entry rules read it.
 
 ---
 

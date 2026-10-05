@@ -200,6 +200,30 @@
   .pick[data-state='correct']  { background: rgb(var(--success-50)); border-color: rgb(var(--success-600)); color: rgb(var(--success-800)); box-shadow: none; }
   .pick[data-state='missed']   { background: rgb(var(--red-50)); border-color: rgb(var(--red-700)); color: rgb(var(--red-800)); box-shadow: none; }
 
+  /* ---- Segmented choice: radio inputs inside .pick labels ---------------- */
+  .pick:has(> input:checked) {
+    background: rgb(var(--purple-700));
+    color: #fff;
+    box-shadow: var(--shadow-sticker);
+  }
+  .pick:has(> input:checked)::before { content: '\2713'; color: rgb(var(--gold-300)); font-weight: 800; }
+  .pick:has(> input:focus-visible) {
+    box-shadow: 0 0 0 2px rgb(var(--focus-inner)), 0 0 0 5px rgb(var(--focus-outer));
+  }
+  .pick:has(> input) { cursor: pointer; }
+
+  /* ---- Sticky progress bar: gold fill on a pale purple track ------------- */
+  .progress-bar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: rgb(var(--black));
+    color: rgb(var(--text-on-dark));
+    border-bottom: var(--border-w-heavy) solid rgb(var(--purple-700));
+  }
+  .progress-track { height: 0.5rem; border-radius: var(--radius-pill); background: rgb(var(--purple-100)); overflow: hidden; }
+  .progress-fill  { height: 100%; background: rgb(var(--gold-400)); transition: width var(--dur-state) var(--ease-out); }
+
   /* ---- Status badge ------------------------------------------------------ */
   .badge {
     display: inline-flex; align-items: center; gap: 0.3rem;

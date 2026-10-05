@@ -847,7 +847,7 @@ Cross-persona facts that shape every build decision.
 
 ### Spec Impact Log
 
-Changes this persona work suggests to the existing docs. None have been applied. Decide each before Sprint 0 closes.
+Changes this persona work suggests to the existing docs. Adopted so far: #1 (D-036), #5 and the phone part of #8 (D-038), and the age-attestation part of #9 (D-037). The rest are open in `DECISIONS.md`.
 
 | # | Change | Driven by | Affects |
 | :--- | :--- | :--- | :--- |

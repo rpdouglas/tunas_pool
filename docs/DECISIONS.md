@@ -39,10 +39,14 @@ ADR-style log. Add an entry for every non-obvious decision. Status: **Accepted**
 | D-033 | 2026-10-05 | When a guest saves their account with an email that already has an account, the app signs in to that account and `adoptGuestProfile` re-points the guest's profile to it (`claimedByUid` only; the `playerId` and its entries never move). If both have profiles, the admin merges them. The failed link attempt uses up the one-time code, so the app sends a fresh link and the second link finishes the move (seen in the Auth emulator) | Accepted |
 | D-034 | 2026-10-05 | Players find their profile by querying `claimedByUid == uid`, never by assuming `players/{uid}`, because a moved or claimed profile keeps its original `playerId`. The player read rule now checks the document's own `claimedByUid` so the query is allowed | Accepted |
 | D-035 | 2026-10-05 | Cloud Functions deploy through a manual **Deploy functions** GitHub Actions workflow (`workflow_dispatch`), pulled forward from Sprint 3. It runs only on `main`, re-runs the typecheck and the functions tests, and deploys only the `tunaspool` codebase (`--only functions:tunaspool`), so other apps' functions in the shared project are never touched. It reuses the `FIREBASE_SERVICE_ACCOUNT` secret, which needs Cloud Functions Admin, Service Account User, Cloud Scheduler Admin, and Artifact Registry Administrator. Whether to deploy functions automatically on merge is revisited in Sprint 3 | Accepted |
+| D-036 | 2026-10-05 | Payment is private (PERSONAS Spec Impact Log #1). `paymentMethod`, `paymentIntent`, `paymentStatus`, `paidAt`, and `paidBy` move out of the public entry document into `entries/{playerId}/payment/current`, readable only by the owner and admin and never revealed. The public entry keeps what leaderboards need (name, source, submission time, late-override badge) | Accepted |
+| D-037 | 2026-10-05 | Entry asks "I'm 18 or older" once per player and stores `ageAttestedAt` on the profile. The age and wording are revisited after the legal review (still open) | Provisional |
+| D-038 | 2026-10-05 | The name other players see defaults to first name and last initial ("Dale D."), and a nickname is fine (Spec Impact Log #5). Phone is optional, explained, and accepts any North American number, stored as E.164 `+1…` for duplicate flags (Spec Impact Log #8, phone part). "Someone else is paying" was not adopted | Accepted |
+| D-039 | 2026-10-05 | The e-Transfer address is the pool's contact address, `tunasweeklypool2026@yahoo.com`, kept in `config/pool` and edited on the admin Pool settings screen rather than in code. Resolves the open e-Transfer decision | Accepted |
+| D-040 | 2026-10-05 | The server stamps entry times: rules require `picksSubmittedAt` and the picks' `updatedAt` to equal `request.time`, so the receipt's time and confirmation code can't be backdated from the phone | Accepted |
 
 ## Open (no default yet)
 - Legal and regulatory check for running the pool (blocks public launch)
-- e-Transfer address for `config/pool`
 - How US-side players pay and receive winnings (see docs/PERSONAS.md §6)
-- Age attestation wording and legal age to use
-- Which spec changes from PERSONAS.md §6 "Spec Impact Log" to adopt
+- Age attestation wording and legal age to use (working default: 18, D-037)
+- Remaining PERSONAS.md §6 Spec Impact Log items: #2 bundled payments, #3 counter role, #4 payout method, #6 captain role, #7 trust views, #9 responsible-play link, #10 printable leaderboard (#1, #5, #8 phone adopted: D-036, D-038)

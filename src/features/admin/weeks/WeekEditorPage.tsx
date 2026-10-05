@@ -5,7 +5,6 @@ import type { WeekStatus } from '@shared/types';
 import {
   addDays,
   daysBetween,
-  formatClock,
   formatPoolDate,
   formatPoolDateTime,
   toZonedParts,
@@ -16,11 +15,11 @@ import {
   DEFAULT_LOCK,
   MNF_GAME_ID,
   gamesToText,
+  kickoffLabel,
   parseMatchups,
   sundayOf,
   weekIdFor,
   weekProblems,
-  type GameDraft,
 } from '@shared/weeks';
 import { Button } from '../../../components/ui/Button';
 import { Field } from '../../../components/ui/Field';
@@ -29,7 +28,7 @@ import { Panel } from '../../../components/ui/Panel';
 import { SectionBar } from '../../../components/ui/SectionBar';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { TextAreaField } from '../../../components/ui/TextAreaField';
-import { upcomingSunday } from './season';
+import { upcomingSunday } from '../../../lib/season';
 import {
   useSaveDraftWeek,
   useSeasonWeeks,
@@ -101,11 +100,6 @@ function cloneFrom(
     lockDate: addDays(sunday, offset),
     lockTime: prevLock.lockTime,
   };
-}
-
-function kickoffLabel(game: GameDraft): string {
-  const { hour, minute, weekday } = toZonedParts(new Date(game.kickoffMs));
-  return `${weekday === 1 ? 'Mon' : 'Sun'} ${formatClock(hour, minute)}`;
 }
 
 function callableMessage(err: unknown): string {
