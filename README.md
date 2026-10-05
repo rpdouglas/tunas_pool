@@ -32,6 +32,8 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm run lint` | ESLint |
 | `npm test` | Unit and component tests (Vitest + Testing Library) |
 | `npm run test:rules` | Firestore rules tests in the emulator (needs Java 21+) |
+| `npm run test:a11y` | Axe, font, and no-horizontal-scroll checks on a production build (Playwright) |
+| `npm run test:e2e:emulator` | Browser run of the sign-in and week-setup flows against running emulators (steps in `scripts/e2e-emulator.mjs`) |
 | `npm run emulators` | Firebase emulators (Auth, Firestore, Functions, Hosting, Storage, UI) |
 | `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs credentials) |
 
@@ -47,14 +49,23 @@ Firestore database (`db-tunaspool`, location `nam5`). Both are pinned in `fireba
 2. Add a Web app (linked to the `tunaspool` Hosting site) and copy its config into `.env.local` (see `.env.example`).
 3. In the terminal: `npx firebase login --no-localhost`.
 4. Deploy: `npm run build && npx firebase deploy --project prod --only hosting,firestore:rules,firestore:indexes`.
-5. Cloud Functions and the scheduler need the Blaze (pay-as-you-go) plan.
-6. Grant admin: `GCLOUD_PROJECT=lilypad-strategy-design npm run admin:claim -- <uid>`.
+5. Cloud Functions and the scheduler need the Blaze (pay-as-you-go) plan. Deploy them with the **Deploy functions** workflow
+   or `npx firebase deploy --project prod --only functions:tunaspool`.
+6. Grant admin: sign in at `/admin` with your email link, find your uid under Authentication > Users, then run
+   `GCLOUD_PROJECT=lilypad-strategy-design npm run admin:claim -- <uid>` and tap **Check again**.
 
 **Deploys are automatic.** Every push to `main` that passes CI deploys Hosting, Firestore rules, and Firestore
 indexes (the `deploy` job in `.github/workflows/ci.yml`). It authenticates with the `FIREBASE_SERVICE_ACCOUNT`
 repo secret (a service-account key) and builds with web config fetched by `scripts/write-web-env.mjs`, so no env
-file is committed. Indexes on `db-tunaspool` that are not in `firestore.indexes.json` are deleted. Functions and
-Storage are still deployed by hand.
+file is committed. Indexes on `db-tunaspool` that are not in `firestore.indexes.json` are deleted. Storage is
+still deployed by hand.
+
+**Functions deploy on demand.** After merging a change to `functions/`, run **Deploy functions** from the
+repo's Actions tab (`.github/workflows/deploy-functions.yml`). It runs only on `main` and deploys only this pool's
+codebase (`--only functions:tunaspool`). The `FIREBASE_SERVICE_ACCOUNT` service account needs these roles on
+`lilypad-strategy-design`: Cloud Functions Admin, Service Account User, Cloud Scheduler Admin, and Artifact
+Registry Administrator. The first deploy may also need the Cloud Functions, Cloud Build, Artifact Registry,
+Cloud Run, Eventarc, and Cloud Scheduler APIs enabled (a project owner can enable them in the console).
 
 For manual deploys, because the project is shared: always pass `--project prod` with an explicit `--only` list, and do not deploy
 `storage` (it would replace the rules on the bucket other apps use) until that is sorted out.

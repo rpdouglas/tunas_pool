@@ -22,6 +22,8 @@ Update this file in the same commit as any schema change.
 
 When a guest upgrades with `linkWithCredential`, the `uid` is unchanged, so nothing moves.
 
+**Guest saves with an email that already has an account:** the client signs in to that account and calls `adoptGuestProfile`, which re-points the guest's profile to the account's `uid`. Nothing is copied. See §5.
+
 **Claim and merge:** if a player who already has a self-serve profile is approved to claim a roster profile, a function **merges** the two by repointing entries and stats to the roster `playerId`, then sets `claimedByUid` and `mergedInto` on the old profile (audit logged). If they have no existing profile, the claim is just a link.
 
 ---
@@ -168,7 +170,7 @@ Readable by the owner and admin. Readable by everyone once `week.revealed == tru
 
 `at`, `actorUid`, `action` (enum below), `target` (path), `before`, `after`, `reason` (required for overrides), `year`, `weekId`.
 
-Actions: `payment.set`, `entry.adminUpsert`, `entry.lateOverride`, `entry.delete`, `week.status`, `week.results`, `week.winnerPublished`, `week.correction`, `claim.approved`, `claim.rejected`, `claim.unlinked`, `player.merged`.
+Actions: `payment.set`, `entry.adminUpsert`, `entry.lateOverride`, `entry.delete`, `week.status`, `week.results`, `week.winnerPublished`, `week.correction`, `claim.approved`, `claim.rejected`, `claim.unlinked`, `player.merged`, `player.guestMoved`.
 
 ---
 
@@ -197,7 +199,7 @@ type GameResult = 'home' | 'away' | 'tie';
 | `adminUpsertEntry(year, weekId, playerId, entryFields, picksDoc)` | Enter or edit picks for a player. Allowed while open. Rejects after lock. |
 | `adminLateOverride(year, weekId, playerId, entryFields, picksDoc, reason)` | Post-lock entry or edit. `reason` required. Sets `lateOverride`. |
 | `adminDeleteEntry(year, weekId, playerId, reason)` | Remove an entry. |
-| `adminSetWeekStatus(year, weekId, status)` | Open, lock early, or finalize. |
+| `adminSetWeekStatus(year, weekId, status)` | `draft → open` (only when `weekProblems` in `shared/weeks.ts` is empty, judged by the server clock), `open → draft` (only while the week has no entries), `open → locked` (lock early; also sets `revealed: true`). Audit logged as `week.status` with before and after. `final` is reached through results and the winner, not this callable. |
 | `adminEnterResults(year, weekId, results, mnfTotal)` | Save results and recompute the leaderboard. Re-runs after Final are flagged as `week.correction`. |
 | `adminPublishWinner(year, weekId)` | Compute the winner, write `winner`, update standings and stats. |
 | `adminMarkPayout(year, weekId, sent)` | Record that the payout was sent. |
@@ -213,6 +215,7 @@ type GameResult = 'home' | 'away' | 'tie';
 | Function | Purpose |
 |---|---|
 | `requestClaim(claimedName, claimedPhone)` | Creates a pending claim and computes `suggestedPlayerId`. Rate limited. |
+| `adoptGuestProfile(guestIdToken)` | Called after a guest saves their account with an email that already has an account, so the app signed in to that account instead. Verifies the guest's anonymous ID token, then moves the guest's profile to the caller by setting `claimedByUid` (the `playerId` and its entries do not change). If the caller already has a profile, returns `needs_admin` and changes nothing; the admin merges with `adminMergePlayers`. Audit logged as `player.guestMoved`. |
 
 **Triggers and schedules**
 
@@ -228,8 +231,12 @@ type GameResult = 'home' | 'away' | 'tie';
 ## 6. Week lifecycle
 
 ```
-draft --(admin opens)--> open --(lockAt, automatic)--> locked --(results + publish)--> final
+draft --(admin opens)--> open --(lockAt, automatic, or admin locks early)--> locked --(results + publish)--> final
+  ^                        |
+  +--(admin, no entries)---+
 ```
+
+- **Setting up a draft:** the admin pastes one game per line (`shared/weeks.ts` `parseMatchups`). No day or time means Sunday 1:00 PM; the last line is Monday night, 8:15 PM by default. The default lock is Saturday 11:59 PM Toronto time. A week opens only with 14 Sunday games, one Monday night game as the tiebreaker, no team twice, and a lock that is in the future and before the first kickoff.
 
 - **draft:** visible to admin only. Games and lock time are editable.
 - **open:** players can create and edit entries until `lockAt`.

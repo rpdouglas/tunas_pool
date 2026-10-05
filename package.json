@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:a11y": "playwright test",
+    "test:e2e:emulator": "node scripts/e2e-emulator.mjs",
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-tunas-pool \"vitest run -c vitest.rules.config.ts\"",
     "emulators": "firebase emulators:start --project demo-tunas-pool --import=.emulator-data --export-on-exit",
     "functions:build": "npm --prefix functions run build",

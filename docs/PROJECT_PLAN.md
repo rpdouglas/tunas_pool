@@ -90,7 +90,7 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 - Results screen: tap the winner per game (including "tie"), enter the MNF total.
 - `adminEnterResults`, `onResultsWritten` (per-entry wins), and `adminPublishWinner` implementing the scoring and tiebreaker in `DATA_MODEL.md` §7.
 - Winner banner and a payout-sent toggle.
-- Add functions to the CI `deploy` job once they do real work, and grant the deploy service account the roles functions deploys need. Region `us-central1` (D-028).
+- Decide whether functions deploy automatically on merge or stay on the manual **Deploy functions** workflow added in Sprint 1 (D-035). Region `us-central1` (D-028).
 - Unit tests for the scoring and tiebreaker, including the paper-sheet example (actual 46: 58 wins over 45), the all-below case, and a split pot.
 
 **Acceptance (Phase 1 gate):** Run a full mock week end to end in the emulator and then in a staging project: 10 or more mixed players, payments confirmed, results entered, winner published with the correct tiebreaker outcome. Admin can do the whole weekly job from a phone.

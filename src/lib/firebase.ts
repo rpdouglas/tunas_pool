@@ -5,14 +5,27 @@ import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
 import { connectStorageEmulator, getStorage } from 'firebase/storage';
 import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '@shared/config';
 
-const app = initializeApp({
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-});
+// Builds without web config (CI's verify build and the /styleguide accessibility build) fall back to
+// the emulator-only demo project, so the app still starts. Production deploys always write the real
+// config first (scripts/write-web-env.mjs).
+const env = import.meta.env;
+const hasConfig = Boolean(env.VITE_FIREBASE_API_KEY);
+const app = initializeApp(
+  hasConfig
+    ? {
+        apiKey: env.VITE_FIREBASE_API_KEY,
+        authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
+        projectId: env.VITE_FIREBASE_PROJECT_ID,
+        storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+        appId: env.VITE_FIREBASE_APP_ID,
+      }
+    : {
+        apiKey: 'demo-api-key',
+        projectId: 'demo-tunas-pool',
+        authDomain: 'demo-tunas-pool.firebaseapp.com',
+      },
+);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app, FIRESTORE_DATABASE_ID);

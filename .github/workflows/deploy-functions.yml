@@ -1,0 +1,37 @@
+name: Deploy functions
+
+# Manual production deploy of this pool's Cloud Functions (codebase `tunaspool`, region us-central1).
+# Not automatic: run it from the Actions tab after merging a change that touches functions/.
+# `functions:tunaspool` limits the deploy to this pool's codebase, so other apps' functions in the
+# shared project are never updated or deleted (DECISIONS.md D-015, D-035).
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-functions-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy-functions:
+    # Production only ever runs what is on main.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - run: npm ci
+      - run: npm --prefix functions ci
+      - run: npm run typecheck
+      - run: npx vitest run functions shared
+      # --force answers the non-interactive prompts (removing functions deleted from this codebase,
+      # and the container-image cleanup policy). It cannot reach other codebases.
+      - run: npx firebase deploy --project prod --only functions:tunaspool --non-interactive --force

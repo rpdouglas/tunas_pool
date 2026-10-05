@@ -59,8 +59,11 @@ service cloud.firestore {
 
     // ---------- players (roster + self-serve profiles) ----------
     match /players/{playerId} {
-      // PII (phone, email, notes): owner and admin only.
-      allow read: if isAdmin() || ownsPlayer(playerId);
+      // PII (phone, email, notes): owner and admin only. Checked against the doc itself so a
+      // login can find its profile with where('claimedByUid', '==', uid): after a guest's profile
+      // moves to an existing account, or a claim is approved, playerId no longer equals the uid.
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.claimedByUid == request.auth.uid);
 
       // Self-serve: playerId must equal the caller's uid, claimed by that uid.
       allow create: if
@@ -133,11 +136,18 @@ service cloud.firestore {
 
         // Admin may build/edit a week only while it is a draft (or create it).
         // Opening, locking, results, and winner go through callables.
-        allow create: if isAdmin() && request.resource.data.status == 'draft';
+        // Derived fields (revealed, counters, results, winner) start empty and are function-written.
+        allow create: if isAdmin()
+          && request.resource.data.status == 'draft'
+          && request.resource.data.revealed == false
+          && request.resource.data.entryCount == 0
+          && request.resource.data.paidCount == 0
+          && request.resource.data.winner == null;
         allow update: if isAdmin()
           && resource.data.status == 'draft'
-          && request.resource.data.status == 'draft'
-          && request.resource.data.revealed == false;
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+               'status', 'revealed', 'entryCount', 'paidCount', 'results', 'mnfTotal',
+               'winner', 'payoutSent']);
         allow delete: if isAdmin() && resource.data.status == 'draft';
 
         // ----- entries (one per person per week; doc ID = playerId) -----
@@ -219,6 +229,8 @@ service cloud.firestore {
 - **Self-serve profile ordering:** the client must create `players/{uid}` **before** its first entry write. Entry rules call `ownsPlayer()`, which needs the profile to exist.
 - **Admin entry edits:** the admin cannot write entries or picks directly from the client. Use `adminUpsertEntry` while open, or `adminLateOverride` (reason required) after lock.
 - **`claimedByUid` is never client-writable.** The owner-update rule limits affected keys, and the admin-update rule requires the field to be unchanged.
+- **Finding your profile:** a login reads its profile with `where('claimedByUid', '==', uid)`, which the player read rule allows because it checks the document's own `claimedByUid`. After `adoptGuestProfile` or an approved claim, the `playerId` is no longer the login's `uid`, so the client must never assume `players/{uid}`. A direct read of a profile that does not exist is denied rather than returned empty, so use the query.
+- **Draft weeks:** an admin edits a draft directly from the client, but the rules keep derived fields out of reach: a new week must start with `revealed: false`, zero counters, and no winner, and draft edits cannot touch `status`, `revealed`, the counters, results, the winner, or `payoutSent`. Status changes go through `adminSetWeekStatus`.
 
 ## 3. Storage rules
 
@@ -257,6 +269,7 @@ Each row is at least one passing and one failing test.
 | 3 | Owner updates own `phone` | allow |
 | 4 | Owner updates `claimedByUid` | deny |
 | 5 | Non-owner reads `players/{id}` | deny |
+| 5b | A login queries `players` by its own `claimedByUid`; queries for another uid or without the filter | allow / deny |
 | 6 | Admin creates roster player with `claimedByUid: null` | allow |
 | 7 | Admin creates roster player with a non-null `claimedByUid` | deny |
 | 8 | Admin updates player and changes `claimedByUid` | deny |
@@ -280,7 +293,8 @@ Each row is at least one passing and one failing test.
 | 26 | Admin reads `auditLog` | allow |
 | 27 | Non-admin reads a `draft` week | deny |
 | 28 | Admin edits a week while `draft`; edits after `open` | allow / deny |
-| 29 | Admin attempts to set `revealed: true` directly | deny |
+| 29 | Admin attempts to set `revealed: true` directly (on create or update) | deny |
+| 29b | Admin sets `entryCount`, `paidCount`, or `winner` from the client | deny |
 | 30 | Admin writes an entry or picks directly from the client | deny |
 | 31 | Unauthenticated read or write anywhere | deny |
 | 32 | Storage: non-admin reads or writes `paperSheets/*` | deny |
