@@ -22,7 +22,8 @@ Guests sign in invisibly and can save their account with an email link. Rules ar
 - [x] `adminSetWeekStatus` (draft to open, back to draft, lock early) with audit logging (D-032)
 - [x] Styleguide entries for every new component (GameCard, TextAreaField); `test:a11y` now also covers `/account`, `/auth/finish`, and the `/admin` sign-in gate
 - [x] End-to-end check in the emulator (`npm run test:e2e:emulator`, 29 checks at 375px); docs updated
-- [ ] Deploy functions to production by hand before relying on the admin screens there (`adminSetWeekStatus` and `adoptGuestProfile` are real now; CI deploys functions from Sprint 3)
+- [x] Manual **Deploy functions** workflow (`workflow_dispatch`, `main` only, codebase `tunaspool` only) (D-035)
+- [ ] Give the deploy service account the roles it needs (Cloud Functions Admin, Service Account User, Cloud Scheduler Admin, and Artifact Registry Administrator), then run **Deploy functions** after this sprint merges. Until then "Open week" and the guest move fail in production
 - [ ] Grant the admin claim in production (README, Firebase setup step 6)
 
 ## Acceptance (from PROJECT_PLAN.md)
