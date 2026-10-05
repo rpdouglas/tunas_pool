@@ -16,6 +16,8 @@ import { RosterRow } from '../features/admin/roster/RosterRow';
 import type { RosterRow as RosterRowData } from '../features/admin/roster/roster';
 import { PhotoField } from '../components/ui/PhotoField';
 import { PickRow } from '../components/ui/PickRow';
+import { LeaderboardRow } from '../components/ui/LeaderboardRow';
+import { ShareBar } from '../components/ui/ShareBar';
 import type { ClaimRow, EntryRow } from '@shared/adminTypes';
 import type { WeekWinner } from '@shared/types';
 import { Field } from '../components/ui/Field';
@@ -521,6 +523,54 @@ export default function Styleguide() {
               onReject={() => undefined}
             />
           </ul>
+        </section>
+
+        <section aria-labelledby="sg-leaderboard">
+          <h2 id="sg-leaderboard" className="mb-3 font-heading text-h2 italic">
+            Leaderboard row and pick share
+          </h2>
+          <ol className="flex max-w-player flex-col gap-2">
+            <LeaderboardRow rankLabel="1" name="Dale D." wins={12} losses={3} winner>
+              <p className="text-body">That player's picks open here.</p>
+            </LeaderboardRow>
+            <LeaderboardRow
+              rankLabel="Tied 2"
+              name="Jen K."
+              wins={9}
+              losses={2}
+              bestPossible={13}
+              you
+            >
+              <p className="text-body">That player's picks open here.</p>
+            </LeaderboardRow>
+            <LeaderboardRow
+              rankLabel="Tied 2"
+              name="Hank O."
+              wins={9}
+              losses={2}
+              bestPossible={13}
+              late
+            />
+          </ol>
+          <div className="mt-4 flex max-w-player flex-col gap-4 rounded-lg bg-surface p-4">
+            <ShareBar
+              awayTeam="Packers"
+              homeTeam="Bears"
+              awayCount={28}
+              homeCount={12}
+              awayPercent={70}
+              homePercent={30}
+              winner="home"
+            />
+            <ShareBar
+              awayTeam="Buccaneers"
+              homeTeam="Commanders"
+              awayCount={20}
+              homeCount={19}
+              awayPercent={50}
+              homePercent={48}
+            />
+          </div>
         </section>
 
         <section aria-labelledby="sg-winner">

@@ -115,6 +115,9 @@ export default function EntryPage() {
             <p className="text-body">
               Picks are locked, and you didn't enter this week. See you next week!
             </p>
+            <Link to={`/week/${year}/${week.id}`} className="btn btn-secondary">
+              Standings and everyone's picks
+            </Link>
             <Link to="/" className="btn btn-primary">
               Back to this week
             </Link>
@@ -138,6 +141,11 @@ export default function EntryPage() {
           setEditing(true);
         }}
       />
+      {!open && (
+        <Link to={`/week/${year}/${week.id}`} className="btn btn-secondary">
+          Standings and everyone's picks
+        </Link>
+      )}
     </GameDayPage>
   );
 }

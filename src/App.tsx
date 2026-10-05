@@ -6,6 +6,7 @@ import FinishSignIn from './pages/FinishSignIn';
 import EntryPage from './features/entry/EntryPage';
 const ClaimPage = lazy(() => import('./features/claims/ClaimPage'));
 const HistoryPage = lazy(() => import('./features/claims/HistoryPage'));
+const WeekPage = lazy(() => import('./features/leaderboard/WeekPage'));
 const Styleguide = lazy(() => import('./pages/Styleguide'));
 import NotFound from './pages/NotFound';
 import { AdminLayout } from './features/admin/AdminLayout';
@@ -36,6 +37,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/picks/:year/:weekId" element={<EntryPage />} />
+        <Route path="/week/:year/:weekId" element={<WeekPage />} />
         <Route path="/account" element={<SaveAccount />} />
         <Route path="/claim" element={<ClaimPage />} />
         <Route path="/history" element={<HistoryPage />} />

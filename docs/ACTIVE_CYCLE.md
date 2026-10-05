@@ -1,11 +1,53 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 5: Claims and merges** · Phase 2 (Roster, paper, and claims) · Started: 2026-10-05
+**Sprint 6: Reveal and weekly leaderboard** · Phase 3 (Reveal and standings) · Started: 2026-10-05
 
 ## Goal
-A player who has been entered on paper, by text, or by phone can ask to link that history to their own login, the commissioner approves or rejects it in one tap, and after approval the history shows in the player's account at once. A wrong approval can be undone. Two profiles for the same person can be merged. Asking reveals nothing about anyone's profile.
+Once picks lock, every player can see everyone's picks, a leaderboard that fills in as results are entered, how the pool split on each game, and, when the week is final, the winner and exactly how it was decided. A wrong result can be corrected after the winner is published, in the open.
 
 ## Persona check
+- **Primary persona:** Gerald (Verifiable by Anyone). Secondary: Dale and Jen (what a player sees on Sunday), the Snoop (anti-persona E), the Commissioner (corrections), Kayla (what is safe to screenshot).
+- **Gerald Trust Test:** after the lock anyone signed in sees every pick with its submission time, each player's record, and a "Late entry" marker on any entry approved after the lock. The winner view has "How this was decided": the rule in plain words, the Monday night total, each tied player's guess, and the pot as paid entries times the fee. A correction after Final shows a public "Result corrected" note with the time; the reason and the before and after are in the audit log.
+- **Snoop test / D-021:** nothing about anyone's picks is read or shown before `revealed`. The week page before the lock says only when picks open up and how many are in. The rules refuse the reads regardless (row 47).
+- **Slump rule:** the per-game line talks about the game ("Only 12 of 40 picked the Bears"), never about anyone being out of it. "Best possible" is each player's own ceiling, not a verdict.
+- **Privacy test:** no phone, email, or payment status on any player screen. The leaderboard ranks by record only (D-069).
+- **Dale Deadline Test:** nothing is added before the lock. After it, the home screen and the picks page each get one button to the week.
+- **Commissioner Counter Test:** "Correct a result" is on the Results screen of a final week. It needs a typed reason, says the winner may change, and can be cancelled. A wrong correction is fixed by correcting again.
+- **Rosalie Inclusion Test:** a paper entry appears in the standings and the picks like any other. Nothing here needs a login of her own.
+- **Border / Responsible-Play:** no money changes hands differently. Weekly framing only: no streaks, no season pressure.
+
+## Tasks
+- [x] Shared logic: leaderboard with shared places and best possible record, pick marks, pick share and its plain-words line (`shared/reveal.ts`, 12 tests)
+- [x] Function: `adminCorrectResults` (`functions/src/weekActions.ts`), scoring with the same code as publishing; 4 integration tests (winner changes and the payout is cleared, winner unchanged, nothing changed, refusals)
+- [x] Rules tests: two new matrix rows (47, 48), 51 rules tests in all. No rule changed
+- [x] Player: the week page (`/week/:year/:weekId`) with the winner, "How this was decided", Standings and By game; the latest winner on the home screen; a button to the week from the home screen and the picks page once locked
+- [x] Back Office: "Correct a result" on the Results screen for a final week, and the "Result corrected" note
+- [x] Styleguide entries for the leaderboard row and the share bar; `test:a11y` passes (18 checks)
+- [x] Docs: DATA_MODEL §3.5, §5, §6, §10; FIRESTORE_RULES (rows 47, 48); DESIGN_SYSTEM §6; DECISIONS D-067 to D-070
+- [ ] Look at the week page on a real phone with a real week (browser runs are parked, D-066, so no screen here has been opened in a browser)
+- [ ] Confirm the provisional decisions D-067 to D-070 with the commissioner
+
+## Acceptance (from PROJECT_PLAN.md)
+At lock, picks become visible to all within one minute. During the week the leaderboard updates as results are entered. A post-final correction flags the audit log and updates standings.
+
+## Notes / learned
+- **Verified with the fast checks only** (D-066): typecheck, lint, 142 unit tests, 99 rules and function tests in the emulator, the production build, and `test:a11y` on the styleguide. The week page, the home screen's winner banner, and the correction mode have not been opened in a browser. The logic under them is tested; the layout is not.
+- "Picks visible within a minute of the lock" rests on the `lockWeeks` scheduler, which was seen locking a week in production on 2026-10-05, and on the picks rule, which opens the reads the moment `revealed` is true.
+- "Season standings" do not exist yet (Sprint 7), so "updates standings" here means the week's records and winner.
+- A test caught a wrong assumption of mine, not a bug: flipping the Monday night result made the runner-up win outright, because she had picked the other side. The correction test now says so.
+- The players' leaderboard and the Back Office standings can disagree at the top when the leader has not paid (D-069). Worth watching for confusion in the first real weeks.
+- A leftover emulator from an earlier browser run was still holding port 8080 and made `test:rules` exit without a summary. If it prints no "Tests" line, check the port.
+
+---
+
+## Sprint 5 (released 2026-10-05, PR #21; follow-ups open)
+
+**Sprint 5: Claims and merges** · Phase 2 (Roster, paper, and claims) · Started: 2026-10-05
+
+### Goal
+A player who has been entered on paper, by text, or by phone can ask to link that history to their own login, the commissioner approves or rejects it in one tap, and after approval the history shows in the player's account at once. A wrong approval can be undone. Two profiles for the same person can be merged. Asking reveals nothing about anyone's profile.
+
+### Persona check
 - **Primary persona:** the Commissioner (Ten Seconds and an Undo) for the Claims tab. Secondary: Bernie and a family member helping Rosalie (the claimant), the Snoop (anti-persona E), the Double-Dipper (anti-persona A), Gerald (proof).
 - **Snoop test (anti-persona E):** typing someone else's name and phone gets the same "we'll let the pool know" answer whether or not anyone matches. The claim document the claimant can read holds only what they typed. Matches are worked out for the admin when the Claims tab opens and are never stored where the claimant can read them. A pending or rejected claimant cannot read the profile, its entries' picks, or its payments (rules tests).
 - **Rosalie Inclusion Test:** nothing changes for a paper player who never claims. Her roster profile, entries, and history stay exactly as they are, and she is never asked to register. A claim is always someone's own choice.
@@ -17,7 +59,7 @@ A player who has been entered on paper, by text, or by phone can ask to link tha
 - **Privacy test:** the claimant's email and typed phone go to the admin only. Other players never see that a claim exists.
 - **Responsible-Play Check:** still one entry per person per week. A merge is refused when both profiles entered the same week, so two entries are never quietly folded into one.
 
-## Tasks
+### Tasks
 - [x] Shared logic: request validation, who may ask and how often, ranked matches, merge conflicts (`shared/claims.ts`, 13 tests)
 - [x] Functions: `requestClaim`, `adminListClaims`, `adminApproveClaim`, `adminRejectClaim`, `adminUnlinkClaim`, `adminMergePlayers` (`functions/src/claims.ts`). No stubs remain. 18 integration tests against the Firestore emulator, including the abuse cases and the acceptance case (three weeks of paper history, claimed, then unlinked back to the same state)
 - [x] Rules tests for the claim abuse cases: three new matrix rows (44 to 46), 49 rules tests in all. No rule changed
@@ -29,10 +71,10 @@ A player who has been entered on paper, by text, or by phone can ask to link tha
 - [ ] Confirm the provisional decisions D-060 and D-062 to D-065 with the commissioner
 - [ ] Try it on the live site in the `2026-test` season, or with a real roster player, after the functions deploy
 
-## Acceptance (from PROJECT_PLAN.md)
+### Acceptance (from PROJECT_PLAN.md)
 A roster senior with three weeks of admin-entered history is claimed by a signed-in player. After approval, the history appears in their account immediately. Unlinking restores the previous state. Every step is in the audit log.
 
-## Notes / learned
+### Notes / learned
 - **End-to-end browser runs are parked as a sprint habit** (Ryan, 2026-10-05: they were taking most of the time and getting in the way). This sprint was verified with typecheck, lint, the unit tests, and `npm run test:rules` (rules plus the functions' integration tests). The browser scripts stay in the repo for when they are wanted.
 - Why they got in the way: with the emulators, the Vite dev server, and several browser pages open, the 8 GB Codespace runs out of memory and Chromium reports "Page crashed" at a different step each time. The same flow passes when memory is free and fails minutes later with nothing changed. Unchanged `main` behaves the same. None of the crashes was a code problem. `test:e2e:mock-week` got past the lock and results on this branch before crashing at the publish step.
 - The first design stored the suggested match on the claim, as the data model said. The claimant can read their own claim, so that would have leaked whether a name and phone are on the roster. Matches are now worked out for the admin on demand (D-061).
@@ -72,7 +114,7 @@ The commissioner keeps a roster of the people who play on paper, by text, or by 
 - [x] Production: the `tunaspool-paper-sheets` bucket is created (US multi-region, uniform access), added to Firebase, and has `storage.rules` deployed to it (2026-10-05, with Ryan's go-ahead; the release matches the file)
 - [x] Production: the three new callables are deployed. The merge of PR #19 ran the automatic functions deploy, and it succeeded (2026-10-05)
 - [x] Live check by Ryan (2026-10-05): a paper sheet entered on the live site saved with all 14 picks, an `entry.adminUpsert` audit entry, and a photo in the bucket (242 KB after shrinking on the phone)
-- [ ] Remove the live check's entry: it is in the real season (`2026` week 1) under the made-up player `seedtest-13`. Use "Remove this entry" on the entry screen, before running `admin:seed-test-week -- 2026-test --remove-players`, which deletes the profile but not the entry
+- [x] The live check's entry (`seedtest-13` in the real `2026` week 1) is removed (2026-10-05): its payment was undone and the entry removed through the audited functions, actor `script:remove-test-entry`. Its test photo is still in the bucket
 - [ ] Confirm the provisional decisions D-054 to D-058 with the commissioner
 - [ ] The acceptance's "about a minute" with a real sheet and a real thumb (the scripted run takes about 8 seconds: 15 taps, one field, one payment tap, one photo)
 

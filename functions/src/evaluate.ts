@@ -52,14 +52,20 @@ export async function evaluateWeek(
   db: Firestore,
   year: string,
   weekId: string,
+  /** Score against these results instead of the saved ones: a correction being checked before it is written. */
+  override?: { results: Record<string, GameResult>; mnfTotal: number | null },
 ): Promise<WeekEvaluation | null> {
   const weekRef = db.doc(`seasons/${year}/weeks/${weekId}`);
   const weekSnap = await weekRef.get();
   if (!weekSnap.exists) return null;
   const week = weekSnap.data()!;
   const gameIds: string[] = (week.games ?? []).map((g: { id: string }) => g.id);
-  const results: Record<string, GameResult> = week.results ?? {};
-  const mnfTotal: number | null = typeof week.mnfTotal === 'number' ? week.mnfTotal : null;
+  const results: Record<string, GameResult> = override?.results ?? week.results ?? {};
+  const mnfTotal: number | null = override
+    ? override.mnfTotal
+    : typeof week.mnfTotal === 'number'
+      ? week.mnfTotal
+      : null;
   const { tieRule, unpaidEligibleToWin } = await loadPoolRules(db);
 
   const entries = await weekRef.collection('entries').get();

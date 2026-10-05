@@ -8,10 +8,12 @@ import { PawnShopHelmet, TunaBadge, WordmarkArt } from '../components/ui/BrandAr
 import { currentSeason } from '../lib/season';
 import { useGuestSession } from '../features/auth/useAuth';
 import { useCurrentWeek, useMyEntry } from '../features/entry/entryData';
+import { useLastWinner } from '../features/leaderboard/revealData';
+import { WinnerBanner } from '../components/ui/WinnerBanner';
 
 /**
  * The weekly home screen (D-020): this week at a glance, your status, and the one next step.
- * Pot and entry count arrive in Sprint 3, last week's winner in Sprint 6, the season leader in Sprint 7.
+ * The latest published winner sits under it (Sprint 6). The season leader arrives in Sprint 7.
  */
 export default function Home() {
   // Every player is signed in, as a guest if nothing else, before they make picks.
@@ -20,6 +22,7 @@ export default function Home() {
   const current = useCurrentWeek(year);
   const week = current.data ?? null;
   const mine = useMyEntry(year, week?.id, session.user?.uid);
+  const lastWinner = useLastWinner(year).data ?? null;
 
   const open = Boolean(week && week.status === 'open' && Date.now() < week.lockAtMs);
   const entry = mine.data?.entry ?? null;
@@ -126,9 +129,28 @@ export default function Home() {
                         : 'See your picks'}
                   </Link>
                 ) : null}
+                {!open && (
+                  <Link to={`/week/${year}/${week.id}`} className="btn btn-secondary">
+                    Standings and everyone's picks
+                  </Link>
+                )}
               </div>
             </Panel>
           </>
+        )}
+
+        {lastWinner?.winner && (
+          <div className="flex flex-col gap-2">
+            <WinnerBanner weekNumber={lastWinner.weekNumber} winner={lastWinner.winner} />
+            {lastWinner.id !== week?.id && (
+              <Link
+                to={`/week/${year}/${lastWinner.id}`}
+                className="inline-flex min-h-touch items-center justify-center text-body text-ink-inverse underline"
+              >
+                See how week {lastWinner.weekNumber} went
+              </Link>
+            )}
+          </div>
         )}
 
         {session.user && !session.user.isAnonymous ? (

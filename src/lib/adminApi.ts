@@ -3,6 +3,7 @@ import { httpsCallable } from 'firebase/functions';
 import type {
   ApproveClaimResult,
   ClaimsList,
+  CorrectionResult,
   EntriesList,
   MergeResult,
   PublishedWinner,
@@ -39,6 +40,10 @@ export const adminApi = {
     WeekArgs & { results: Record<string, GameResult>; mnfTotal: number | null },
     { changed: boolean }
   >('adminEnterResults'),
+  correctResults: callable<
+    WeekArgs & { results: Record<string, GameResult>; mnfTotal: number; reason: string },
+    CorrectionResult
+  >('adminCorrectResults'),
   previewWinner: callable<WeekArgs, WeekPreview>('adminPreviewWinner'),
   publishWinner: callable<WeekArgs & { expectedPlayerIds: string[] }, PublishedWinner>(
     'adminPublishWinner',
