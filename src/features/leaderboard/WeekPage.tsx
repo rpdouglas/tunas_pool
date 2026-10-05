@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   PICK_MARK_TEXT,
   gameShare,
@@ -22,6 +22,7 @@ import type { WeekView } from '../../lib/weekModel';
 import { useGuestSession } from '../auth/useAuth';
 import { useMyProfile } from '../claims/claimsData';
 import { useRevealEntries, useRevealWeek } from './revealData';
+import { useSeasonWeekList } from './standingsData';
 
 type View = 'standings' | 'games';
 
@@ -39,6 +40,30 @@ export default function WeekPage() {
   const profile = useMyProfile(session.user?.uid);
 
   const title = week.data ? `Week ${week.data.weekNumber}` : 'This week';
+  const navigate = useNavigate();
+  const weekList = useSeasonWeekList(year, Boolean(session.user));
+  // Every week stays viewable: pick any earlier one (PROJECT_PLAN Sprint 7).
+  const picker =
+    weekList.data && weekList.data.length > 1 ? (
+      <div className="flex items-center justify-center gap-2">
+        <label htmlFor="week-jump" className="font-semibold text-ink-inverse">
+          Week
+        </label>
+        <select
+          id="week-jump"
+          className="field w-auto"
+          value={weekId}
+          onChange={(e) => navigate(`/week/${year}/${e.target.value}`)}
+        >
+          {weekList.data.map((w) => (
+            <option key={w.id} value={w.id}>
+              Week {w.weekNumber}
+              {w.status === 'final' ? ' · Final' : w.status === 'open' ? ' · Open' : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+    ) : null;
   const back = (
     <Link
       to="/"
@@ -74,6 +99,7 @@ export default function WeekPage() {
   if (!week.data) {
     return (
       <GameDayPage title={title}>
+        {picker}
         <Panel>
           <p className="text-body">That week isn't available.</p>
         </Panel>
@@ -84,6 +110,7 @@ export default function WeekPage() {
   if (!revealed) {
     return (
       <GameDayPage title={title}>
+        {picker}
         <Panel title="Picks are hidden">
           <div className="flex flex-col gap-3">
             <p className="text-body">
@@ -103,6 +130,7 @@ export default function WeekPage() {
   }
   return (
     <GameDayPage title={title}>
+      {picker}
       <Revealed week={week.data} entries={entries.data ?? []} myPlayerId={profile.data?.playerId} />
       {back}
     </GameDayPage>

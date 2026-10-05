@@ -34,6 +34,7 @@ import { planGuestMove } from './guestMove';
 import { lockDueWeeks } from './lockWeeks';
 import { parsePaymentRequest } from './payments';
 import { sameResults } from './results';
+import { recomputeAllTime, recomputeStandings, seasonReport } from './season';
 import { recountWeek } from './weekCounters';
 import {
   correctResults,
@@ -72,6 +73,34 @@ function requireId(value: unknown, name: string): string {
 
 const weekPath = (year: string, weekId: string) => `seasons/${year}/weeks/${weekId}`;
 
+/** Which of these logins are saved accounts (email link, Google) rather than guest logins. */
+async function savedLogins(uids: string[]): Promise<Set<string>> {
+  const saved = new Set<string>();
+  for (let i = 0; i < uids.length; i += 100) {
+    const found = await getAuth(app).getUsers(uids.slice(i, i + 100).map((uid) => ({ uid })));
+    for (const user of found.users) if (user.providerData.length > 0) saved.add(user.uid);
+  }
+  return saved;
+}
+
+/**
+ * Bring the standings and all-time stats up to date after something that changes them. It runs
+ * after the action it follows has already been saved and audited, so a failure here is logged, not
+ * thrown: the commissioner can run it again from the Reports screen.
+ */
+async function refreshStandings(years: string[] | 'all'): Promise<void> {
+  try {
+    const list =
+      years === 'all'
+        ? (await db.collection('seasons').select().get()).docs.map((d) => d.id)
+        : years;
+    for (const year of list) await recomputeStandings(db, year, savedLogins);
+    await recomputeAllTime(db);
+  } catch (err) {
+    logger.error('standings refresh failed', { years, err });
+  }
+}
+
 // ---- Claims and merges (Sprint 5) ---------------------------------------------
 export const adminListClaims = onCall(async (req) => {
   requireAdmin(req);
@@ -80,11 +109,13 @@ export const adminListClaims = onCall(async (req) => {
 
 export const adminApproveClaim = onCall(async (req) => {
   requireAdmin(req);
-  return approveClaim(db, {
+  const result = await approveClaim(db, {
     claimId: requireId(req.data?.claimId, 'claimId'),
     playerId: requireId(req.data?.playerId, 'playerId'),
     actorUid: req.auth!.uid,
   });
+  await refreshStandings('all');
+  return result;
 });
 
 export const adminRejectClaim = onCall(async (req) => {
@@ -98,19 +129,23 @@ export const adminRejectClaim = onCall(async (req) => {
 
 export const adminUnlinkClaim = onCall(async (req) => {
   requireAdmin(req);
-  return unlinkClaim(db, {
+  const result = await unlinkClaim(db, {
     playerId: requireId(req.data?.playerId, 'playerId'),
     actorUid: req.auth!.uid,
   });
+  await refreshStandings('all');
+  return result;
 });
 
 export const adminMergePlayers = onCall(async (req) => {
   requireAdmin(req);
-  return mergePlayers(db, {
+  const result = await mergePlayers(db, {
     fromId: requireId(req.data?.fromId, 'fromId'),
     intoId: requireId(req.data?.intoId, 'intoId'),
     actorUid: req.auth!.uid,
   });
+  await refreshStandings('all');
+  return result;
 });
 
 // ---- adminSetWeekStatus (Sprint 1): draft -> open, open -> draft, open -> locked ----
@@ -239,7 +274,7 @@ export const adminEnterResults = onCall(async (req) => {
 // ---- adminCorrectResults (Sprint 6): fix a result after the winner is published ----
 export const adminCorrectResults = onCall(async (req) => {
   requireAdmin(req);
-  return correctResults(db, {
+  const result = await correctResults(db, {
     year: requireId(req.data?.year, 'year'),
     weekId: requireId(req.data?.weekId, 'weekId'),
     results: req.data?.results,
@@ -247,6 +282,8 @@ export const adminCorrectResults = onCall(async (req) => {
     reason: req.data?.reason,
     actorUid: req.auth!.uid,
   });
+  await refreshStandings([requireId(req.data?.year, 'year')]);
+  return result;
 });
 
 // ---- adminPreviewWinner (Sprint 3): standings and the winner "if the games ended now" ----
@@ -269,12 +306,14 @@ export const adminPublishWinner = onCall(async (req) => {
       'Confirm the winner you reviewed (expectedPlayerIds).',
     );
   }
-  return publishWinner(db, {
+  const result = await publishWinner(db, {
     year: requireId(req.data?.year, 'year'),
     weekId: requireId(req.data?.weekId, 'weekId'),
     expectedPlayerIds: expected,
     actorUid: req.auth!.uid,
   });
+  await refreshStandings([requireId(req.data?.year, 'year')]);
+  return result;
 });
 
 // ---- adminMarkPayout (Sprint 3): record that the winner was paid (D-042) ----
@@ -289,6 +328,23 @@ export const adminMarkPayout = onCall(async (req) => {
     sent,
     actorUid: req.auth!.uid,
   });
+});
+
+// ---- Standings and reports (Sprint 7) ----------------------------------------
+
+/** adminRecomputeStandings: work the season standings and all-time stats out again, on request. */
+export const adminRecomputeStandings = onCall(async (req) => {
+  requireAdmin(req);
+  const year = requireId(req.data?.year, 'year');
+  const standings = await recomputeStandings(db, year, savedLogins);
+  const allTime = await recomputeAllTime(db);
+  return { year, players: standings.players, removed: standings.removed, allTime: allTime.players };
+});
+
+/** adminSeasonReport: the week-by-week table for the Reports screen and its CSV export. */
+export const adminSeasonReport = onCall(async (req) => {
+  requireAdmin(req);
+  return seasonReport(db, requireId(req.data?.year, 'year'));
 });
 
 // ---- Player callables ---------------------------------------------------------

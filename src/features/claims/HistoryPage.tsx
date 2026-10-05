@@ -4,7 +4,9 @@ import { formatRecord } from '@shared/scoring';
 import { GameDayPage } from '../../components/layout/GameDayPage';
 import { Panel } from '../../components/ui/Panel';
 import { StatusBadge } from '../../components/ui/StatusBadge';
+import { winPercent } from '@shared/standings';
 import { useGuestSession } from '../auth/useAuth';
+import { useMyAllTime } from '../leaderboard/standingsData';
 import { useMyHistory, useMyHistoryPicks, useMyProfile, type HistoryWeek } from './claimsData';
 
 const TITLE = 'Your history';
@@ -18,6 +20,7 @@ export default function HistoryPage() {
   const session = useGuestSession();
   const profile = useMyProfile(session.user?.uid);
   const history = useMyHistory(profile.data?.playerId);
+  const allTime = useMyAllTime(profile.data?.playerId).data ?? null;
 
   const loading =
     !session.user || profile.isPending || (Boolean(profile.data) && history.isPending);
@@ -47,6 +50,18 @@ export default function HistoryPage() {
             <p className="text-body">
               {history.data!.length} {history.data!.length === 1 ? 'week' : 'weeks'} played.
             </p>
+            {allTime && allTime.weeksPlayed > 0 && (
+              <p className="rounded-md bg-surface-tint p-3 text-body">
+                <strong>All time:</strong> {formatRecord(allTime.wins, allTime.losses)} (
+                {winPercent(allTime)} correct) over {allTime.weeksPlayed} finished{' '}
+                {allTime.weeksPlayed === 1 ? 'week' : 'weeks'}
+                {allTime.weeklyTitles > 0 &&
+                  `, with ${allTime.weeklyTitles} ${allTime.weeklyTitles === 1 ? 'week' : 'weeks'} won`}
+                {allTime.bestWeekRecord &&
+                  `. Best week: ${formatRecord(allTime.bestWeekRecord.wins, allTime.bestWeekRecord.losses)}`}
+                .
+              </p>
+            )}
             <ul className="flex flex-col gap-2" aria-label="Weeks played">
               {history.data!.map((row) => (
                 <HistoryRow

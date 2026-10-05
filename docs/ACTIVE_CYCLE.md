@@ -1,11 +1,52 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 6: Reveal and weekly leaderboard** · Phase 3 (Reveal and standings) · Started: 2026-10-05
+**Sprint 7: Season standings and stats** · Phase 3 (Reveal and standings) · Started: 2026-10-05
 
 ## Goal
-Once picks lock, every player can see everyone's picks, a leaderboard that fills in as results are entered, how the pool split on each game, and, when the week is final, the winner and exactly how it was decided. A wrong result can be corrected after the winner is published, in the open.
+The season adds up on its own: standings across the finished weeks, a page for each player's season, every past week one tap away, and a report the commissioner can check the money against.
 
 ## Persona check
+- **Primary persona:** Dale (the regular, who wants to see how his season is going). Secondary: Gerald (numbers he can check), the Commissioner (reports), Jen and Kayla (what others see of them), a guest (Bernie's first weeks online).
+- **Slump rule:** the standings are a record, not a chase. No streaks (D-023), no "games back", and the page says each week is still its own pot. The home screen shows the leader in one line and nothing about how far anyone is behind.
+- **Gerald Trust Test:** standings count only final weeks and are worked out from the entries each time, so they follow a correction or a merge. The tests check them against totals added up by hand. Each player's page lists every finished week with a link to that week's picks.
+- **Privacy test:** another player sees a display name and a record. Nothing about phone, email, or payment is on any of these pages or readable through them (rows 50, 51). All-time stats are shown to the player only.
+- **Welcome Test:** a guest sees why they are not on the standings and what to do about it, in plain words, with one button.
+- **Commissioner Counter Test:** the report is one screen, with the two things most often needed as files: the weeks, and who still owes. "Recalculate standings" is there if the numbers ever look off.
+- **Rosalie Inclusion Test:** roster players are on the standings without a login.
+- **Dale Deadline Test / Border / Responsible-Play:** nothing is added before the lock. No money features change. The unpaid list is admin only and is never a tab: unpaid entries still cannot win.
+
+## Tasks
+- [x] Shared logic: standings, places, win rate, best week, all-time stats (`shared/standings.ts`, 10 tests with hand-added totals); the season report and CSV export (`shared/reports.ts`, 8 tests)
+- [x] Functions: `recomputeStandings`, `recomputeAllTime`, `seasonReport` (`functions/src/season.ts`); the refresh after publish, correction, claim, unlink, and merge; `adminRecomputeStandings` and `adminSeasonReport`. 5 integration tests
+- [x] Rules tests: two new matrix rows (50, 51), 54 rules tests in all. No rule changed
+- [x] Player: season standings (`/standings`), a player's season (`/player/:playerId`), a week picker on the week page, the season leader on the home screen, all-time stats on "Your history", and the guest prompt
+- [x] Back Office: Reports tab with the week-by-week table, two CSV downloads, and "Recalculate standings"
+- [x] Docs: DATA_MODEL §3.2, §3.8, §5; FIRESTORE_RULES (rows 50, 51); DECISIONS D-073 to D-077; PROJECT_PLAN
+- [→] Google sign-in: carried over (D-077). It needs a real sign-in on the live site to prove
+- [ ] Acceptance: standings checked against a hand-kept spreadsheet for three real weeks. No real week is final yet: weeks 1 to 4 need their sheets and winners first
+- [ ] Look at the new pages on a real phone (browser runs are parked, D-066)
+- [ ] Confirm the provisional decisions D-073, D-075, D-077 with the commissioner
+
+## Acceptance (from PROJECT_PLAN.md)
+Standings match a hand-checked spreadsheet for at least three real weeks of data.
+
+## Notes / learned
+- **Verified with the fast checks only** (D-066): typecheck, lint, 161 unit tests, 110 rules and function tests in the emulator, and the production build. No screen in this sprint has been opened in a browser.
+- The acceptance test cannot be run yet: the real season has no final week. The unit tests stand in for it with three weeks added up by hand, and the Reports CSV is the tool for the real check once weeks 1 to 4 are published.
+- With seven tabs the Back Office menu is two full lines at 375px. It is due a rethink (a "More" menu, or icons) before another tab is added.
+- `seasons/{year}` must exist as a document for the all-time pass to find the season. The app creates it with the first week, and the tests now do the same.
+- Every page added here waits for the sign-in before it reads anything (the lesson of the week page bug).
+
+---
+
+## Sprint 6 (released 2026-10-05, PR #22; follow-ups open)
+
+**Sprint 6: Reveal and weekly leaderboard** · Phase 3 (Reveal and standings) · Started: 2026-10-05
+
+### Goal
+Once picks lock, every player can see everyone's picks, a leaderboard that fills in as results are entered, how the pool split on each game, and, when the week is final, the winner and exactly how it was decided. A wrong result can be corrected after the winner is published, in the open.
+
+### Persona check
 - **Primary persona:** Gerald (Verifiable by Anyone). Secondary: Dale and Jen (what a player sees on Sunday), the Snoop (anti-persona E), the Commissioner (corrections), Kayla (what is safe to screenshot).
 - **Gerald Trust Test:** after the lock anyone signed in sees every pick with its submission time, each player's record, and a "Late entry" marker on any entry approved after the lock. The winner view has "How this was decided": the rule in plain words, the Monday night total, each tied player's guess, and the pot as paid entries times the fee. A correction after Final shows a public "Result corrected" note with the time; the reason and the before and after are in the audit log.
 - **Snoop test / D-021:** nothing about anyone's picks is read or shown before `revealed`. The week page before the lock says only when picks open up and how many are in. The rules refuse the reads regardless (row 47).
@@ -16,7 +57,7 @@ Once picks lock, every player can see everyone's picks, a leaderboard that fills
 - **Rosalie Inclusion Test:** a paper entry appears in the standings and the picks like any other. Nothing here needs a login of her own.
 - **Border / Responsible-Play:** no money changes hands differently. Weekly framing only: no streaks, no season pressure.
 
-## Tasks
+### Tasks
 - [x] Shared logic: leaderboard with shared places and best possible record, pick marks, pick share and its plain-words line (`shared/reveal.ts`, 12 tests)
 - [x] Function: `adminCorrectResults` (`functions/src/weekActions.ts`), scoring with the same code as publishing; 4 integration tests (winner changes and the payout is cleared, winner unchanged, nothing changed, refusals)
 - [x] Rules tests: two new matrix rows (47, 48), 51 rules tests in all. No rule changed
@@ -28,10 +69,10 @@ Once picks lock, every player can see everyone's picks, a leaderboard that fills
 - [ ] Look at the week page on a real phone with a real week (browser runs are parked, D-066, so no screen here has been opened in a browser)
 - [ ] Confirm the provisional decisions D-067 to D-070 with the commissioner
 
-## Acceptance (from PROJECT_PLAN.md)
+### Acceptance (from PROJECT_PLAN.md)
 At lock, picks become visible to all within one minute. During the week the leaderboard updates as results are entered. A post-final correction flags the audit log and updates standings.
 
-## Notes / learned
+### Notes / learned
 - **Verified with the fast checks only** (D-066): typecheck, lint, 142 unit tests, 99 rules and function tests in the emulator, the production build, and `test:a11y` on the styleguide. The week page, the home screen's winner banner, and the correction mode have not been opened in a browser. The logic under them is tested; the layout is not.
 - "Picks visible within a minute of the lock" rests on the `lockWeeks` scheduler, which was seen locking a week in production on 2026-10-05, and on the picks rule, which opens the reads the moment `revealed` is true.
 - "Season standings" do not exist yet (Sprint 7), so "updates standings" here means the week's records and winner.
