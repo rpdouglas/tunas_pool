@@ -5,7 +5,7 @@
  * Needs firebase-tools credentials (GOOGLE_APPLICATION_CREDENTIALS in CI).
  */
 import { execFileSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const [project, appId] = process.argv.slice(2);
 if (!project || !appId) {
@@ -13,11 +13,24 @@ if (!project || !appId) {
   process.exit(1);
 }
 
-const out = execFileSync(
-  'npx',
-  ['firebase', 'apps:sdkconfig', 'WEB', appId, '--project', project, '--json'],
-  { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] },
-);
+let out;
+try {
+  out = execFileSync(
+    'npx',
+    ['firebase', 'apps:sdkconfig', 'WEB', appId, '--project', project, '--json'],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] },
+  );
+} catch {
+  // The CLI only says "see firebase-debug.log", so surface the API calls and their responses.
+  console.error(`Could not read the web app config for ${appId} in ${project}.`);
+  if (existsSync('firebase-debug.log')) {
+    const calls = readFileSync('firebase-debug.log', 'utf8')
+      .split('\n')
+      .filter((line) => /\[apiv2\]\[(query|status|body)\]|HTTP Error/.test(line));
+    console.error(calls.join('\n'));
+  }
+  process.exit(1);
+}
 const config = JSON.parse(out).result.sdkConfig;
 
 const env = {
