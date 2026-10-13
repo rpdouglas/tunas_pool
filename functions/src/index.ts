@@ -20,6 +20,8 @@ import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '../../shared/config';
 import type { Game, WeekStatus } from '../../shared/types';
 import { deleteEntry, upsertEntry } from './adminEntries';
 import { deletePlayer, inspectPlayerDelete } from './players';
+import { loadCounterOverview, saveCounterPlayer } from './counter';
+import { staffRoleOf, type StaffRole } from '../../shared/roles';
 import { createRateLimit, tidyClientError } from './clientErrors';
 import { auditInTransaction } from './audit';
 import {
@@ -57,6 +59,27 @@ function requireAdmin(req: CallableRequest): void {
   if (req.auth?.token.admin !== true) {
     throw new HttpsError('permission-denied', 'Admin only.');
   }
+}
+
+/**
+ * Staff are the commissioner (`admin`) and the counter role (`counter`, D-095). Only the callables
+ * Devon needs use this; every other admin callable still needs `admin` and refuses the counter.
+ */
+function requireStaff(req: CallableRequest): StaffRole {
+  const role = staffRoleOf(req.auth?.token);
+  if (!role) throw new HttpsError('permission-denied', 'Staff only.');
+  return role;
+}
+
+/** Who is acting, for the audit log. Only the counter role adds its role and email. */
+function actorOf(req: CallableRequest, role: StaffRole) {
+  return role === 'counter'
+    ? {
+        actorUid: req.auth!.uid,
+        actorRole: 'counter' as const,
+        actorEmail: (req.auth?.token.email as string | undefined) ?? null,
+      }
+    : { actorUid: req.auth!.uid };
 }
 
 function requireSignedIn(req: CallableRequest): void {
@@ -203,8 +226,9 @@ export const adminSetWeekStatus = onCall(async (req) => {
 });
 
 // ---- adminUpsertEntry (Sprint 4): enter or edit someone's picks while the week is open ----
+// The counter role may enter a new sheet while the week is open (D-095); the limits are in the function.
 export const adminUpsertEntry = onCall(async (req) => {
-  requireAdmin(req);
+  const role = requireStaff(req);
   return upsertEntry(db, {
     year: requireId(req.data?.year, 'year'),
     weekId: requireId(req.data?.weekId, 'weekId'),
@@ -212,7 +236,7 @@ export const adminUpsertEntry = onCall(async (req) => {
     entry: req.data?.entry,
     late: false,
     nowMs: Date.now(),
-    actorUid: req.auth!.uid,
+    ...actorOf(req, role),
   });
 });
 
@@ -257,8 +281,9 @@ export const adminDeletePlayer = onCall(async (req) => {
 });
 
 // ---- adminSetPayment (Sprint 3): mark an entry paid or unpaid -----------------
+// The counter role may mark cash received and undo it (D-095); the limits are in the function.
 export const adminSetPayment = onCall(async (req) => {
-  requireAdmin(req);
+  const role = requireStaff(req);
   const request = parsePaymentRequest(req.data);
   if (!request.ok) throw new HttpsError('invalid-argument', request.message);
   return setPayment(db, {
@@ -267,7 +292,36 @@ export const adminSetPayment = onCall(async (req) => {
     playerId: requireId(req.data?.playerId, 'playerId'),
     status: request.status,
     method: request.method,
+    ...actorOf(req, role),
+  });
+});
+
+// ---- counterOverview (D-095): this week's roster for the counter, with nothing private in it ----
+export const counterOverview = onCall(async (req) => {
+  const role = requireStaff(req);
+  return loadCounterOverview(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    role,
+  });
+});
+
+// ---- counterSavePlayer (D-095): add a roster player, or fix a name, a phone, how they usually pay ----
+export const counterSavePlayer = onCall(async (req) => {
+  const role = requireStaff(req);
+  const playerId =
+    req.data?.playerId === null || req.data?.playerId === undefined
+      ? null
+      : requireId(req.data.playerId, 'playerId');
+  return saveCounterPlayer(db, {
+    playerId,
+    displayName: req.data?.displayName,
+    phone: req.data?.phone,
+    usualPayment: req.data?.usualPayment,
+    force: req.data?.force,
+    role,
     actorUid: req.auth!.uid,
+    actorEmail: (req.auth?.token.email as string | undefined) ?? null,
   });
 });
 

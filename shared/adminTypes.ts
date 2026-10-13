@@ -5,6 +5,7 @@
  */
 import type { DuplicateReason } from './duplicates';
 import type { WinnerOutcome } from './scoring';
+import type { EntrySource, PaymentMethod, PaymentStatus } from './types';
 
 export interface EntryRow {
   playerId: string;
@@ -114,6 +115,39 @@ export interface ApproveClaimResult {
 export type PlayerDeleteCheck =
   | { ok: true }
   | { ok: false; code: 'merged' | 'played' | 'linked' | 'pending_claim'; message: string };
+
+/**
+ * One roster line on the counter screen (D-095). Everything Devon needs to serve the person in front
+ * of him, and nothing private: no phone, no email, no note, no picks.
+ */
+export interface CounterRow {
+  playerId: string;
+  displayName: string;
+  active: boolean;
+  /** `self` signed up on the website with their own login; `admin` is on the roster. */
+  origin: 'self' | 'admin';
+  entered: boolean;
+  source: EntrySource | null;
+  late: boolean;
+  /** Null until the entry has a payment record. */
+  paymentStatus: PaymentStatus | null;
+  paymentMethod: PaymentMethod | null;
+}
+
+export interface CounterOverview {
+  rows: CounterRow[];
+}
+
+export interface CounterPlayerMatch {
+  playerId: string;
+  displayName: string;
+  reasons: DuplicateReason[];
+}
+
+/** Adding or fixing a player. A possible double comes back as `saved: false` so Devon can decide. */
+export type CounterSaveResult =
+  | { saved: true; playerId: string; created: boolean }
+  | { saved: false; matches: CounterPlayerMatch[] };
 
 export interface MergeResult {
   intoId: string;

@@ -249,7 +249,7 @@ export default function Styleguide() {
           </h2>
           <p className="mb-3 text-body">
             The bar and drawer on every player screen. Tap Menu to open the drawer. Three states
-            below: a guest, a player, and the commissioner.
+            below: a guest, a player, the counter, and the commissioner.
           </p>
           <div className="flex flex-col gap-6">
             {[
@@ -260,6 +260,7 @@ export default function Styleguide() {
                   email: null,
                   signedIn: false,
                   isAdmin: false,
+                  isCounter: false,
                   profileId: null,
                   showClaim: true,
                   printTo: null,
@@ -272,8 +273,22 @@ export default function Styleguide() {
                   email: 'dale@tunas.test',
                   signedIn: true,
                   isAdmin: false,
+                  isCounter: false,
                   profileId: 'p1',
                   showClaim: true,
+                  printTo: '/',
+                },
+              },
+              {
+                label: 'Counter',
+                props: {
+                  name: 'Devon',
+                  email: 'devon@shop.test',
+                  signedIn: true,
+                  isAdmin: false,
+                  isCounter: true,
+                  profileId: null,
+                  showClaim: false,
                   printTo: '/',
                 },
               },
@@ -284,6 +299,7 @@ export default function Styleguide() {
                   email: 'rpdouglas@gmail.com',
                   signedIn: true,
                   isAdmin: true,
+                  isCounter: false,
                   profileId: 'p2',
                   showClaim: false,
                   printTo: '/',

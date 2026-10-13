@@ -57,6 +57,13 @@ export interface PaperEntryFormProps {
   backfill?: boolean;
   /** Where "Back" goes: the roster, keeping the season and week. */
   backHref: string;
+  /** What the back link says. The roster by default. */
+  backLabel?: string;
+  /**
+   * The counter role (D-095): a new sheet only, cash at most, no removing. The server enforces it
+   * too; this just doesn't offer what would be refused.
+   */
+  counter?: boolean;
   onSaved: (summary: { name: string; paid: boolean; late: boolean }) => void;
   onRemoved: (name: string) => void;
 }
@@ -72,6 +79,8 @@ export function PaperEntryForm({
   late,
   backfill = false,
   backHref,
+  backLabel = 'Roster',
+  counter = false,
   onSaved,
   onRemoved,
 }: PaperEntryFormProps) {
@@ -242,7 +251,7 @@ export function PaperEntryForm({
     <form onSubmit={onSubmit} noValidate className="flex flex-col">
       <div className="mx-auto flex w-full max-w-player flex-col gap-3 pb-3">
         <Link to={backHref} className="inline-flex min-h-touch items-center text-body underline">
-          ← Roster
+          ← {backLabel}
         </Link>
         <h1 className="font-heading text-h2">
           <span className="block text-body font-normal text-ink-muted">Entering for</span>
@@ -326,7 +335,7 @@ export function PaperEntryForm({
         ) : (
           <SegmentedChoice
             legend={`Did they pay the ${fee}?`}
-            options={PAID_OPTIONS}
+            options={counter ? PAID_OPTIONS.filter((o) => o.value !== 'etransfer') : PAID_OPTIONS}
             value={draft.paid}
             onChange={(paid) => update({ paid })}
           />
@@ -383,7 +392,7 @@ export function PaperEntryForm({
           {saveLabel}
         </Button>
 
-        {isEdit && (
+        {isEdit && !counter && (
           <details className="rounded-md border-2 border-line-subtle bg-surface p-3">
             <summary className="min-h-touch cursor-pointer py-2 font-heading text-h3">
               Remove this entry

@@ -4,6 +4,8 @@ import type {
   ApproveClaimResult,
   ClaimsList,
   CorrectionResult,
+  CounterOverview,
+  CounterSaveResult,
   EntriesList,
   MergeResult,
   PlayerDeleteCheck,
@@ -92,6 +94,18 @@ export const adminApi = {
   ),
   unlinkClaim: callable<{ playerId: string }, { unlinked: true }>('adminUnlinkClaim'),
   mergePlayers: callable<{ fromId: string; intoId: string }, MergeResult>('adminMergePlayers'),
+  /** The counter role's roster for a week: names and status, nothing private (D-095). */
+  counterOverview: callable<WeekArgs, CounterOverview>('counterOverview'),
+  counterSavePlayer: callable<
+    {
+      playerId: string | null;
+      displayName: string;
+      phone?: string;
+      usualPayment?: PaymentMethod | null;
+      force?: boolean;
+    },
+    CounterSaveResult
+  >('counterSavePlayer'),
   /** Can this player be deleted, and if not, why not? Changes nothing. */
   checkPlayerDelete: callable<{ playerId: string; dryRun: true }, PlayerDeleteCheck>(
     'adminDeletePlayer',

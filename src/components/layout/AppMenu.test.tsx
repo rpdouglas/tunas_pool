@@ -19,6 +19,7 @@ const guest: MenuViewProps = {
   email: null,
   signedIn: false,
   isAdmin: false,
+  isCounter: false,
   profileId: null,
   showClaim: true,
   printTo: null,
@@ -100,6 +101,19 @@ describe('MenuView', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
     expect(screen.getByRole('link', { name: /Admin dashboard/ })).toHaveAttribute('href', '/admin');
     expect(screen.queryByRole('link', { name: 'Link your history' })).toBeNull();
+  });
+
+  it('gives the counter role a link to the Counter screens, and nobody else', async () => {
+    show({ name: 'Devon', signedIn: true, isCounter: true });
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.getByRole('link', { name: 'Counter' })).toHaveAttribute('href', '/counter');
+    expect(screen.queryByRole('link', { name: /Admin dashboard/ })).toBeNull();
+  });
+
+  it('does not show the Counter link to a player or a guest', async () => {
+    show({ name: 'Dale D.', signedIn: true });
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.queryByRole('link', { name: 'Counter' })).toBeNull();
   });
 
   it('hides the print link when no week is open', async () => {

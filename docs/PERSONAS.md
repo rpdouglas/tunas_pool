@@ -853,7 +853,7 @@ Changes this persona work suggests to the existing docs. Adopted so far: #1 (D-0
 | :--- | :--- | :--- | :--- |
 | 1 | **Hide `paymentMethod` and `paymentStatus` from other players.** Today any signed-in user can read the whole entry doc. Show only the owner and admin, or split them into a private sub-document. | Jen, Rosalie, Kayla | `FIRESTORE_RULES.md`, `DATA_MODEL.md` |
 | 2 | **Bundle payments.** Add a `paymentGroupId` or `payments` collection so one payment can cover several entries, with a note. | Dwayne, Commissioner | `DATA_MODEL.md`, Sprint 3 |
-| 3 | **Counter role.** Add a `role` custom claim (`admin` or `counter`) and a restricted callable set. | Devon | `FIRESTORE_RULES.md`, `DATA_MODEL.md`, Sprint 4 |
+| 3 | **Counter role.** Add a `role` custom claim (`admin` or `counter`) and a restricted callable set. *Built (D-095): a separate `counter` claim, not a `role` value, so every `admin` check stays admin-only.* | Devon | `FIRESTORE_RULES.md`, `DATA_MODEL.md`, Sprint 4 |
 | 4 | **Payout method and record.** Capture how a winner wants to be paid and record the payout. | Troy, Commissioner | `DATA_MODEL.md`, Sprint 3 |
 | 5 | **Display-name default** of first name and last initial, with a nickname option. | Rosalie, Kayla, Jen | `DATA_MODEL.md`, Sprint 2 |
 | 6 | **Captain role** (`players.managedByUid`) so a player can manage a small group. | Dwayne | `DATA_MODEL.md`, post-v1 |

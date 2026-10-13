@@ -14,6 +14,7 @@ const ResultsSheetPage = lazy(() => import('./features/print/ResultsSheetPage'))
 const Styleguide = lazy(() => import('./pages/Styleguide'));
 import NotFound from './pages/NotFound';
 import { AdminLayout } from './features/admin/AdminLayout';
+import { CounterLayout } from './features/counter/CounterLayout';
 
 // Admin screens and the styleguide load on demand, so players on a weak signal download less.
 import { RequireAdmin } from './features/admin/RequireAdmin';
@@ -22,6 +23,9 @@ const PaymentsPage = lazy(() => import('./features/admin/payments/PaymentsPage')
 const ResultsPage = lazy(() => import('./features/admin/results/ResultsPage'));
 const WeekEditorPage = lazy(() => import('./features/admin/weeks/WeekEditorPage'));
 const PoolSettingsPage = lazy(() => import('./features/admin/settings/PoolSettingsPage'));
+// Devon's screens (D-095): the counter role, and the commissioner too.
+const CounterPage = lazy(() => import('./features/counter/CounterPage'));
+const CounterEnterPage = lazy(() => import('./features/counter/CounterEnterPage'));
 const RosterPage = lazy(() => import('./features/admin/roster/RosterPage'));
 const ClaimsPage = lazy(() => import('./features/admin/claims/ClaimsPage'));
 const ReportsPage = lazy(() => import('./features/admin/reports/ReportsPage'));
@@ -74,6 +78,17 @@ export default function App() {
           <Route path="more" element={<MorePage />} />
           <Route path="weeks/:year/:weekId" element={<WeekEditorPage />} />
           <Route path="settings" element={<PoolSettingsPage />} />
+        </Route>
+        <Route
+          path="/counter"
+          element={
+            <RequireAdmin staff>
+              <CounterLayout />
+            </RequireAdmin>
+          }
+        >
+          <Route index element={<CounterPage />} />
+          <Route path="enter/:playerId" element={<CounterEnterPage />} />
         </Route>
         {showStyleguide && <Route path="/styleguide" element={<Styleguide />} />}
         <Route path="*" element={<NotFound />} />

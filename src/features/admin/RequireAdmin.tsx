@@ -10,9 +10,17 @@ import { useAuth } from '../auth/useAuth';
 /**
  * Admin screens need the `admin` custom claim (CLAUDE.md §4.7). The claim is set with
  * `npm run admin:claim`, never from the app. Rules enforce it too; this guard is for the UI.
+ * With `staff`, the counter role (D-095) is let in as well: that is the Counter screens only.
  */
-export function RequireAdmin({ children }: { children: ReactNode }) {
-  const { user, isAdmin, ready } = useAuth();
+export function RequireAdmin({
+  children,
+  staff = false,
+}: {
+  children: ReactNode;
+  staff?: boolean;
+}) {
+  const { user, isAdmin, isCounter, ready } = useAuth();
+  const next = staff ? '/counter' : '/admin';
   const [checking, setChecking] = useState(false);
 
   if (!ready) {
@@ -24,17 +32,18 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
       </AdminGate>
     );
   }
-  if (isAdmin) return <>{children}</>;
+  if (isAdmin || (staff && isCounter)) return <>{children}</>;
 
   if (user && !user.isAnonymous) {
     return (
       <AdminGate>
         <div className="flex flex-col gap-4">
           <p className="text-body">
-            You're signed in as <strong>{user.email}</strong>, which isn't an admin account.
+            You're signed in as <strong>{user.email}</strong>, which isn't{' '}
+            {staff ? 'a counter or admin' : 'an admin'} account.
           </p>
           <p className="text-body-sm text-ink-muted">
-            If admin access was just turned on for this account, check again to refresh it.
+            If access was just turned on for this account, check again to refresh it.
           </p>
           <Button
             variant="secondary"
@@ -57,10 +66,14 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
   return (
     <AdminGate>
       <div className="flex flex-col gap-4">
-        <p className="text-body">This area is for the pool admin. Sign in with your admin email.</p>
-        <EmailLinkForm next="/admin" buttonLabel="Email me a sign-in link" />
+        <p className="text-body">
+          {staff
+            ? 'This area is for the pool counter and admin. Sign in with your own email.'
+            : 'This area is for the pool admin. Sign in with your admin email.'}
+        </p>
+        <EmailLinkForm next={next} buttonLabel="Email me a sign-in link" />
         <p className="text-center text-body text-ink-muted">or</p>
-        <GoogleSignInButton next="/admin" />
+        <GoogleSignInButton next={next} />
       </div>
     </AdminGate>
   );

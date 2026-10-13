@@ -229,7 +229,7 @@ All eleven sprints are built and released. What that does and does not mean:
 **Carried over, each waiting on something outside the code:**
 - Saturday reminder email (needs a mail service, D-079).
 - Database backups and delete protection (a setting in the shared project, D-089).
-- Devon's counter role (PERSONAS §3.10): designed for, not built.
+- ~~Devon's counter role (PERSONAS §3.10)~~: built after Sprint 10 (D-095).
 - The legal and regulatory check, which blocks a public launch (§7, item 1).
 
 **What went wrong, and what changed because of it:**
@@ -247,7 +247,7 @@ All eleven sprints are built and released. What that does and does not mean:
 6. **The legal check**, before the pool is opened beyond the people who already play.
 7. **Performance to 90:** it is at 74 to 78. The page no longer jumps and paints early; what is left is the wait for the app's code and first data. The Firestore SDK is the largest download, so the lighter SDK on the player's first screen is the next step, along with keeping the first-paint wordmark in place when the app starts instead of redrawing it.
 8. **Reminder email**, once a mail service is chosen.
-9. **Counter role for Devon**, if the commissioner wants to delegate.
+9. ~~**Counter role for Devon**~~ Built (D-095). To use it: grant the role with `npm run admin:claim -- <uid> counter` (README), and deploy the Storage rule (it needs Ryan).
 10. **A wide picks grid** for the counter or a printout, if the two lists are not enough (D-067).
 
 ## 8. Parked (post-v1 ideas)

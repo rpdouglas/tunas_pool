@@ -5,6 +5,7 @@
  */
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
+import { counterEntryCheck } from '../../shared/counterPolicy';
 import { entryWindow, parseAdminEntry, parseReason } from '../../shared/paperEntry';
 import type { Game } from '../../shared/types';
 import { auditInTransaction } from './audit';
@@ -58,6 +59,18 @@ export async function upsertEntry(
       },
       input.nowMs, // the server clock decides (CLAUDE.md §4.4)
     );
+    const counter = input.actorRole === 'counter';
+    if (counter) {
+      // Devon enters a new sheet while the week is open, and nothing else (D-095).
+      const allowed = counterEntryCheck({
+        windowMode: window.mode,
+        playerName: String(player.get('displayName') ?? 'This player'),
+        playerActive: !player.exists || player.get('active') !== false,
+        entryExists: entry.exists,
+        markPaid: null,
+      });
+      if (!allowed.ok) throw new HttpsError('permission-denied', allowed.message);
+    }
     if (window.mode === 'closed') throw new HttpsError('failed-precondition', window.message);
     if (!late && window.mode === 'late') {
       throw new HttpsError(
@@ -96,6 +109,16 @@ export async function upsertEntry(
     const parsed = parseAdminEntry(input.entry, { year, weekId, gameIds });
     if (!parsed.ok) throw new HttpsError('invalid-argument', parsed.message);
     const sheet = parsed.value;
+    if (counter) {
+      const allowed = counterEntryCheck({
+        windowMode: window.mode,
+        playerName: String(player.get('displayName') ?? 'This player'),
+        playerActive: true,
+        entryExists: false,
+        markPaid: sheet.markPaid,
+      });
+      if (!allowed.ok) throw new HttpsError('permission-denied', allowed.message);
+    }
 
     let reason: string | undefined;
     if (late) {
@@ -147,6 +170,7 @@ export async function upsertEntry(
 
     auditInTransaction(tx, db, {
       actorUid,
+      ...(counter ? { actorRole: 'counter', actorEmail: input.actorEmail ?? null } : {}),
       action: late ? 'entry.lateOverride' : 'entry.adminUpsert',
       target: entryRef.path,
       before: entry.exists

@@ -43,7 +43,7 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm run test:e2e:claims` | Sprint 5 in a browser: ask to link, approve, history, unlink, reject, merge (needs the Functions emulator; see `scripts/e2e-claims.mjs`) |
 | `npm run emulators` | Firebase emulators (Auth, Firestore, Functions, Hosting, Storage, UI) |
 | `npm run admin:export -- <season>` | Save a season to a JSON file in `backups/` (needs credentials; the file holds phone numbers and payments, see the script) |
-| `npm run admin:claim -- <uid>` | Grant the admin custom claim (needs a project and credentials, see step 6 below) |
+| `npm run admin:claim -- <uid> [admin\|counter\|none]` | Set a staff role: the admin (default), the counter role for Devon, or none (needs a project and credentials, see step 6 below) |
 
 ## Firebase setup (one time)
 
@@ -151,6 +151,18 @@ Back Office, More, **Audit log**. Type the player's name or the week in Find. Ea
 it, when, and the reason they typed, with the stored before and after under it. For "that's not what I picked", look
 for *Entered picks* or *Changed the picks* for that player: the before and after hold the picks themselves. A paper
 entry may also have a photo of the sheet (open the player's picks from the Roster). Nothing in the log can be edited.
+
+### The counter role: letting Devon cover the counter (D-095)
+
+Devon signs in at **/counter** with his own email (so everything he does is under his name), then you give him the role:
+
+1. Have him open `/counter` and sign in with the email link. That creates his login.
+2. Find his uid (Firebase console, Authentication) and run `npm run admin:claim -- <uid> counter` with the same project and credentials as the admin step.
+3. He taps **Check again** on the page.
+
+Devon can enter a **new** sheet while the week is open, mark **cash** received (and undo it), and add or fix a roster player. He can't see phone numbers, emails, notes, or anyone's picks, can't change a sheet that is already in, can't touch anything after the lock, and can't confirm an e-Transfer: those say "Ask the commissioner." His work shows in the Audit log as "Counter (his email)". Take the role away with `npm run admin:claim -- <uid> none`.
+
+The Storage rule that lets him add a sheet photo is not deployed by CI (and the pool's Storage is shared, so it waits for you): `firebase deploy --project prod --only storage:paperSheets`.
 
 ### Removing a player (D-094)
 

@@ -1,6 +1,10 @@
 /**
- * One-off: grant the admin custom claim to a Firebase Auth user.
- *   npm run admin:claim -- <uid>
+ * One-off: set a staff role on a Firebase Auth user (D-095).
+ *   npm run admin:claim -- <uid>            the commissioner: full admin
+ *   npm run admin:claim -- <uid> counter    Devon, the counter role: daily work only
+ *   npm run admin:claim -- <uid> none       take either role away
+ * Other claims on the account are kept. A counter is never made out of an admin by accident:
+ * that would take the commissioner's access away, so it needs `none` first.
  * For the live pool, both a project and credentials are required:
  *   GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json GCLOUD_PROJECT=lilypad-strategy-design npm run admin:claim -- <uid>
  * That project is shared (DECISIONS.md D-015), so the claim is visible to every app in it.
@@ -15,8 +19,9 @@ import { getAuth } from 'firebase-admin/auth';
 const EMULATOR_PROJECT = 'demo-tunas-pool';
 
 const uid = process.argv[2];
-if (!uid) {
-  console.error('Usage: npm run admin:claim -- <uid>');
+const role = process.argv[3] ?? 'admin';
+if (!uid || !['admin', 'counter', 'none'].includes(role)) {
+  console.error('Usage: npm run admin:claim -- <uid> [admin|counter|none]   (default: admin)');
   process.exit(1);
 }
 
@@ -40,7 +45,24 @@ initializeApp({
 });
 
 try {
-  await getAuth().setCustomUserClaims(uid, { admin: true });
+  const existing = (await getAuth().getUser(uid)).customClaims ?? {};
+  const others: Record<string, unknown> = { ...existing };
+  const wasAdmin = others.admin;
+  delete others.admin;
+  delete others.counter;
+  if (role === 'counter' && wasAdmin === true) {
+    console.error(
+      `${uid} is the commissioner. Making them a counter would take their admin access away.\nIf that is what you want, run it with "none" first, then "counter".`,
+    );
+    process.exit(1);
+  }
+  const claims: Record<string, unknown> =
+    role === 'admin'
+      ? { ...others, admin: true }
+      : role === 'counter'
+        ? { ...others, counter: true }
+        : others;
+  await getAuth().setCustomUserClaims(uid, claims);
 } catch (err) {
   const code = (err as { code?: string }).code;
   if (code === 'app/invalid-credential') {
@@ -63,6 +85,11 @@ try {
   throw err;
 }
 
+const done = {
+  admin: 'Admin claim set',
+  counter: 'Counter claim set',
+  none: 'Staff roles removed',
+}[role];
 console.log(
-  `Admin claim set for ${uid} in ${projectId ?? EMULATOR_PROJECT}${usingEmulator ? ' (emulator)' : ''}. Tap "Check again" on /admin, or sign out and back in, to refresh the token.`,
+  `${done} for ${uid} in ${projectId ?? EMULATOR_PROJECT}${usingEmulator ? ' (emulator)' : ''}. Tap "Check again" on /admin (or /counter), or sign out and back in, to refresh the token.`,
 );
