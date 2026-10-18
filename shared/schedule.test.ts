@@ -1,4 +1,11 @@
-import { readEspnScores, suggestResults, readEspnScoreboard, scheduleToText } from './schedule';
+import {
+  finalScores,
+  readEspnScores,
+  suggestResults,
+  readEspnScoreboard,
+  scheduleToText,
+  withUnofficialResults,
+} from './schedule';
 import { defaultLockAt, parseMatchups, weekProblems } from './weeks';
 
 const SUNDAY = '2026-10-11';
@@ -162,5 +169,45 @@ describe('results from the feed', () => {
   it('does not match a game with home and away the other way round', () => {
     const swapped = { events: [event('Commanders', '13', 'Colts', '30')] };
     expect(suggestResults(games, readEspnScores(swapped)).results).toEqual({});
+  });
+});
+
+describe('withUnofficialResults and finalScores', () => {
+  const games = [
+    { id: 'g01', away: 'Texans', home: 'Jaguars', slot: 'sunday' },
+    { id: 'g02', away: 'Bears', home: 'Falcons', slot: 'sunday' },
+    { id: 'g03', away: 'Ravens', home: 'Browns', slot: 'sunday' },
+    { id: 'mnf', away: 'Commanders', home: '49ers', slot: 'mnf' },
+  ];
+  const scores = [
+    { away: 'Texans', home: 'Jaguars', final: true, awayPoints: 17, homePoints: 24 },
+    { away: 'Bears', home: 'Falcons', final: true, awayPoints: 20, homePoints: 20 },
+    { away: 'Ravens', home: 'Browns', final: true, awayPoints: 31, homePoints: 10 },
+    { away: 'Commanders', home: '49ers', final: false, awayPoints: 7, homePoints: 3 },
+  ];
+
+  it('fills in finished games the commissioner has not saved, and says which', () => {
+    expect(withUnofficialResults(games, { g01: 'home' }, scores)).toEqual({
+      results: { g01: 'home', g02: 'tie', g03: 'away' },
+      unofficial: ['g02', 'g03'],
+    });
+  });
+
+  it('keeps a saved result even when the feed disagrees', () => {
+    expect(withUnofficialResults(games, { g03: 'home' }, scores).results.g03).toBe('home');
+  });
+
+  it('leaves games in progress alone', () => {
+    const { results, unofficial } = withUnofficialResults(games, {}, scores);
+    expect(results.mnf).toBeUndefined();
+    expect(unofficial).not.toContain('mnf');
+  });
+
+  it('gives the final score of each finished game', () => {
+    expect(finalScores(games, scores)).toEqual({
+      g01: { awayPoints: 17, homePoints: 24 },
+      g02: { awayPoints: 20, homePoints: 20 },
+      g03: { awayPoints: 31, homePoints: 10 },
+    });
   });
 });

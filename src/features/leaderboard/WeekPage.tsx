@@ -11,8 +11,10 @@ import {
   type LeaderboardRow as Row,
   type RevealEntry,
 } from '@shared/reveal';
+import { finalScores, withUnofficialResults, type FeedScore } from '@shared/schedule';
 import { explainOutcome, formatMoney } from '@shared/scoring';
 import { formatPoolDateTime } from '@shared/time';
+import { Button } from '../../components/ui/Button';
 import { GameDayPage } from '../../components/layout/GameDayPage';
 import { LeaderboardRow } from '../../components/ui/LeaderboardRow';
 import { Panel } from '../../components/ui/Panel';
@@ -21,7 +23,7 @@ import { WinnerBanner } from '../../components/ui/WinnerBanner';
 import type { WeekView } from '../../lib/weekModel';
 import { useGuestSession } from '../auth/useAuth';
 import { useMyProfile } from '../claims/claimsData';
-import { useRevealEntries, useRevealWeek } from './revealData';
+import { useRevealEntries, useRevealWeek, useWeekScores } from './revealData';
 import { useSeasonWeekList } from './standingsData';
 
 type View = 'standings' | 'games';
@@ -38,6 +40,7 @@ export default function WeekPage() {
   const revealed = week.data?.revealed === true;
   const entries = useRevealEntries(year, weekId, revealed && Boolean(session.user));
   const profile = useMyProfile(session.user?.uid);
+  const scores = useWeekScores(year, week.data);
 
   const title = week.data ? `Week ${week.data.weekNumber}` : 'This week';
   const navigate = useNavigate();
@@ -131,7 +134,18 @@ export default function WeekPage() {
   return (
     <GameDayPage title={title}>
       {picker}
-      <Revealed week={week.data} entries={entries.data ?? []} myPlayerId={profile.data?.playerId} />
+      <Revealed
+        week={week.data}
+        entries={entries.data ?? []}
+        myPlayerId={profile.data?.playerId}
+        feed={{
+          scores: scores.data ?? [],
+          checkedAtMs: scores.dataUpdatedAt || null,
+          failed: scores.isError,
+          busy: scores.isFetching || week.isFetching,
+          refresh: () => void Promise.all([scores.refetch(), week.refetch()]),
+        }}
+      />
       <Link
         to={`/sheet/${year}/${weekId}/results`}
         className="inline-flex min-h-touch items-center justify-center text-body text-ink-inverse underline"
@@ -143,20 +157,37 @@ export default function WeekPage() {
   );
 }
 
+/** ESPN's scores for the week (D-098): unofficial until the commissioner saves results. */
+interface Feed {
+  scores: FeedScore[];
+  checkedAtMs: number | null;
+  failed: boolean;
+  busy: boolean;
+  refresh: () => void;
+}
+
 function Revealed({
   week,
   entries,
   myPlayerId,
+  feed,
 }: {
   week: WeekView;
   entries: RevealEntry[];
   myPlayerId: string | undefined;
+  feed: Feed;
 }) {
   const [view, setView] = useState<View>('standings');
   const games = [...week.games].sort((a, b) => a.order - b.order);
   const gameIds = games.map((g) => g.id);
-  const rows = leaderboard(entries, gameIds, week.results);
-  const decided = gameIds.filter((id) => week.results[id]).length;
+  // A final week is the commissioner's results only; a locked one also counts ESPN's finals.
+  const live = week.status === 'locked';
+  const { results, unofficial } = live
+    ? withUnofficialResults(games, week.results, feed.scores)
+    : { results: week.results, unofficial: [] as string[] };
+  const scoreOf = finalScores(games, live ? feed.scores : []);
+  const rows = leaderboard(entries, gameIds, results);
+  const decided = gameIds.filter((id) => results[id]).length;
   const final = week.status === 'final' && week.winner !== null;
   const winner = final ? week.winner! : null;
   const byId = new Map(entries.map((e) => [e.playerId, e]));
@@ -210,13 +241,42 @@ function Revealed({
 
       {!winner && (
         <Panel title="Picks are locked">
-          <p className="text-body">
-            {decided === 0
-              ? 'No results yet. The standings fill in as the games finish.'
-              : `${decided} of ${gameIds.length} games decided.`}{' '}
-            {week.entryCount} {week.entryCount === 1 ? 'player' : 'players'} in. Pot{' '}
-            <strong>{formatMoney(week.paidCount * week.entryFeeCents)}</strong> so far.
-          </p>
+          <div className="flex flex-col gap-3 text-body">
+            <p>
+              {decided === 0
+                ? 'No results yet. The standings fill in as the games finish.'
+                : `${decided} of ${gameIds.length} games decided.`}{' '}
+              {week.entryCount} {week.entryCount === 1 ? 'player' : 'players'} in. Pot{' '}
+              <strong>{formatMoney(week.paidCount * week.entryFeeCents)}</strong> so far.
+            </p>
+            {live && (
+              <>
+                {unofficial.length > 0 && (
+                  <p className="rounded-md bg-gold-50 p-3 text-gold-800">
+                    <span aria-hidden="true">ⓘ </span>
+                    <strong>
+                      {unofficial.length} {unofficial.length === 1 ? 'game is' : 'games are'}{' '}
+                      unofficial.
+                    </strong>{' '}
+                    {unofficial.length === 1 ? 'Its score comes' : 'Their scores come'} from ESPN
+                    and count in the standings until the commissioner confirms the results.
+                  </p>
+                )}
+                <p role="status" className="text-body-sm text-ink-muted">
+                  {feed.busy
+                    ? 'Checking the scores…'
+                    : feed.failed
+                      ? "Couldn't get scores from ESPN just now. The standings show the results the commissioner has saved."
+                      : feed.checkedAtMs
+                        ? `Scores checked ${formatPoolDateTime(new Date(feed.checkedAtMs), { weekday: 'short' })}.`
+                        : null}
+                </p>
+                <Button variant="secondary" disabled={feed.busy} onClick={feed.refresh}>
+                  {feed.busy ? 'Checking…' : 'Refresh scores'}
+                </Button>
+              </>
+            )}
+          </div>
         </Panel>
       )}
 
@@ -265,7 +325,7 @@ function Revealed({
               winner={winner?.playerIds.includes(row.playerId)}
               late={row.late}
             >
-              <PlayerPicks row={row} week={week} />
+              <PlayerPicks row={row} week={week} results={results} unofficial={unofficial} />
             </LeaderboardRow>
           ))}
         </ol>
@@ -273,8 +333,9 @@ function Revealed({
         <ol className="flex flex-col gap-2" aria-label="Games">
           {games.map((g) => {
             const share = gameShare(g.id, entries);
-            const result = week.results[g.id];
+            const result = results[g.id];
             const line = shareLine(g, share, result);
+            const score = scoreOf[g.id];
             return (
               <li key={g.id} className="flex flex-col gap-2 rounded-md bg-surface p-3">
                 <ShareBar
@@ -286,6 +347,14 @@ function Revealed({
                   homePercent={sharePercent(share.home.length, share.total)}
                   winner={result === 'away' || result === 'home' ? result : null}
                 />
+                {score && (
+                  <p className="text-body font-semibold">
+                    Final: {g.away} {score.awayPoints}, {g.home} {score.homePoints}
+                    {unofficial.includes(g.id) && (
+                      <span className="font-normal text-ink-muted"> (unofficial)</span>
+                    )}
+                  </p>
+                )}
                 {line && <p className="text-body">{line}</p>}
                 <details>
                   <summary className="min-h-touch cursor-pointer py-2 text-body font-semibold text-ink-emphasis underline">
@@ -314,15 +383,27 @@ function Revealed({
   );
 }
 
-function PlayerPicks({ row, week }: { row: Row; week: WeekView }) {
+function PlayerPicks({
+  row,
+  week,
+  results,
+  unofficial,
+}: {
+  row: Row;
+  week: WeekView;
+  results: WeekView['results'];
+  unofficial: string[];
+}) {
   const games = [...week.games].sort((a, b) => a.order - b.order);
   return (
     <div className="flex flex-col gap-2 text-body">
       <ul className="flex flex-col gap-1">
         {games.map((g) => {
           const pick = row.picks[g.id];
-          const mark = pickMark(pick, week.results[g.id]);
-          const { icon, label } = PICK_MARK_TEXT[mark];
+          const mark = pickMark(pick, results[g.id]);
+          const { icon } = PICK_MARK_TEXT[mark];
+          const label =
+            PICK_MARK_TEXT[mark].label + (unofficial.includes(g.id) ? ' (unofficial)' : '');
           const team = pick === 'away' ? g.away : pick === 'home' ? g.home : null;
           return (
             <li key={g.id} className="flex items-baseline justify-between gap-2">

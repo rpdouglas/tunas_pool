@@ -6,14 +6,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import type { RevealEntry } from '@shared/reveal';
+import type { FeedScore } from '@shared/schedule';
 import type { Entry, EntryPicks } from '@shared/types';
 import { db } from '../../lib/firebase';
+import { fetchWeekScores } from '../../lib/scoresFeed';
 import { weekConverter, type WeekView } from '../../lib/weekModel';
 
 export const revealKeys = {
   week: (year: string, weekId: string) => ['revealWeek', year, weekId] as const,
   entries: (year: string, weekId: string) => ['revealEntries', year, weekId] as const,
   lastWinner: (year: string) => ['lastWinner', year] as const,
+  scores: (year: string, weekId: string) => ['weekScores', year, weekId] as const,
 };
 
 /**
@@ -84,5 +87,21 @@ export function useLastWinner(year: string, signedIn: boolean) {
       );
       return snap.empty ? null : snap.docs[0].data();
     },
+  });
+}
+
+/**
+ * ESPN's scores for a locked week (D-098), fetched each time the page opens and on Refresh scores.
+ * They fill in games the commissioner hasn't saved yet, marked unofficial. Only while the week is
+ * locked: once it is final, every result is the commissioner's.
+ */
+export function useWeekScores(year: string, week: WeekView | null | undefined) {
+  const enabled = Boolean(week?.revealed && week.status === 'locked');
+  return useQuery({
+    queryKey: revealKeys.scores(year, week?.id ?? ''),
+    enabled,
+    queryFn: (): Promise<FeedScore[]> => fetchWeekScores(week!.games),
+    refetchOnMount: 'always',
+    retry: 1,
   });
 }

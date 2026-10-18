@@ -6,6 +6,7 @@
  */
 import { resolveTeam } from './teams';
 import { addDays, formatClock, toZonedParts } from './time';
+import type { GameResult } from './types';
 
 export interface ScheduleGame {
   kickoffMs: number;
@@ -169,4 +170,39 @@ export function suggestResults(
     if (game.slot === 'mnf') suggestion.mnfTotal = score.homePoints + score.awayPoints;
   }
   return suggestion;
+}
+
+export interface GameScore {
+  awayPoints: number;
+  homePoints: number;
+}
+
+/** Final scores by game ID, for the games on the sheet that the feed says are over. */
+export function finalScores(
+  games: { id: string; away: string; home: string }[],
+  scores: FeedScore[],
+): Record<string, GameScore> {
+  const out: Record<string, GameScore> = {};
+  for (const game of games) {
+    const score = scores.find((s) => s.away === game.away && s.home === game.home);
+    if (score?.final) out[game.id] = { awayPoints: score.awayPoints, homePoints: score.homePoints };
+  }
+  return out;
+}
+
+/**
+ * The week's results for the player's week page (D-098): what the commissioner saved, plus the
+ * feed's final scores for games not saved yet. Those are unofficial and listed as such. A saved
+ * result always wins, even if the feed disagrees.
+ */
+export function withUnofficialResults(
+  games: { id: string; away: string; home: string; slot: string }[],
+  official: Record<string, GameResult>,
+  scores: FeedScore[],
+): { results: Record<string, GameResult>; unofficial: string[] } {
+  const suggested = suggestResults(games, scores).results;
+  const unofficial = games.map((g) => g.id).filter((id) => !official[id] && suggested[id]);
+  const results: Record<string, GameResult> = { ...official };
+  for (const id of unofficial) results[id] = suggested[id];
+  return { results, unofficial };
 }
