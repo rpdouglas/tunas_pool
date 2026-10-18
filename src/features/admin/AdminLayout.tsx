@@ -1,5 +1,6 @@
 import { signOut } from 'firebase/auth';
 import { Link, NavLink, Outlet, useSearchParams } from 'react-router-dom';
+import { AppBar } from '../../components/layout/AppMenu';
 import { auth } from '../../lib/firebase';
 import { useAuth } from '../auth/useAuth';
 import { usePendingClaimCount } from './claims/claimsData';
@@ -25,14 +26,18 @@ export function AdminLayout() {
   return (
     <div className="min-h-screen bg-page-backoffice">
       <header className="bg-purple-700 text-ink-inverse">
-        <div className="mx-auto flex max-w-backoffice flex-wrap items-center justify-between gap-x-4 px-4 py-1">
-          <Link
-            to={`/admin${suffix}`}
-            className="flex min-h-touch items-center font-heading text-h3"
-          >
-            Back Office
-            {season && <span className="badge badge-pending ml-2">Test season</span>}
-          </Link>
+        <div className="mx-auto flex max-w-backoffice flex-wrap items-center justify-between gap-x-4 px-4 py-2">
+          {/* The player menu, so the player site is one tap away from any Back Office screen. */}
+          <div className="flex items-center gap-3">
+            <AppBar compact />
+            <Link
+              to={`/admin${suffix}`}
+              className="flex min-h-touch items-center font-heading text-h3"
+            >
+              Back Office
+              {season && <span className="badge badge-pending ml-2">Test season</span>}
+            </Link>
+          </div>
           <nav
             aria-label="Back Office"
             className="order-last -mx-2 flex w-[calc(100%+1rem)] flex-wrap items-center sm:order-none sm:mx-0 sm:w-auto"

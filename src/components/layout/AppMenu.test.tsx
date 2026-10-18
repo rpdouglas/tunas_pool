@@ -49,6 +49,13 @@ describe('MenuView', () => {
     expect(drawer()).toBeNull();
   });
 
+  it('in the Back Office bar: the Menu button alone, with the way back to the player site', async () => {
+    show({ name: 'Ryan', signedIn: true, isAdmin: true, profileId: 'p2', compact: true });
+    expect(screen.queryByRole('link', { name: 'Your profile' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.getByRole('link', { name: 'This week' })).toHaveAttribute('href', '/');
+  });
+
   it('closes when a link is tapped', async () => {
     show();
     await userEvent.click(screen.getByRole('button', { name: 'Menu' }));

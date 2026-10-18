@@ -64,6 +64,8 @@ export interface MenuViewProps {
   shareNote: string | null;
   onShare: () => void;
   onSignOut: () => void;
+  /** Just the Menu button, no avatar: for the Back Office bar, so it stays one line on a phone. */
+  compact?: boolean;
 }
 
 /**
@@ -84,6 +86,7 @@ export function MenuView({
   shareNote,
   onShare,
   onSignOut,
+  compact = false,
 }: MenuViewProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [isOpen, setOpen] = useState(false);
@@ -97,10 +100,12 @@ export function MenuView({
   }, [isOpen]);
 
   const close = () => setOpen(false);
+  // Inside the Back Office's own <header>, a second <header> isn't allowed.
+  const Bar = compact ? 'div' : 'header';
 
   return (
     <>
-      <header className="flex items-center justify-between gap-3">
+      <Bar className="flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -111,14 +116,16 @@ export function MenuView({
           <Menu aria-hidden="true" size={24} />
           Menu
         </button>
-        <Link
-          to={profileId ? `/player/${profileId}` : '/account'}
-          aria-label={profileId ? 'Your profile' : 'Sign in'}
-          className="app-avatar"
-        >
-          {name ? initialsOf(name) : <UserRound aria-hidden="true" size={22} />}
-        </Link>
-      </header>
+        {!compact && (
+          <Link
+            to={profileId ? `/player/${profileId}` : '/account'}
+            aria-label={profileId ? 'Your profile' : 'Sign in'}
+            className="app-avatar"
+          >
+            {name ? initialsOf(name) : <UserRound aria-hidden="true" size={22} />}
+          </Link>
+        )}
+      </Bar>
 
       <dialog
         ref={dialog}
@@ -253,7 +260,7 @@ export function MenuView({
 }
 
 /** The menu for real screens: reads who is signed in, the roster profile, and the current week. */
-export function AppBar() {
+export function AppBar({ compact = false }: { compact?: boolean }) {
   const { user, isAdmin, isCounter } = useAuth();
   const profile = useMyProfile(user?.uid).data ?? null;
   const year = currentSeason();
@@ -288,6 +295,7 @@ export function AppBar() {
       shareNote={shareNote}
       onShare={share}
       onSignOut={() => void signOut(auth).then(() => navigate('/'))}
+      compact={compact}
     />
   );
 }

@@ -327,6 +327,23 @@ export default function Styleguide() {
                 />
               </div>
             ))}
+            <div className="flex flex-col gap-3 rounded-lg bg-purple-700 p-4">
+              <p className="text-body font-semibold text-ink-inverse">In the Back Office bar</p>
+              <MenuView
+                name="Ryan"
+                email="ryan@example.com"
+                signedIn
+                isAdmin
+                isCounter={false}
+                profileId="p2"
+                showClaim={false}
+                printTo="/"
+                shareNote={null}
+                onShare={() => undefined}
+                onSignOut={() => undefined}
+                compact
+              />
+            </div>
           </div>
         </section>
 
