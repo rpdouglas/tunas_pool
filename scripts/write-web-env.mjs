@@ -38,9 +38,14 @@ if (!res.ok) {
 }
 const config = await res.json();
 
+// The pool's own Hosting site, not the project's `<project>.firebaseapp.com`: Google's sign-in page
+// says "continue to" this domain, and the project is shared (D-099). Hosting serves `/__/auth/` on
+// every site, but the domain's handler must be an authorized redirect URI on the OAuth client.
+const AUTH_DOMAIN = 'tunaspool.web.app';
+
 const env = {
   VITE_FIREBASE_API_KEY: config.apiKey,
-  VITE_FIREBASE_AUTH_DOMAIN: config.authDomain,
+  VITE_FIREBASE_AUTH_DOMAIN: AUTH_DOMAIN,
   VITE_FIREBASE_PROJECT_ID: config.projectId,
   VITE_FIREBASE_STORAGE_BUCKET: config.storageBucket,
   VITE_FIREBASE_MESSAGING_SENDER_ID: config.messagingSenderId,
