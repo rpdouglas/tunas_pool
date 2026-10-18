@@ -41,6 +41,21 @@ export function useRoster() {
   });
 }
 
+/** Adds a roster profile and returns its new player ID. Used by the add form and the import (D-096). */
+export async function createRosterPlayer(fields: PlayerFields): Promise<string> {
+  const ref = doc(collection(db, 'players')); // roster profiles get an auto ID (DATA_MODEL §1)
+  await setDoc(ref, {
+    ...fields,
+    email: null,
+    claimedByUid: null,
+    origin: 'admin',
+    active: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
 export interface SavePlayerInput {
   /** Null to add a new roster player. */
   playerId: string | null;
@@ -60,17 +75,7 @@ export function useSavePlayer() {
         });
         return playerId;
       }
-      const ref = doc(collection(db, 'players')); // roster profiles get an auto ID (DATA_MODEL §1)
-      await setDoc(ref, {
-        ...fields,
-        email: null,
-        claimedByUid: null,
-        origin: 'admin',
-        active: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      return ref.id;
+      return createRosterPlayer(fields);
     },
     onSuccess: () => client.invalidateQueries({ queryKey: rosterKey }),
   });

@@ -14,6 +14,8 @@ import { useToast } from '../components/ui/toastContext';
 import { PaymentRow } from '../features/admin/payments/PaymentRow';
 import { ClaimCard } from '../features/admin/claims/ClaimCard';
 import { RosterRow } from '../features/admin/roster/RosterRow';
+import { ImportRowCard } from '../features/admin/entries/ImportRowCard';
+import type { SheetRow } from '@shared/picksImport';
 import type { RosterRow as RosterRowData } from '../features/admin/roster/roster';
 import { PhotoField } from '../components/ui/PhotoField';
 import { PickRow } from '../components/ui/PickRow';
@@ -46,6 +48,15 @@ const SAMPLE_ROW: EntryRow = {
   paidAtMs: null,
   record: null,
   duplicates: [],
+};
+
+const SAMPLE_SHEET_ROW: SheetRow = {
+  line: 3,
+  name: 'Rosalie M.',
+  picks: { g01: 'home', g02: 'away', mnf: 'home' },
+  blankGameIds: [],
+  tiebreakerTotal: 44,
+  problems: [],
 };
 
 const SAMPLE_ROSTER: RosterRowData = {
@@ -568,6 +579,95 @@ export default function Styleguide() {
               late={false}
               showStatus={false}
               onEdit={() => undefined}
+            />
+          </ul>
+        </section>
+
+        <section aria-labelledby="sg-import">
+          <h2 id="sg-import" className="mb-3 font-heading text-h2 italic">
+            Import line (Back Office)
+          </h2>
+          <ul className="flex max-w-player flex-col gap-2">
+            <ImportRowCard
+              row={SAMPLE_SHEET_ROW}
+              status={{ kind: 'save', newPlayer: false }}
+              match={{ exact: SAMPLE_ROSTER, similar: [] }}
+              choice={{ kind: 'player', playerId: SAMPLE_ROSTER.playerId }}
+              roster={[SAMPLE_ROSTER]}
+              onChoice={() => undefined}
+              onReplace={() => undefined}
+            />
+            <ImportRowCard
+              row={{ ...SAMPLE_SHEET_ROW, line: 4, name: 'Darkness', blankGameIds: ['g02'] }}
+              status={{ kind: 'save', newPlayer: true }}
+              match={{ exact: null, similar: [] }}
+              choice={{ kind: 'new' }}
+              roster={[SAMPLE_ROSTER]}
+              onChoice={() => undefined}
+              onReplace={() => undefined}
+            />
+            <ImportRowCard
+              row={{ ...SAMPLE_SHEET_ROW, line: 5, name: 'Rosalie' }}
+              status={{ kind: 'undecided' }}
+              match={{ exact: null, similar: [SAMPLE_ROSTER] }}
+              choice={{ kind: 'undecided' }}
+              roster={[SAMPLE_ROSTER]}
+              onChoice={() => undefined}
+              onReplace={() => undefined}
+            />
+            <ImportRowCard
+              row={SAMPLE_SHEET_ROW}
+              status={{
+                kind: 'keep',
+                existing: { source: 'web', picks: {}, tiebreakerTotal: 40 },
+                differences: 2,
+              }}
+              match={{ exact: SAMPLE_ROSTER, similar: [] }}
+              choice={{ kind: 'player', playerId: SAMPLE_ROSTER.playerId }}
+              roster={[SAMPLE_ROSTER]}
+              onChoice={() => undefined}
+              onReplace={() => undefined}
+            />
+            <ImportRowCard
+              row={SAMPLE_SHEET_ROW}
+              status={{ kind: 'same' }}
+              match={{ exact: SAMPLE_ROSTER, similar: [] }}
+              choice={{ kind: 'player', playerId: SAMPLE_ROSTER.playerId }}
+              roster={[SAMPLE_ROSTER]}
+              onChoice={() => undefined}
+              onReplace={() => undefined}
+            />
+            <ImportRowCard
+              row={{ ...SAMPLE_SHEET_ROW, line: 8, name: 'Hank O.' }}
+              status={{ kind: 'skip' }}
+              match={{ exact: null, similar: [] }}
+              choice={{ kind: 'skip' }}
+              roster={[SAMPLE_ROSTER]}
+              onChoice={() => undefined}
+              onReplace={() => undefined}
+            />
+            <ImportRowCard
+              row={{
+                ...SAMPLE_SHEET_ROW,
+                line: 9,
+                name: 'Gord M.',
+                problems: [
+                  'G1: "Jagaurs" isn\'t a team name. Did you mean Jaguars?',
+                  'No tiebreaker.',
+                ],
+              }}
+              status={{
+                kind: 'problem',
+                messages: [
+                  'G1: "Jagaurs" isn\'t a team name. Did you mean Jaguars?',
+                  'No tiebreaker.',
+                ],
+              }}
+              match={{ exact: null, similar: [] }}
+              choice={{ kind: 'new' }}
+              roster={[SAMPLE_ROSTER]}
+              onChoice={() => undefined}
+              onReplace={() => undefined}
             />
           </ul>
         </section>

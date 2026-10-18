@@ -47,8 +47,13 @@ function check(label: string, ok: boolean, detail = '') {
 
 /** Open a screen, wait for its words, and check it fits a phone. */
 async function visit(page: Page, name: string, path: string, expected: string | RegExp) {
+  await page.goto(`${APP}${path}`).catch(() => undefined);
+  await checkScreen(page, name, expected);
+}
+
+/** The checks behind visit(), for a screen already open (after choosing a file, say). */
+async function checkScreen(page: Page, name: string, expected: string | RegExp) {
   try {
-    await page.goto(`${APP}${path}`);
     // Visible matches only: the closed menu drawer holds links with the same words as some headings.
     await page.getByText(expected).locator('visible=true').first().waitFor({ timeout: 15_000 });
     const fits = await page.evaluate(
@@ -307,6 +312,40 @@ try {
     (await admin.getByRole('button', { name: /^Delete Rosalie/ }).count()) === 0,
   );
   await visit(admin, 'admin-enter', '/admin/enter/rosalie?week=wk03', 'The sheet, top to bottom');
+  // Import picks from a spreadsheet (D-096): Jen is already in and is kept, a new name is added.
+  await visit(admin, 'admin-import', '/admin/import?week=wk03', 'Spreadsheet (CSV file)');
+  {
+    const wk03 = (await db.doc(`seasons/${YEAR}/weeks/wk03`).get()).data()!;
+    const games = (wk03.games as { id: string; away: string; home: string }[]).sort((a, b) =>
+      a.id === 'mnf' ? 1 : b.id === 'mnf' ? -1 : a.id.localeCompare(b.id),
+    );
+    const csv = [
+      [
+        'Participant',
+        ...games.map((g) => (g.id === 'mnf' ? 'MNF' : `G${Number(g.id.slice(1))}`)),
+        'TB Pts',
+      ],
+      ['Matchup', ...games.map((g) => `${g.away} at ${g.home}`), 'Total'],
+      ['Jen K.', ...games.map((g) => g.away), '41'],
+      ['Walk In Sample', ...games.map((g) => g.home), '38'],
+      [],
+      ['Entry Fee', '$20'],
+    ]
+      .map((r) => r.join(','))
+      .join('\n');
+    await admin
+      .getByLabel('Spreadsheet (CSV file)')
+      .setInputFiles({ name: 'week3.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+    await checkScreen(admin, 'admin-import-preview', '1 to import');
+    await admin.getByRole('button', { name: 'Import 1 entry' }).click();
+    const imported = await admin
+      .getByText('1 of 1 imported')
+      .waitFor({ timeout: 45_000 })
+      .then(() => '')
+      .catch((err: unknown) => String(err).replace(/\s+/g, ' ').slice(0, 220));
+    await admin.screenshot({ path: `${SHOTS}/admin-import-done.png`, fullPage: true });
+    check('import saves the new line and keeps the entry already in', imported === '', imported);
+  }
   await visit(admin, 'admin-claims', '/admin/claims', 'No requests waiting');
   await visit(admin, 'admin-results-final', '/admin/results?week=wk01', 'Correct a result');
   await admin

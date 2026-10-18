@@ -249,6 +249,7 @@ All eleven sprints are built and released. What that does and does not mean:
 8. **Reminder email**, once a mail service is chosen.
 9. ~~**Counter role for Devon**~~ Built (D-095). To use it: grant the role with `npm run admin:claim -- <uid> counter` (README), and deploy the Storage rule (it needs Ryan).
 10. **A wide picks grid** for the counter or a printout, if the two lists are not enough (D-067).
+11. ~~**Import a week from the commissioner's spreadsheet**~~ Built (D-096): Back Office, Roster, Import picks from a spreadsheet. Picks already in online are kept unless Replace is ticked.
 
 ## 8. Parked (post-v1 ideas)
 
