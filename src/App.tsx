@@ -33,6 +33,7 @@ const AuditPage = lazy(() => import('./features/admin/audit/AuditPage'));
 const SeasonsPage = lazy(() => import('./features/admin/seasons/SeasonsPage'));
 const MorePage = lazy(() => import('./features/admin/MorePage'));
 const PaperEntryPage = lazy(() => import('./features/admin/entries/PaperEntryPage'));
+const ImportPicksPage = lazy(() => import('./features/admin/entries/ImportPicksPage'));
 
 // The styleguide is visible in dev, and in builds where VITE_ENABLE_STYLEGUIDE=true (CI a11y checks).
 const showStyleguide = import.meta.env.DEV || import.meta.env.VITE_ENABLE_STYLEGUIDE === 'true';
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="roster" element={<RosterPage />} />
           <Route path="claims" element={<ClaimsPage />} />
           <Route path="enter/:playerId" element={<PaperEntryPage />} />
+          <Route path="import" element={<ImportPicksPage />} />
           <Route path="results" element={<ResultsPage />} />
           <Route path="weeks" element={<WeeksPage />} />
           <Route path="reports" element={<ReportsPage />} />

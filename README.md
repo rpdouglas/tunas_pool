@@ -164,6 +164,27 @@ Devon can enter a **new** sheet while the week is open, mark **cash** received (
 
 The Storage rule that lets him add a sheet photo is not deployed by CI (and the pool's Storage is shared, so it waits for you): `firebase deploy --project prod --only storage:paperSheets`.
 
+### Importing a week from your spreadsheet (D-096)
+
+Back Office, Roster, **Import picks from a spreadsheet**. In your sheet, use File, Download, CSV (Excel: Save As, CSV),
+then choose that file. The week picker at the top must be the week the sheet is for.
+
+The sheet needs a `Participant` heading row, a column per game (`G1`, `G2`, … `MNF`) with the team each player picked,
+and a `TB Pts` column. A `Matchup` row under the headings is checked against the week. Anything below the first blank
+line (last week's winner, totals) is ignored, and so are the Record and Paid columns. Mark payments on the Payments screen.
+
+Nothing saves until you press **Import**. Each line shows what will happen:
+
+- **Ready**: the name is on the roster. **New player**: it isn't, so it will be added. Change either in **Who is this?**
+- **Who is this?** The name is close to someone on the roster ("Barry T" and "Barry Thompson"). Pick them, add a new
+  player, or skip the line.
+- **Already in**: they entered on the website or on paper. Their picks are kept unless you tick **Replace**. With the
+  same picks, nothing happens.
+- **Can't import**: a misspelled team, a missing tiebreaker, or a second line for the same player. It says which.
+
+After the lock, every line is a late entry and needs one reason. Each saved line gets its own audit log entry. If a line
+doesn't save, fix it and choose the file again: lines already in show as "same picks" and are left alone.
+
 ### Removing a player (D-094)
 
 Back Office, Roster, tap the player, then **Added by mistake? Delete this player** at the bottom. It checks first and

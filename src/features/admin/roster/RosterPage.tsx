@@ -148,6 +148,12 @@ export default function RosterPage() {
         </Button>
       )}
 
+      {week && canEnter && (
+        <Link to={`/admin/import${sel.search(week.id)}`} className="btn btn-ghost">
+          Import picks from a spreadsheet
+        </Link>
+      )}
+
       {editing === 'new' ? (
         <PlayerForm
           player={null}
