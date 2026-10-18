@@ -1,8 +1,9 @@
 /**
  * One-off: set a staff role on a Firebase Auth user (D-095).
- *   npm run admin:claim -- <uid>            the commissioner: full admin
- *   npm run admin:claim -- <uid> counter    Devon, the counter role: daily work only
- *   npm run admin:claim -- <uid> none       take either role away
+ *   npm run admin:claim -- <uid or email>            the commissioner: full admin
+ *   npm run admin:claim -- <uid or email> counter    Devon, the counter role: daily work only
+ *   npm run admin:claim -- <uid or email> none       take either role away
+ * An email is looked up in Auth, so the person must have signed in once first (that creates the login).
  * Other claims on the account are kept. A counter is never made out of an admin by accident:
  * that would take the commissioner's access away, so it needs `none` first.
  * For the live pool, both a project and credentials are required:
@@ -18,10 +19,12 @@ import { getAuth } from 'firebase-admin/auth';
 
 const EMULATOR_PROJECT = 'demo-tunas-pool';
 
-const uid = process.argv[2];
+const who = process.argv[2];
 const role = process.argv[3] ?? 'admin';
-if (!uid || !['admin', 'counter', 'none'].includes(role)) {
-  console.error('Usage: npm run admin:claim -- <uid> [admin|counter|none]   (default: admin)');
+if (!who || !['admin', 'counter', 'none'].includes(role)) {
+  console.error(
+    'Usage: npm run admin:claim -- <uid or email> [admin|counter|none]   (default: admin)',
+  );
   process.exit(1);
 }
 
@@ -44,15 +47,20 @@ initializeApp({
   projectId: projectId ?? EMULATOR_PROJECT,
 });
 
+// A uid never contains "@", so anything with one is an email.
+const byEmail = who.includes('@');
+let uid = who;
 try {
-  const existing = (await getAuth().getUser(uid)).customClaims ?? {};
+  const user = byEmail ? await getAuth().getUserByEmail(who) : await getAuth().getUser(who);
+  uid = user.uid;
+  const existing = user.customClaims ?? {};
   const others: Record<string, unknown> = { ...existing };
   const wasAdmin = others.admin;
   delete others.admin;
   delete others.counter;
   if (role === 'counter' && wasAdmin === true) {
     console.error(
-      `${uid} is the commissioner. Making them a counter would take their admin access away.\nIf that is what you want, run it with "none" first, then "counter".`,
+      `${who} is the commissioner. Making them a counter would take their admin access away.\nIf that is what you want, run it with "none" first, then "counter".`,
     );
     process.exit(1);
   }
@@ -71,14 +79,16 @@ try {
         `No usable credentials for ${projectId}.`,
         'Download a service-account key (Firebase console > Project settings > Service accounts),',
         'save it outside the repo, and point GOOGLE_APPLICATION_CREDENTIALS at it:',
-        `  GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json GCLOUD_PROJECT=${projectId} npm run admin:claim -- ${uid}`,
+        `  GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json GCLOUD_PROJECT=${projectId} npm run admin:claim -- ${who}`,
       ].join('\n'),
     );
     process.exit(1);
   }
   if (code === 'auth/user-not-found') {
     console.error(
-      `No user with uid ${uid} in ${projectId ?? EMULATOR_PROJECT}. Check the uid and the project.`,
+      byEmail
+        ? `No login for ${who} in ${projectId ?? EMULATOR_PROJECT}. Have them sign in once at /admin (or /counter) with that email, then run this again.`
+        : `No user with uid ${who} in ${projectId ?? EMULATOR_PROJECT}. Check the uid and the project.`,
     );
     process.exit(1);
   }
@@ -91,5 +101,5 @@ const done = {
   none: 'Staff roles removed',
 }[role];
 console.log(
-  `${done} for ${uid} in ${projectId ?? EMULATOR_PROJECT}${usingEmulator ? ' (emulator)' : ''}. Tap "Check again" on /admin (or /counter), or sign out and back in, to refresh the token.`,
+  `${done} for ${byEmail ? `${who} (uid ${uid})` : uid} in ${projectId ?? EMULATOR_PROJECT}${usingEmulator ? ' (emulator)' : ''}. Tap "Check again" on /admin (or /counter), or sign out and back in, to refresh the token.`,
 );
