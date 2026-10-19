@@ -226,6 +226,14 @@ try {
   await player.screenshot({ path: `${SHOTS}/week-final-by-game.png`, fullPage: true });
   await visit(player, 'week-locked', `/week/${YEAR}/wk02`, 'games decided');
   await visit(player, 'week-open-hidden', `/week/${YEAR}/wk03`, 'Picks are hidden');
+  // The weekly board (D-102) sits under the hidden picks before the lock; this guest has no entry.
+  await checkScreen(player, 'week-open-board', /The board is for this week's players/);
+  await player.goto(`${APP}/week/${YEAR}/wk02`).catch(() => undefined);
+  await player
+    .getByRole('button', { name: 'Board' })
+    .click()
+    .catch(() => undefined);
+  await checkScreen(player, 'week-locked-board', 'House rules');
   await visit(player, 'standings', '/standings', 'Season standings');
   await visit(player, 'player', '/player/dale', 'Weeks won');
   await visit(player, 'sheet', `/sheet/${YEAR}/wk03`, 'Tiebreaker:');

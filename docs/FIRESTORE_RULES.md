@@ -61,6 +61,57 @@ service cloud.firestore {
     function isNowOrNull(v) { return v == null || v == request.time; }
 
     function isDisplayName(v) { return v is string && v.size() > 0 && v.size() <= 60; }
+
+    // ---------- the weekly board (D-102) ----------
+    // The commissioner or the counter role: they moderate the board.
+    function isStaff() {
+      return isAdmin() || (signedIn() && request.auth.token.counter == true);
+    }
+
+    // Signed in with Google or email, not as a guest: every post has a name that can be held to it.
+    function hasSavedAccount() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // Rules can't look up which player a login belongs to, so the function `boardJoin` keeps a
+    // login-to-player index. It is only a pointer: ownsPlayer() re-checks the live profile, so an
+    // out-of-date index (after an unlink or a merge) grants nothing.
+    function loginPath() {
+      return /databases/$(database)/documents/logins/$(request.auth.uid);
+    }
+
+    function entryPath(year, weekId, playerId) {
+      return /databases/$(database)/documents/seasons/$(year)/weeks/$(weekId)/entries/$(playerId);
+    }
+
+    // Read: anyone who entered that week, and the staff.
+    function boardReader(year, weekId) {
+      return isStaff()
+        || (signedIn()
+          && exists(loginPath())
+          && ownsPlayer(get(loginPath()).data.playerId)
+          && exists(entryPath(year, weekId, get(loginPath()).data.playerId)));
+    }
+
+    // Post: a paid entry that week, not muted.
+    function boardPoster(year, weekId, playerId) {
+      return hasSavedAccount()
+        && ownsPlayer(playerId)
+        && exists(/databases/$(database)/documents/seasons/$(year)/weeks/$(weekId)/entries/$(playerId)/payment/current)
+        && get(/databases/$(database)/documents/seasons/$(year)/weeks/$(weekId)/entries/$(playerId)/payment/current).data.paymentStatus == 'paid'
+        && !exists(/databases/$(database)/documents/seasons/$(year)/weeks/$(weekId)/boardMutes/$(playerId));
+    }
+
+    // Open from the week opening until three days after the winner is published.
+    function boardOpen(year, weekId) {
+      let w = get(weekPath(year, weekId)).data;
+      return w.status in ['open', 'locked']
+        || (w.status == 'final'
+          && w.winner != null
+          && request.time < w.winner.publishedAt + duration.value(3, 'd'));
+    }
+
+    function isMessageText(v) { return v is string && v.size() > 0 && v.size() <= 500; }
     function isPaymentIntent(v) { return v in ['will_do', 'already_did']; }
 
     // ---------- players (roster + self-serve profiles) ----------
@@ -134,6 +185,12 @@ service cloud.firestore {
       // Public-safe fields only. Keep secrets out of this collection.
       allow read: if signedIn();
       allow write: if isAdmin();
+    }
+
+    // ---------- login-to-player index for the board (D-102), written by `boardJoin` ----------
+    match /logins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
     }
 
     // ---------- audit log ----------
@@ -258,6 +315,54 @@ service cloud.firestore {
         }
       }
 
+      // ----- the weekly board (D-102) -----
+      match /weeks/{weekId}/board/{messageId} {
+        allow read: if boardReader(year, weekId);
+
+        allow create: if boardPoster(year, weekId, request.resource.data.playerId)
+          && boardOpen(year, weekId)
+          && request.resource.data.keys().hasOnly([
+               'playerId', 'displayName', 'text', 'createdAt', 'editedAt', 'hidden'])
+          && request.resource.data.displayName
+               == get(playerPath(request.resource.data.playerId)).data.displayName
+          && isMessageText(request.resource.data.text)
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.editedAt == null
+          && request.resource.data.hidden == false;
+
+        // Your own post, for ten minutes, while it isn't hidden. Hiding is the staff's callable.
+        allow update: if boardPoster(year, weekId, resource.data.playerId)
+          && boardOpen(year, weekId)
+          && resource.data.hidden == false
+          && request.time < resource.data.createdAt + duration.value(10, 'm')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+          && isMessageText(request.resource.data.text)
+          && request.resource.data.editedAt == request.time;
+
+        allow delete: if hasSavedAccount()
+          && ownsPlayer(resource.data.playerId)
+          && resource.data.hidden == false
+          && request.time < resource.data.createdAt + duration.value(10, 'm');
+      }
+
+      // Muted for the week: written by `boardMute`. The staff and the muted player can see it.
+      match /weeks/{weekId}/boardMutes/{playerId} {
+        allow read: if isStaff() || ownsPlayer(playerId);
+        allow write: if false;
+      }
+
+      // Reports: one per player per message (the ID says so), read by the staff only.
+      match /weeks/{weekId}/boardReports/{reportId} {
+        allow read: if isStaff();
+        allow create: if boardReader(year, weekId)
+          && ownsPlayer(request.resource.data.playerId)
+          && request.resource.data.keys().hasOnly(['messageId', 'playerId', 'createdAt'])
+          && request.resource.data.messageId is string
+          && reportId == request.resource.data.messageId + '_' + request.resource.data.playerId
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+
       // ----- standings (function-written) -----
       match /standings/{playerId} {
         allow read: if signedIn();
@@ -292,6 +397,8 @@ service cloud.firestore {
 - **Listing weeks:** players must filter by `status in ['open', 'locked', 'final']`. The rule checks each document, so an unfiltered query is rejected because it could include drafts.
 - **Finding your profile:** a login reads its profile with `where('claimedByUid', '==', uid)`, which the player read rule allows because it checks the document's own `claimedByUid`. After `adoptGuestProfile` or an approved claim, the `playerId` is no longer the login's `uid`, so the client must never assume `players/{uid}`. A direct read of a profile that does not exist is denied rather than returned empty, so use the query.
 - **Draft weeks:** an admin edits a draft directly from the client, but the rules keep derived fields out of reach: a new week must start with `revealed: false`, zero counters, and no winner, and draft edits cannot touch `status`, `revealed`, the counters, results, the winner, or `payoutSent`. Status changes go through `adminSetWeekStatus`.
+
+- **The weekly board (D-102):** `board` posts are read by anyone who entered that week and by the staff (`admin` or `counter`, row 57, 58). Rules can't look up which player a login belongs to, so `boardJoin` writes a pointer, `logins/{uid}` = `{ playerId }`, which no client can write (row 65). Every read and post re-checks the live profile with `ownsPlayer()`, so a pointer left behind by an unlink or a merge grants nothing (row 59). A post needs a saved account (`sign_in_provider` is not `anonymous`), a **paid** entry that week, no mute, the server time, the poster's own current display name, and 1 to 500 characters (rows 60, 61). The board takes posts from the week opening until three days after the winner is published (row 62). The writer may change the text or delete the post for ten minutes, never once it is hidden (row 63). Hiding a post and muting a player are the audited callables `boardHide` and `boardMute`; no client, the staff included, can do either directly (row 64). A report's ID is `{messageId}_{playerId}`, so each player reports a post once; only the staff read reports (row 65).
 
 ## 3. Storage rules
 
@@ -395,3 +502,12 @@ Each row is at least one passing and one failing test.
 | 54 | A counter writes a player, a week, the pool config, a payment, or deletes an entry or a player from the browser | deny |
 | 55 | A counter uploads a sheet photo (an image of 5 MB or less under `paperSheets`); reads or deletes one; uploads a PDF, an oversized file, or a file outside `paperSheets` | allow / deny / deny |
 | 56 | A token with a look-alike claim (`counter: 'true'`, `counter: 1`, `role: 'counter'`, `counters: true`) uploads a sheet photo | deny |
+| 57 | Someone who entered the week (a guest included) lists its board; someone with no entry, or with no `logins` pointer, lists it | allow / deny |
+| 58 | The commissioner and the counter list a board | allow |
+| 59 | A `logins` pointer to a profile the login does not own: read the board, or post as that player | deny |
+| 60 | A paid player with a saved account posts with the server time and their own name; a phone time, another name, `hidden: true`, an extra field, empty or 501 characters, or posting as someone else | allow / deny |
+| 61 | An unpaid entry, a guest login, or a muted player posts; the muted player and others read the mute; anyone writes a mute | deny / allow (own) / deny / deny |
+| 62 | A post one day after the winner was published; four days after | allow / deny |
+| 63 | The writer edits text or deletes within ten minutes; edits with a phone time, sets `hidden`, changes the name; another player edits or deletes; edits or deletes after ten minutes or once hidden | allow / deny |
+| 64 | The admin or the counter hides a post, deletes it, or writes a mute from the browser | deny |
+| 65 | A reader reports a post under `{messageId}_{playerId}`; a mismatched ID; a non-entrant reports; a player lists reports; the admin lists them; a login reads its own and another's `logins` pointer; a client writes one | allow / deny / deny / deny / allow / allow-deny / deny |

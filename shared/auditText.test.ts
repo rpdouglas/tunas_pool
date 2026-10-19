@@ -12,6 +12,24 @@ const entry = (overrides: Partial<AuditRecord>): AuditRecord => ({
 });
 
 describe('describeAudit', () => {
+  it('says what was done on the board (D-102), by name', () => {
+    const hidden = entry({
+      action: 'board.hidden',
+      target: 'seasons/2026/weeks/wk05/board/m1',
+      before: { playerId: 'dale', displayName: 'Dale D.', text: 'x' },
+      after: { hidden: true },
+    });
+    expect(describeAudit(hidden, names).what).toBe('Hid a post by Dale D. on the board');
+    const mute = (muted: boolean) =>
+      entry({
+        action: 'board.mute',
+        target: 'seasons/2026/weeks/wk05/boardMutes/dale',
+        after: { muted, displayName: 'Dale D.' },
+      });
+    expect(describeAudit(mute(true), names).what).toBe('Muted Dale D. on the board');
+    expect(describeAudit(mute(false), names).what).toBe('Let Dale D. post on the board again');
+  });
+
   it('says who was marked paid, how, and in which week', () => {
     expect(
       describeAudit(

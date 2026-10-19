@@ -157,6 +157,15 @@ export function describeAudit(record: AuditRecord, names: Names, myUid?: string)
     case 'player.guestMoved':
       what = `Moved ${player}'s guest picks to their account`;
       break;
+    case 'board.hidden':
+      what = `Hid a post by ${player} on the board`;
+      break;
+    case 'board.mute':
+      what =
+        field(after, 'muted') === true
+          ? `Muted ${player} on the board`
+          : `Let ${player} post on the board again`;
+      break;
     case 'season.status':
       what = text(after, 'status') === 'archived' ? 'Archived the season' : 'Reopened the season';
       break;

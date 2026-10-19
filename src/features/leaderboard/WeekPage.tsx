@@ -22,11 +22,12 @@ import { ShareBar } from '../../components/ui/ShareBar';
 import { WinnerBanner } from '../../components/ui/WinnerBanner';
 import type { WeekView } from '../../lib/weekModel';
 import { useGuestSession } from '../auth/useAuth';
+import { BoardSection } from '../board/BoardSection';
 import { useMyProfile } from '../claims/claimsData';
 import { useRevealEntries, useRevealWeek, useWeekScores } from './revealData';
 import { useSeasonWeekList } from './standingsData';
 
-type View = 'standings' | 'games';
+type View = 'standings' | 'games' | 'board';
 
 /**
  * The week, once picks are locked (PROJECT_PLAN Sprint 6): the winner and how it was decided, the
@@ -127,6 +128,7 @@ export default function WeekPage() {
             </p>
           </div>
         </Panel>
+        <BoardSection year={year} week={week.data} />
         {back}
       </GameDayPage>
     );
@@ -288,11 +290,12 @@ function Revealed({
         </p>
       )}
 
-      <div role="group" aria-label="Show" className="grid grid-cols-2 gap-2">
+      <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
         {(
           [
             ['standings', 'Standings'],
             ['games', 'By game'],
+            ['board', 'Board'],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -300,14 +303,16 @@ function Revealed({
             type="button"
             aria-pressed={view === value}
             onClick={() => setView(value)}
-            className="min-h-touch rounded-pill border-2 border-white bg-black/30 px-4 font-heading text-h3 text-ink-inverse aria-pressed:bg-white aria-pressed:text-purple-700"
+            className="min-h-touch min-w-[6rem] flex-1 rounded-pill border-2 border-white bg-black/30 px-3 font-heading text-h3 text-ink-inverse aria-pressed:bg-white aria-pressed:text-purple-700"
           >
             {label}
           </button>
         ))}
       </div>
 
-      {entries.length === 0 ? (
+      {view === 'board' ? (
+        <BoardSection year={week.year} week={week} />
+      ) : entries.length === 0 ? (
         <Panel>
           <p className="text-body">Nobody entered this week.</p>
         </Panel>
