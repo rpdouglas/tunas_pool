@@ -10,6 +10,7 @@ import { MenuView } from '../components/layout/AppMenu';
 import { PawnShopHelmet, TunaBadge, WordmarkArt } from '../components/ui/BrandArt';
 import { WordmarkLockup } from '../components/ui/WordmarkLockup';
 import { WinnerBanner } from '../components/ui/WinnerBanner';
+import { WelcomePanel } from '../components/ui/WelcomePanel';
 import { useToast } from '../components/ui/toastContext';
 import { PaymentRow } from '../features/admin/payments/PaymentRow';
 import { ClaimCard } from '../features/admin/claims/ClaimCard';
@@ -344,6 +345,21 @@ export default function Styleguide() {
                 compact
               />
             </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-welcome">
+          <h2 id="sg-welcome" className="mb-3 font-heading text-h2 italic">
+            Welcome (first visit)
+          </h2>
+          <div className="bg-gameday flex max-w-player flex-col gap-4 rounded-lg p-4">
+            <WelcomePanel
+              fee="$20"
+              lockLabel="Sat, Oct 24, 11:59 PM"
+              signedIn={false}
+              onDismiss={() => undefined}
+            />
+            <WelcomePanel fee="$20" lockLabel={null} signedIn onDismiss={() => undefined} />
           </div>
         </section>
 

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatMoney } from '@shared/scoring';
 import { formatPoolDateTime } from '@shared/time';
@@ -7,12 +8,24 @@ import { StatTile } from '../components/ui/StatTile';
 import { PawnShopHelmet, TunaBadge, WordmarkArt } from '../components/ui/BrandArt';
 import { currentSeason } from '../lib/season';
 import { useGuestSession } from '../features/auth/useAuth';
-import { useCurrentWeek, useMyEntry } from '../features/entry/entryData';
+import { useCurrentWeek, useMyEntry, useMyProfile } from '../features/entry/entryData';
 import { useLastWinner } from '../features/leaderboard/revealData';
 import { useSeasonLeaders } from '../features/leaderboard/standingsData';
 import { formatRecord } from '@shared/scoring';
 import { WinnerBanner } from '../components/ui/WinnerBanner';
 import { AppBar } from '../components/layout/AppMenu';
+import { WelcomePanel } from '../components/ui/WelcomePanel';
+
+const WELCOME_KEY = 'tunas.welcomeHidden';
+
+/** Whether "Got it, hide this" was tapped on this phone. Storage can be blocked: then it just shows. */
+function welcomeHidden(): boolean {
+  try {
+    return localStorage.getItem(WELCOME_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * The weekly home screen (D-020): this week at a glance, your status, and the one next step.
@@ -31,6 +44,11 @@ export default function Home() {
   const open = Boolean(week && week.status === 'open' && Date.now() < week.lockAtMs);
   const entry = mine.data?.entry ?? null;
   const payment = mine.data?.payment ?? null;
+  // Someone new: signed in (as a guest, usually) with no profile yet, so never a regular (D-101).
+  const profile = useMyProfile(session.user?.uid);
+  const [hidden, setHidden] = useState(welcomeHidden);
+  const newcomer = profile.isSuccess && profile.data === null && !hidden;
+  const signedIn = Boolean(session.user && !session.user.isAnonymous);
 
   return (
     <main className="bg-gameday min-h-screen px-4 pb-16 pt-8">
@@ -66,6 +84,21 @@ export default function Home() {
           </Panel>
         ) : (
           <>
+            {newcomer && (
+              <WelcomePanel
+                fee={`$${(week.entryFeeCents / 100).toFixed(0)}`}
+                lockLabel={open ? formatPoolDateTime(new Date(week.lockAtMs)) : null}
+                signedIn={signedIn}
+                onDismiss={() => {
+                  setHidden(true);
+                  try {
+                    localStorage.setItem(WELCOME_KEY, '1');
+                  } catch {
+                    // Blocked storage: it stays hidden until the page is reloaded.
+                  }
+                }}
+              />
+            )}
             <div className="grid grid-cols-2 gap-3">
               <StatTile label="Week" value={String(week.weekNumber)} />
               <StatTile
@@ -131,7 +164,9 @@ export default function Home() {
                 {open || entry ? (
                   <Link to={`/picks/${year}/${week.id}`} className="btn btn-primary">
                     {!entry
-                      ? 'Make your picks'
+                      ? newcomer
+                        ? 'Make your picks, no account needed'
+                        : 'Make your picks'
                       : open
                         ? 'See or edit your picks'
                         : 'See your picks'}
