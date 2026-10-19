@@ -205,7 +205,7 @@ All use semantic tokens. Build in `src/components/ui/`, each shown in the dev-on
 | **Stat tile** | `.stat-tile` | n/a |
 | **Countdown** | "1d 04h 12m to lock". Turns red-800 under 1 hour. | normal · urgent · locked |
 | **Leaderboard row** | Place ("1", or "Tied 3") · name · record ("11 – 4") · best possible while games remain. Opens to that player's picks. "You", the winner's crown, and "Late entry" are words or icons, never color alone. Paid badge is admin only. | default · you · winner · tied · late |
-| **Share bar** | How the pool split on one game: each team with its count and percent over a two-part bar. The winner gets a check and the word "Won". | undecided · decided |
+| **Share bar** | One game on the By game view, scoreboard style (D-103): each team's logo (or badge) with its name under it and its score beside it, how many picked each side, and an outlined bar in the teams' colours. The left team gets its primary colour; the right team gets its primary, or its secondary when the two are too alike (ΔE under 30), or neutral grey. The winner gets a check and "Won"; your pick, "Final (unofficial)", and an Upset tag are said in words. | undecided · decided · with score · your pick · upset |
 | **Winner banner** | Gold crown, name, record, tiebreaker points, pot. The only animated element. | n/a |
 | **Payments queue row** (admin) | Name, phone, declared method, one-tap **Paid** with undo. 56px. | unpaid · paid · flagged duplicate |
 | **Pick row** (admin) | One numbered line of the paper sheet: number, away, home. Two Pick buttons with no kickoff time, for copying a sheet top to bottom. Long team names wrap. | unpicked · picked |
@@ -281,7 +281,7 @@ Friendly, plain, a bit of football-fan warmth. Exclamation marks only in the her
 - **Don't use Ravens, Bills, or any NFL logos, helmets, raven-head marks, or uniform marks** on the website. That includes the Ravens' raven-head logo, which would be the obvious temptation now. This is my judgment call, not legal advice.
 - **Exception (D-053):** the commissioner approved the supplied artwork in `docs/BRAND_ASSETS.md` as is, including the round Tuna badge with Ravens and NFL marks. The rules in this section still apply to any other artwork.
 - **The mascot needs a recolor** (unless using the approved badge). On the paper sheet Tuna wears a Bills cap and jersey with Bills logos. For the site, redraw or re-export him in **purple, black, and gold with a neutral emblem** (a "T" or fish), keeping the sunglasses, grin, number 69, and TUNA belt buckle.
-- Team names on game cards are plain text, with no logos.
+- Team names on game cards are plain text, with no logos. **Exception (D-103):** the By game view on the week page shows each team's logo, with the name written under it. The logos are fetched from ESPN at deploy into `public/teams/` and never committed; when one is missing the card shows a badge in the team's colour with its short code. Team colours for the bar come from `shared/teamColors.ts`.
 - Ask whoever produced the sheet for layered or vector originals. The file on hand is a flattened raster.
 
 | Asset | Format | Notes |

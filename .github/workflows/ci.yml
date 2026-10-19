@@ -59,6 +59,10 @@ jobs:
       # The web build typechecks the functions' tests too (tsconfig.json), so it needs their dependencies.
       - run: npm --prefix functions ci
       - run: node scripts/write-web-env.mjs prod "$FIREBASE_WEB_APP_ID"
+      # Team logos for the By game view (D-103), fetched fresh, never committed. Never blocks a
+      # release: a logo that can't be fetched shows as the team badge.
+      - run: npx tsx scripts/fetch-team-logos.ts
+        continue-on-error: true
       - run: npm run build
       - run: npx firebase deploy --project prod --only hosting,firestore:rules,firestore:indexes --non-interactive --force
 

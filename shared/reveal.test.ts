@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isUpset,
   gameShare,
   leaderboard,
   pickMark,
@@ -141,5 +142,24 @@ describe('sharePercent', () => {
     expect(sharePercent(399, 400)).toBe(99);
     expect(sharePercent(12, 40)).toBe(30);
     expect(sharePercent(0, 0)).toBe(0);
+  });
+});
+
+describe('isUpset', () => {
+  const share = (away: number, home: number) => ({
+    away: Array(away).fill('a'),
+    home: Array(home).fill('h'),
+    blank: [],
+    total: away + home,
+  });
+  it('is an upset when a third or so of the pool, or fewer, picked the winner', () => {
+    expect(isUpset(share(7, 29), 'away')).toBe(true);
+    expect(isUpset(share(24, 12), 'home')).toBe(true);
+    expect(isUpset(share(24, 12), 'away')).toBe(false);
+  });
+  it('never for a tie, a game not decided, or nobody entered', () => {
+    expect(isUpset(share(1, 9), 'tie')).toBe(false);
+    expect(isUpset(share(1, 9), undefined)).toBe(false);
+    expect(isUpset(share(0, 0), 'away')).toBe(false);
   });
 });

@@ -33,3 +33,6 @@ playwright-report
 
 # Season exports hold phone numbers and payments (scripts/export-season.ts)
 backups/
+
+# team logos, fetched at deploy (D-103); NFL marks, never committed
+public/teams

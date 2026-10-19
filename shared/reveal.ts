@@ -113,8 +113,18 @@ export function shareLine(
   const count = share[result].length;
   if (count === share.total) return `Everyone picked the ${winner}.`;
   if (count === 0) return `Nobody picked the ${winner}.`;
-  const few = count / share.total <= 0.35;
+  const few = count / share.total <= UPSET_SHARE;
   return `${few ? 'Only ' : ''}${count} of ${share.total} picked the ${winner}.`;
+}
+
+/** At or under this share of the pool picked the winner: "Only 7 of 36" and an Upset tag (D-103). */
+export const UPSET_SHARE = 0.35;
+
+/** Few people picked the winner. A tie, a game not decided, or nobody entered is never an upset. */
+export function isUpset(share: GameShare, result: GameResult | undefined): boolean {
+  if (result !== 'away' && result !== 'home') return false;
+  if (share.total === 0) return false;
+  return share[result].length / share.total <= UPSET_SHARE;
 }
 
 /** A plain place number, with "Tied" said in words when players are level. */
