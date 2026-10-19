@@ -39,6 +39,8 @@ docs/
   PROJECT_PLAN.md          <- phases, sprints, acceptance criteria
   ACTIVE_CYCLE.md          <- current sprint (create at Sprint 0; update every sprint)
   DECISIONS.md             <- ADR-style log of decisions (create at Sprint 0)
+  MIGRATION.md             <- runbook for moving to the pool's own project and tunaspool.ca (D-100, not started)
+  reports/                 <- dated review snapshots (YYYY-MM-DD-name.md); read-only history, never a source of truth
 ```
 
 Rules for docs:
