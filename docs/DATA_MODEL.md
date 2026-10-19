@@ -39,9 +39,13 @@ seasons/{year}
     entries/{playerId}                       (one per person per week)
       payment/current                        (owner + admin only, never revealed)
       private/picks                          (hidden until revealed)
+    board/{messageId}                        (the weekly board, D-102)
+    boardMutes/{playerId}                    (function-written)
+    boardReports/{messageId_playerId}        (staff-read)
   standings/{playerId}                       (function-written)
 config/pool                                  (admin-written settings)
 auditLog/{logId}                             (function-written)
+logins/{uid}                                 (function-written pointer to a player, D-102)
 ```
 
 `year` is a string such as `"2026"`. `weekId` is `"wk04"`, zero-padded.
@@ -190,6 +194,16 @@ Readable by the owner and admin. Readable by everyone once `week.revealed == tru
 - **Ranked** by correct picks, then win rate, then name. Players level on correct picks share a place.
 - Readable by any signed-in player: this document is the public player profile (a name and a record). It holds no phone, email, or payment.
 
+### 3.8b The weekly board (D-102)
+
+`seasons/{year}/weeks/{weekId}/board/{messageId}`: `playerId`, `displayName` (the poster's current name, checked by the rules), `text` (1 to 500 characters), `createdAt` (server time), `editedAt` (server time or null), `hidden` (boolean). Hiding adds `hiddenAt` and `hiddenBy` and empties `text`; the words are kept only in the audit log. Read by anyone who entered that week and by the staff; posted by a paid entrant with a saved account who isn't muted, from the week opening until three days after the winner is published. The writer may edit `text` or delete the post for ten minutes.
+
+`.../boardMutes/{playerId}`: `reason`, `by`, `at`. Written by `boardMute`; read by the staff and the muted player.
+
+`.../boardReports/{messageId}_{playerId}`: `messageId`, `playerId` (the reporter), `createdAt`. One per player per post; read by the staff.
+
+`logins/{uid}`: `playerId`, `updatedAt`. Written by `boardJoin` only, so the rules can tell which player a login is. A pointer, never a grant: the rules re-check `players/{playerId}.claimedByUid`.
+
 ### 3.9 `config/pool`
 
 `entryFeeCents`, `etransferEmail`, `etransferInstructions`, `contactEmail`, `defaultLockRule` (for example Saturday 23:59 America/Toronto), `tieGameRule` (see open decisions), `unpaidEligibleToWin` (boolean).
@@ -200,7 +214,7 @@ Readable by the owner and admin. Readable by everyone once `week.revealed == tru
 
 Counter actions carry `actorRole: 'counter'` and `actorEmail`, so the Audit log says "Counter (devon@…)" (D-095).
 
-Actions: `payment.set`, `entry.adminUpsert`, `entry.lateOverride`, `entry.delete`, `week.status`, `week.results`, `week.winnerPublished`, `week.payout`, `week.correction`, `claim.approved`, `claim.rejected`, `claim.unlinked`, `player.merged`, `player.delete`, `player.saved`, `player.guestMoved`, `season.status`.
+Actions: `payment.set`, `entry.adminUpsert`, `entry.lateOverride`, `entry.delete`, `week.status`, `week.results`, `week.winnerPublished`, `week.payout`, `week.correction`, `claim.approved`, `claim.rejected`, `claim.unlinked`, `player.merged`, `player.delete`, `player.saved`, `player.guestMoved`, `season.status`, `board.hidden`, `board.mute`.
 
 The Back Office shows the log in plain words (`shared/auditText.ts`), newest first, with the stored before and after under each entry. Entries written by a one-off script carry an actor that starts `script:`.
 
@@ -257,6 +271,9 @@ type GameResult = 'home' | 'away' | 'tie';
 |---|---|
 | `requestClaim(claimedName, claimedPhone?)` | Creates a pending claim holding what the player typed. Always answers `{ status: 'pending' }`, whoever they name. Needs a saved account, not a guest login (D-060). Refused if the login is already linked to a roster profile, already has a request waiting, or has asked three times in 24 hours. |
 | `adoptGuestProfile(guestIdToken)` | Called after a guest saves their account with an email that already has an account, so the app signed in to that account instead. Verifies the guest's anonymous ID token, then moves the guest's profile to the caller by setting `claimedByUid` (the `playerId` and its entries do not change). If the caller already has a profile, returns `needs_admin` and changes nothing; the admin merges with `adminMergePlayers`. Audit logged as `player.guestMoved`. |
+| `boardJoin()` | Any signed-in login. Finds the one live (not merged) profile whose `claimedByUid` is the caller and writes `logins/{uid}` = `{ playerId }`, or deletes the pointer when there is none (D-102). Idempotent; the board screen calls it once per visit. |
+| `boardHide(year, weekId, messageId, reason)` | Admin **or counter**. Hides a board post: sets `hidden`, `hiddenAt`, `hiddenBy`, and empties `text`. `reason` 5 to 300 characters. Hiding twice changes nothing. Audit logged as `board.hidden` with the words in `before`. |
+| `boardMute(year, weekId, playerId, muted, reason)` | Admin **or counter**. Mutes a player on one week's board (`boardMutes/{playerId}`) or lifts it. `reason` required both ways. No change when already in that state. Audit logged as `board.mute`. |
 | `reportClientError(message, stack, path, userAgent, release)` | Any signed-in login, guests included. Writes an uncaught script error from the web app to the functions' log (D-086). Text is cut to length and the path loses its query string. Limited per instance. Never fails the caller. |
 
 **Triggers and schedules**

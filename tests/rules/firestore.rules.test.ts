@@ -813,3 +813,203 @@ describe('Counter role (D-095): daily work only, nothing private, nothing irreve
     }
   });
 });
+
+describe('The weekly board (D-102): entrants read, paid players with an account post', () => {
+  const board = (w = OPEN_WEEK) => `${weekPath(w)}/board`;
+  const google = (uid: string, extra: Record<string, unknown> = {}) =>
+    env
+      .authenticatedContext(uid, { firebase: { sign_in_provider: 'google.com' }, ...extra })
+      .firestore();
+  const guest = (uid: string) =>
+    env.authenticatedContext(uid, { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+  const message = (overrides: Record<string, unknown> = {}) => ({
+    playerId: 'p1',
+    displayName: 'Alice A.',
+    text: 'Lock it in, the Jags are winning.',
+    createdAt: serverTimestamp(),
+    editedAt: null,
+    hidden: false,
+    ...overrides,
+  });
+
+  // Alice (p1) has an entry in the open week; her login is indexed. Paid unless a test says not.
+  async function seedBoard({ paid = true }: { paid?: boolean } = {}) {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'logins/alice'), { playerId: 'p1', updatedAt: Timestamp.now() });
+      await setDoc(
+        doc(db, `${weekPath(OPEN_WEEK)}/entries/p1/payment/current`),
+        paymentData({ paymentStatus: paid ? 'paid' : 'unpaid' }),
+      );
+      await setDoc(doc(db, `${board()}/m1`), message({ createdAt: Timestamp.now() }));
+      // Bob (p2) has a login and a profile but no entry this week.
+      await setDoc(doc(db, 'players/p2'), profile('bob'));
+      await setDoc(doc(db, 'logins/bob'), { playerId: 'p2', updatedAt: Timestamp.now() });
+    });
+  }
+
+  it('#57 someone who entered reads the board, as a guest too; someone who did not, cannot', async () => {
+    await seedBoard();
+    await assertSucceeds(getDocs(collection(google('alice'), board())));
+    await assertSucceeds(getDocs(collection(guest('alice'), board())));
+    await assertFails(getDocs(collection(google('bob'), board())));
+    // No index yet: nothing to check against, so no.
+    await assertFails(getDocs(collection(google('carol'), board())));
+  });
+
+  it('#58 the commissioner and the counter read every board', async () => {
+    await seedBoard();
+    await assertSucceeds(getDocs(collection(admin(), board())));
+    await assertSucceeds(
+      getDocs(
+        collection(env.authenticatedContext('devon', { counter: true }).firestore(), board()),
+      ),
+    );
+  });
+
+  it('#59 a stale index grants nothing: a login pointing at a profile it no longer owns', async () => {
+    await seedBoard();
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'logins/mallory'), {
+        playerId: 'p1',
+        updatedAt: Timestamp.now(),
+      });
+    });
+    await assertFails(getDocs(collection(google('mallory'), board())));
+    await assertFails(setDoc(doc(google('mallory'), `${board()}/x`), message()));
+  });
+
+  it('#60 a paid player with a saved account posts, with the server time and their own name', async () => {
+    await seedBoard();
+    await assertSucceeds(setDoc(doc(google('alice'), `${board()}/m2`), message()));
+    await assertFails(
+      setDoc(doc(google('alice'), `${board()}/m3`), message({ createdAt: phoneClock() })),
+    );
+    await assertFails(
+      setDoc(doc(google('alice'), `${board()}/m4`), message({ displayName: 'Tuna' })),
+    );
+    await assertFails(setDoc(doc(google('alice'), `${board()}/m5`), message({ hidden: true })));
+    await assertFails(setDoc(doc(google('alice'), `${board()}/m6`), message({ extra: 1 })));
+    await assertFails(setDoc(doc(google('alice'), `${board()}/m7`), message({ text: '' })));
+    await assertFails(
+      setDoc(doc(google('alice'), `${board()}/m8`), message({ text: 'x'.repeat(501) })),
+    );
+    // Never as someone else.
+    await assertFails(setDoc(doc(google('bob'), `${board()}/m9`), message()));
+  });
+
+  it('#61 a guest, an unpaid entry, and a muted player cannot post', async () => {
+    await seedBoard({ paid: false });
+    await assertFails(setDoc(doc(google('alice'), `${board()}/u1`), message()));
+    await seedBoard();
+    await assertFails(setDoc(doc(guest('alice'), `${board()}/g1`), message()));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `${weekPath(OPEN_WEEK)}/boardMutes/p1`), {
+        reason: 'Over the line',
+        by: 'boss',
+        at: Timestamp.now(),
+      });
+    });
+    await assertFails(setDoc(doc(google('alice'), `${board()}/x1`), message()));
+    // She can see that she is muted; nobody else but the staff can.
+    await assertSucceeds(getDoc(doc(google('alice'), `${weekPath(OPEN_WEEK)}/boardMutes/p1`)));
+    await assertFails(getDoc(doc(google('bob'), `${weekPath(OPEN_WEEK)}/boardMutes/p1`)));
+    await assertFails(
+      setDoc(doc(google('alice'), `${weekPath(OPEN_WEEK)}/boardMutes/p1`), { reason: 'x' }),
+    );
+  });
+
+  it('#62 the board closes three days after the winner is published', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      for (const [w, daysAgo] of [
+        ['finalRecent', 1],
+        ['finalOld', 4],
+      ] as const) {
+        await setDoc(doc(db, weekPath(w)), {
+          status: 'final',
+          lockAt: hoursFromNow(-24 * 6),
+          revealed: true,
+          games: [],
+          results: {},
+          mnfTotal: 40,
+          payoutSent: false,
+          winner: { publishedAt: hoursFromNow(-24 * daysAgo) },
+        });
+        await setDoc(doc(db, `${weekPath(w)}/entries/p1`), entryData('p1'));
+        await setDoc(
+          doc(db, `${weekPath(w)}/entries/p1/payment/current`),
+          paymentData({ paymentStatus: 'paid' }),
+        );
+      }
+    });
+    await assertSucceeds(setDoc(doc(google('alice'), `${board('finalRecent')}/a`), message()));
+    await assertFails(setDoc(doc(google('alice'), `${board('finalOld')}/a`), message()));
+  });
+
+  it('#63 your own post: edit the text or delete it for ten minutes, never once hidden', async () => {
+    await seedBoard();
+    const mine = `${board()}/m1`;
+    await assertSucceeds(
+      updateDoc(doc(google('alice'), mine), { text: 'Fixed', editedAt: serverTimestamp() }),
+    );
+    await assertFails(updateDoc(doc(google('alice'), mine), { text: 'x', editedAt: phoneClock() }));
+    await assertFails(updateDoc(doc(google('alice'), mine), { hidden: true }));
+    await assertFails(updateDoc(doc(google('alice'), mine), { displayName: 'Tuna' }));
+    await assertFails(
+      updateDoc(doc(google('bob'), mine), { text: 'x', editedAt: serverTimestamp() }),
+    );
+    await assertFails(deleteDoc(doc(google('bob'), mine)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(
+        doc(db, `${board()}/old`),
+        message({ createdAt: Timestamp.fromMillis(Date.now() - 11 * 60_000) }),
+      );
+      await setDoc(
+        doc(db, `${board()}/hid`),
+        message({ createdAt: Timestamp.now(), hidden: true, text: '' }),
+      );
+    });
+    await assertFails(
+      updateDoc(doc(google('alice'), `${board()}/old`), { text: 'x', editedAt: serverTimestamp() }),
+    );
+    await assertFails(deleteDoc(doc(google('alice'), `${board()}/old`)));
+    await assertFails(
+      updateDoc(doc(google('alice'), `${board()}/hid`), {
+        text: 'back',
+        editedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(deleteDoc(doc(google('alice'), `${board()}/hid`)));
+    await assertSucceeds(deleteDoc(doc(google('alice'), mine)));
+  });
+
+  it('#64 the staff hide and mute only through the audited callables, never from the browser', async () => {
+    await seedBoard();
+    const devon = env.authenticatedContext('devon', { counter: true }).firestore();
+    for (const db of [admin(), devon]) {
+      await assertFails(updateDoc(doc(db, `${board()}/m1`), { hidden: true, text: '' }));
+      await assertFails(deleteDoc(doc(db, `${board()}/m1`)));
+      await assertFails(setDoc(doc(db, `${weekPath(OPEN_WEEK)}/boardMutes/p1`), { reason: 'x' }));
+    }
+  });
+
+  it('#65 a reader reports a post once; only the staff read reports; the index is function-written', async () => {
+    await seedBoard();
+    const report = (playerId = 'p1') => ({
+      messageId: 'm1',
+      playerId,
+      createdAt: serverTimestamp(),
+    });
+    const reports = `${weekPath(OPEN_WEEK)}/boardReports`;
+    await assertSucceeds(setDoc(doc(guest('alice'), `${reports}/m1_p1`), report()));
+    await assertFails(setDoc(doc(guest('alice'), `${reports}/other_p1`), report()));
+    await assertFails(setDoc(doc(google('bob'), `${reports}/m1_p2`), report('p2')));
+    await assertFails(getDocs(collection(google('alice'), reports)));
+    await assertSucceeds(getDocs(collection(admin(), reports)));
+    await assertSucceeds(getDoc(doc(google('alice'), 'logins/alice')));
+    await assertFails(getDoc(doc(google('alice'), 'logins/bob')));
+    await assertFails(setDoc(doc(google('carol'), 'logins/carol'), { playerId: 'p1' }));
+  });
+});

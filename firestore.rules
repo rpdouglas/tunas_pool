@@ -41,6 +41,57 @@ service cloud.firestore {
     function isNowOrNull(v) { return v == null || v == request.time; }
 
     function isDisplayName(v) { return v is string && v.size() > 0 && v.size() <= 60; }
+
+    // ---------- the weekly board (D-102) ----------
+    // The commissioner or the counter role: they moderate the board.
+    function isStaff() {
+      return isAdmin() || (signedIn() && request.auth.token.counter == true);
+    }
+
+    // Signed in with Google or email, not as a guest: every post has a name that can be held to it.
+    function hasSavedAccount() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // Rules can't look up which player a login belongs to, so the function `boardJoin` keeps a
+    // login-to-player index. It is only a pointer: ownsPlayer() re-checks the live profile, so an
+    // out-of-date index (after an unlink or a merge) grants nothing.
+    function loginPath() {
+      return /databases/$(database)/documents/logins/$(request.auth.uid);
+    }
+
+    function entryPath(year, weekId, playerId) {
+      return /databases/$(database)/documents/seasons/$(year)/weeks/$(weekId)/entries/$(playerId);
+    }
+
+    // Read: anyone who entered that week, and the staff.
+    function boardReader(year, weekId) {
+      return isStaff()
+        || (signedIn()
+          && exists(loginPath())
+          && ownsPlayer(get(loginPath()).data.playerId)
+          && exists(entryPath(year, weekId, get(loginPath()).data.playerId)));
+    }
+
+    // Post: a paid entry that week, not muted.
+    function boardPoster(year, weekId, playerId) {
+      return hasSavedAccount()
+        && ownsPlayer(playerId)
+        && exists(/databases/$(database)/documents/seasons/$(year)/weeks/$(weekId)/entries/$(playerId)/payment/current)
+        && get(/databases/$(database)/documents/seasons/$(year)/weeks/$(weekId)/entries/$(playerId)/payment/current).data.paymentStatus == 'paid'
+        && !exists(/databases/$(database)/documents/seasons/$(year)/weeks/$(weekId)/boardMutes/$(playerId));
+    }
+
+    // Open from the week opening until three days after the winner is published.
+    function boardOpen(year, weekId) {
+      let w = get(weekPath(year, weekId)).data;
+      return w.status in ['open', 'locked']
+        || (w.status == 'final'
+          && w.winner != null
+          && request.time < w.winner.publishedAt + duration.value(3, 'd'));
+    }
+
+    function isMessageText(v) { return v is string && v.size() > 0 && v.size() <= 500; }
     function isPaymentIntent(v) { return v in ['will_do', 'already_did']; }
 
     // ---------- players (roster + self-serve profiles) ----------
@@ -114,6 +165,12 @@ service cloud.firestore {
       // Public-safe fields only. Keep secrets out of this collection.
       allow read: if signedIn();
       allow write: if isAdmin();
+    }
+
+    // ---------- login-to-player index for the board (D-102), written by `boardJoin` ----------
+    match /logins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
     }
 
     // ---------- audit log ----------
@@ -236,6 +293,54 @@ service cloud.firestore {
               && weekIsOpen(year, weekId);
           }
         }
+      }
+
+      // ----- the weekly board (D-102) -----
+      match /weeks/{weekId}/board/{messageId} {
+        allow read: if boardReader(year, weekId);
+
+        allow create: if boardPoster(year, weekId, request.resource.data.playerId)
+          && boardOpen(year, weekId)
+          && request.resource.data.keys().hasOnly([
+               'playerId', 'displayName', 'text', 'createdAt', 'editedAt', 'hidden'])
+          && request.resource.data.displayName
+               == get(playerPath(request.resource.data.playerId)).data.displayName
+          && isMessageText(request.resource.data.text)
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.editedAt == null
+          && request.resource.data.hidden == false;
+
+        // Your own post, for ten minutes, while it isn't hidden. Hiding is the staff's callable.
+        allow update: if boardPoster(year, weekId, resource.data.playerId)
+          && boardOpen(year, weekId)
+          && resource.data.hidden == false
+          && request.time < resource.data.createdAt + duration.value(10, 'm')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+          && isMessageText(request.resource.data.text)
+          && request.resource.data.editedAt == request.time;
+
+        allow delete: if hasSavedAccount()
+          && ownsPlayer(resource.data.playerId)
+          && resource.data.hidden == false
+          && request.time < resource.data.createdAt + duration.value(10, 'm');
+      }
+
+      // Muted for the week: written by `boardMute`. The staff and the muted player can see it.
+      match /weeks/{weekId}/boardMutes/{playerId} {
+        allow read: if isStaff() || ownsPlayer(playerId);
+        allow write: if false;
+      }
+
+      // Reports: one per player per message (the ID says so), read by the staff only.
+      match /weeks/{weekId}/boardReports/{reportId} {
+        allow read: if isStaff();
+        allow create: if boardReader(year, weekId)
+          && ownsPlayer(request.resource.data.playerId)
+          && request.resource.data.keys().hasOnly(['messageId', 'playerId', 'createdAt'])
+          && request.resource.data.messageId is string
+          && reportId == request.resource.data.messageId + '_' + request.resource.data.playerId
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
       }
 
       // ----- standings (function-written) -----

@@ -11,6 +11,9 @@ import { PawnShopHelmet, TunaBadge, WordmarkArt } from '../components/ui/BrandAr
 import { WordmarkLockup } from '../components/ui/WordmarkLockup';
 import { WinnerBanner } from '../components/ui/WinnerBanner';
 import { WelcomePanel } from '../components/ui/WelcomePanel';
+import { BoardPost } from '../features/board/BoardPost';
+import { BoardComposer } from '../features/board/BoardComposer';
+import { HOUSE_RULES } from '@shared/board';
 import { useToast } from '../components/ui/toastContext';
 import { PaymentRow } from '../features/admin/payments/PaymentRow';
 import { ClaimCard } from '../features/admin/claims/ClaimCard';
@@ -360,6 +363,66 @@ export default function Styleguide() {
               onDismiss={() => undefined}
             />
             <WelcomePanel fee="$20" lockLabel={null} signedIn onDismiss={() => undefined} />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-board">
+          <h2 id="sg-board" className="mb-3 font-heading text-h2 italic">
+            Board posts (D-102)
+          </h2>
+          <div className="bg-gameday flex max-w-player flex-col gap-3 rounded-lg p-4">
+            <Panel title="Board">
+              <div className="flex flex-col gap-4 text-body">
+                <p className="text-ink-muted">{HOUSE_RULES}</p>
+                <BoardComposer onPost={async () => undefined} />
+                <ol className="flex flex-col gap-2" aria-label="Sample posts">
+                  {(
+                    [
+                      { label: 'Yours, editable', mine: true, canChange: true, staff: false },
+                      { label: 'Someone else', mine: false, canChange: false, staff: false },
+                      {
+                        label: 'Reported, as staff',
+                        mine: false,
+                        canChange: false,
+                        staff: true,
+                        reportCount: 2,
+                      },
+                      {
+                        label: 'Hidden',
+                        mine: false,
+                        canChange: false,
+                        staff: false,
+                        hidden: true,
+                      },
+                    ] as const
+                  ).map((state, i) => (
+                    <BoardPost
+                      key={state.label}
+                      message={{
+                        id: `sg${i}`,
+                        playerId: `p${i}`,
+                        displayName: i === 0 ? 'Rosalie M.' : 'Dale D.',
+                        text: 'hidden' in state ? '' : 'Jags by 20. Write it down.',
+                        createdAtMs: Date.UTC(2026, 9, 18, 17, 5),
+                        edited: i === 1,
+                        hidden: 'hidden' in state,
+                      }}
+                      mine={state.mine}
+                      canChange={state.canChange}
+                      canReport={!state.mine && !state.staff}
+                      reported={false}
+                      staff={state.staff}
+                      reportCount={'reportCount' in state ? state.reportCount : undefined}
+                      onEdit={async () => undefined}
+                      onDelete={async () => undefined}
+                      onReport={async () => undefined}
+                      onHide={async () => undefined}
+                      onMute={async () => undefined}
+                    />
+                  ))}
+                </ol>
+              </div>
+            </Panel>
           </div>
         </section>
 

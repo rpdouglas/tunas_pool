@@ -20,6 +20,7 @@ import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '../../shared/config';
 import type { Game, WeekStatus } from '../../shared/types';
 import { deleteEntry, upsertEntry } from './adminEntries';
 import { deletePlayer, inspectPlayerDelete } from './players';
+import { hideMessage, joinBoard, setMute } from './board';
 import { loadCounterOverview, saveCounterPlayer } from './counter';
 import { staffRoleOf, type StaffRole } from '../../shared/roles';
 import { createRateLimit, tidyClientError } from './clientErrors';
@@ -322,6 +323,40 @@ export const counterSavePlayer = onCall(async (req) => {
     role,
     actorUid: req.auth!.uid,
     actorEmail: (req.auth?.token.email as string | undefined) ?? null,
+  });
+});
+
+// ---- the weekly board (D-102) ---------------------------------------------------
+// boardJoin: point this login at its player, so the rules can let entrants read the board.
+export const boardJoin = onCall(async (req) => {
+  requireSignedIn(req);
+  return joinBoard(db, req.auth!.uid);
+});
+
+// boardHide and boardMute: the commissioner or the counter role, with a reason, audited.
+export const boardHide = onCall(async (req) => {
+  const role = requireStaff(req);
+  return hideMessage(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    messageId: requireId(req.data?.messageId, 'messageId'),
+    reason: req.data?.reason,
+    ...actorOf(req, role),
+  });
+});
+
+export const boardMute = onCall(async (req) => {
+  const role = requireStaff(req);
+  if (typeof req.data?.muted !== 'boolean') {
+    throw new HttpsError('invalid-argument', 'Say whether to mute or unmute.');
+  }
+  return setMute(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    playerId: requireId(req.data?.playerId, 'playerId'),
+    muted: req.data.muted,
+    reason: req.data?.reason,
+    ...actorOf(req, role),
   });
 });
 

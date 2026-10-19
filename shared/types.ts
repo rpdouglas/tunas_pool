@@ -40,7 +40,9 @@ export type AuditAction =
   | 'player.delete'
   | 'player.saved'
   | 'player.guestMoved'
-  | 'season.status';
+  | 'season.status'
+  | 'board.hidden'
+  | 'board.mute';
 
 // ---- players/{playerId} ----------------------------------------------------
 export interface Player {
