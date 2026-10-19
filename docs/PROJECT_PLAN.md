@@ -251,6 +251,8 @@ All eleven sprints are built and released. What that does and does not mean:
 10. **A wide picks grid** for the counter or a printout, if the two lists are not enough (D-067).
 11. ~~**Import a week from the commissioner's spreadsheet**~~ Built (D-096): Back Office, Roster, Import picks from a spreadsheet. Picks already in online are kept unless Replace is ticked.
 12. **Move to the pool's own project and `tunaspool.ca`** (D-100), between two weeks, whenever it suits. Not urgent. Steps in `docs/MIGRATION.md`: Part 1 (domain, project, dry run) can be done ahead without players noticing.
+13. ~~**Welcome for first-time visitors**~~ Built (D-101): a panel on the home screen for anyone with no profile yet, saying no account is needed.
+14. **Weekly message board** (D-102), next. Rules tests first: post only when paid and signed in with a saved account, read when entered, hide and mute by admin or counter through an audited callable.
 
 ## 8. Parked (post-v1 ideas)
 
