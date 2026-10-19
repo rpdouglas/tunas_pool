@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   PICK_MARK_TEXT,
   gameShare,
+  isUpset,
   leaderboard,
   pickMark,
   rankLabel,
@@ -193,6 +194,7 @@ function Revealed({
   const final = week.status === 'final' && week.winner !== null;
   const winner = final ? week.winner! : null;
   const byId = new Map(entries.map((e) => [e.playerId, e]));
+  const myPicks = myPlayerId ? (byId.get(myPlayerId)?.picks ?? null) : null;
   const tied = winner ? winner.tiedPlayerIds.map((id) => byId.get(id)).filter((e) => e) : [];
 
   return (
@@ -351,15 +353,11 @@ function Revealed({
                   awayPercent={sharePercent(share.away.length, share.total)}
                   homePercent={sharePercent(share.home.length, share.total)}
                   winner={result === 'away' || result === 'home' ? result : null}
+                  score={score ? { away: score.awayPoints, home: score.homePoints } : null}
+                  unofficial={unofficial.includes(g.id)}
+                  myPick={myPicks?.[g.id] ?? null}
+                  upset={isUpset(share, result)}
                 />
-                {score && (
-                  <p className="text-body font-semibold">
-                    Final: {g.away} {score.awayPoints}, {g.home} {score.homePoints}
-                    {unofficial.includes(g.id) && (
-                      <span className="font-normal text-ink-muted"> (unofficial)</span>
-                    )}
-                  </p>
-                )}
                 {line && <p className="text-body">{line}</p>}
                 <details>
                   <summary className="min-h-touch cursor-pointer py-2 text-body font-semibold text-ink-emphasis underline">

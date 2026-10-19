@@ -117,9 +117,13 @@ it('counts ESPN finals as unofficial, keeps saved results, and refreshes on requ
   expect(refetchWeek).toHaveBeenCalled();
 
   await userEvent.click(screen.getByRole('button', { name: 'By game' }));
-  expect(screen.getByText('Final: Bears 14, Falcons 21', { exact: false })).toHaveTextContent(
-    '(unofficial)',
-  );
+  // Scoreboard cards (D-103): each score beside its team, and "Final (unofficial)" for a feed result.
+  const bears = screen
+    .getAllByRole('listitem')
+    .find((li) => li.textContent?.includes('Bears') && li.textContent.includes('Falcons'))!;
+  expect(within(bears).getByText('14')).toBeInTheDocument();
+  expect(within(bears).getByText('21')).toBeInTheDocument();
+  expect(within(bears).getByText(/Final/)).toHaveTextContent('Final (unofficial)');
 });
 
 it('falls back to the saved results when ESPN cannot be reached', () => {

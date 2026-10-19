@@ -836,6 +836,21 @@ export default function Styleguide() {
               awayPercent={70}
               homePercent={30}
               winner="home"
+              score={{ away: 17, home: 24 }}
+              unofficial
+              myPick="away"
+              upset
+            />
+            <ShareBar
+              awayTeam="Bears"
+              homeTeam="Titans"
+              awayCount={18}
+              homeCount={18}
+              awayPercent={50}
+              homePercent={50}
+              winner="away"
+              score={{ away: 20, home: 13 }}
+              myPick="away"
             />
             <ShareBar
               awayTeam="Buccaneers"
