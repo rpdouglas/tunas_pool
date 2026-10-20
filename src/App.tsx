@@ -13,6 +13,8 @@ const PlayerPage = lazy(() => import('./features/leaderboard/PlayerPage'));
 const SheetPage = lazy(() => import('./features/print/SheetPage'));
 const ResultsSheetPage = lazy(() => import('./features/print/ResultsSheetPage'));
 const Styleguide = lazy(() => import('./pages/Styleguide'));
+// Weekly 649 Bingo: its own chunk, linked from nowhere (D-128).
+const BingoRoutes = lazy(() => import('./features/bingo/BingoRoutes'));
 import NotFound from './pages/NotFound';
 import { AdminLayout } from './features/admin/AdminLayout';
 import { CounterLayout } from './features/counter/CounterLayout';
@@ -61,6 +63,7 @@ export default function App() {
         <Route path="/claim" element={<ClaimPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/auth/finish" element={<FinishSignIn />} />
+        <Route path="/b/*" element={<BingoRoutes />} />
         <Route
           path="/admin"
           element={

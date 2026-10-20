@@ -85,6 +85,7 @@ npm run test           # Vitest
 npm run test:rules     # rules tests and the functions' integration tests (Firestore emulator)
 npm run test:a11y      # axe, fonts, and 375px checks on /styleguide and the sign-in pages (Playwright)
 npm run test:smoke     # every screen once at 375px against the emulators, about a minute (D-082)
+# SMOKE_ONLY=bingo npm run test:smoke   # guest and bingo screens only, when the Codespace runs short of memory
 # The four test:e2e:* flows below are parked (D-066): run them only when asked.
 npm run test:e2e:emulator  # full browser flows against running emulators + dev server (see the script header)
 npm run test:e2e:mock-week # the Phase 1 gate: 12 players, payments, results, winner, payout (needs the Functions emulator)

@@ -28,6 +28,9 @@ import { PhotoField } from '../components/ui/PhotoField';
 import { PickRow } from '../components/ui/PickRow';
 import { LeaderboardRow } from '../components/ui/LeaderboardRow';
 import { HallOfFameList } from '../components/ui/HallOfFameList';
+import { BingoBalls, BingoCardPanel } from '../components/ui/BingoCard';
+import { BingoNumberPicker } from '../components/ui/BingoNumberPicker';
+import { BingoPastGame } from '../components/ui/BingoPastGame';
 import type { HallList } from '@shared/hallOfFame';
 import { ShareBar } from '../components/ui/ShareBar';
 import { ShareCard } from '../components/ui/ShareCard';
@@ -915,6 +918,90 @@ export default function Styleguide() {
                 entries: [],
                 more: null,
                 empty: 'No perfect weeks yet.',
+              }}
+            />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-bingo">
+          <h2 id="sg-bingo" className="mb-3 font-heading text-h2 italic">
+            Bingo cards, number picker, and past games
+          </h2>
+          <div className="flex max-w-player flex-col gap-4">
+            <Panel>
+              <BingoBalls numbers={[3, 11, 19, 27, 35, 43]} hits={[]} />
+            </Panel>
+            <BingoCardPanel
+              title="Card 1 (not paid, no intent)"
+              numbers={[3, 11, 19, 27, 35, 43]}
+              hits={[11, 27]}
+              paidDraws={1}
+              drawsSoFar={2}
+              dueDraw="2026-11-18"
+              payment={null}
+              onIntent={() => undefined}
+              onRetire={() => undefined}
+            />
+            <BingoCardPanel
+              title="Card 2 (will pay cash)"
+              numbers={[1, 2, 3, 4, 5, 6]}
+              hits={[1, 2, 3, 4, 5]}
+              paidDraws={2}
+              drawsSoFar={2}
+              dueDraw="2026-11-18"
+              payment={{ paid: false, late: false, intent: 'cash' }}
+              onIntent={() => undefined}
+            />
+            <BingoCardPanel
+              title="Card 3 (paid, all six)"
+              numbers={[7, 14, 21, 28, 35, 42]}
+              hits={[7, 14, 21, 28, 35, 42]}
+              paidDraws={3}
+              drawsSoFar={3}
+              dueDraw="2026-11-25"
+              payment={{ paid: true, late: true, intent: 'etransfer' }}
+            />
+            <Panel title="Add a card">
+              <BingoNumberPicker
+                onSubmit={() => undefined}
+                error="Your limit is 2 cards. You can change it on your cards page."
+              />
+            </Panel>
+            <BingoPastGame
+              c={{
+                number: 1,
+                status: 'won',
+                test: false,
+                potCents: 208_000,
+                drawsApproved: 6,
+                closingDraw: '2026-12-16',
+                carriedOutCents: 0,
+                winners: [
+                  {
+                    cardId: 'a',
+                    displayName: 'Bartholomew Featherstonehaugh',
+                    hits: 6,
+                    shareCents: 104_000,
+                  },
+                  {
+                    cardId: 'b',
+                    displayName: 'Jen K.',
+                    hits: 6,
+                    shareCents: 104_000,
+                  },
+                ],
+              }}
+            />
+            <BingoPastGame
+              c={{
+                number: 2,
+                status: 'capped',
+                test: true,
+                potCents: 412_345,
+                drawsApproved: 26,
+                closingDraw: '2027-06-30',
+                carriedOutCents: 412_345,
+                winners: [],
               }}
             />
           </div>

@@ -1,11 +1,46 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 13: Bingo functions** · Phase 6c (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
+**Sprint 14: Bingo player screens** · Phase 6d (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
 
 ## Goal
-Every money and result action is a callable with an integration test, and a whole game runs in the emulator.
+A first-timer joins and adds a card at 375px without help.
 
 ## Persona check
+Reuses the whole-feature check from Sprint 11. For this sprint:
+- **Jen (Welcome Test):** `/b` says what bingo is in three plain lines and "Nothing is paid on this page" before asking anything; the rules and the odds are one tap away and readable before joining; a guest is asked to save their account first, in plain words. The smoke run joins with the code and adds a quick-pick card through the real screens and functions.
+- **Rosalie:** a card's numbers are balls with crossed-off said in words ("2 of 6 crossed off: 11 and 27"), never colour alone; paid or not is a sentence with a ✓, and fits at Extra large text (checked in the smoke run).
+- **Gerald:** Past games names the winners, the pot, the share, and the draw.
+- **Bingo Check:** the card screen shows what you've put in, in dollars, first; limits and "Sit out this game" are on the same page; the board is counts only (D-123); no word anywhere says a card is close (tested in `shared/bingoView.test.ts`); the support line is on the rules screen with tap-to-call numbers.
+- **Privacy:** members see only their own cards; the board and history read only the cycle documents.
+
+## Tasks
+- [x] `bingoStatus` callable and its test (D-132)
+- [x] `shared/bingoView.ts`: every player-facing sentence, 8 tests
+- [x] UI: `BingoBalls`, `BingoCardPanel`, `BingoNumberPicker`, `BingoPastGame`, in the styleguide with their states; 5 component tests
+- [x] Screens: `/b` (join), `/b/cards`, `/b/board`, `/b/history`, `/b/rules`, one lazy chunk with `noindex`, "not found" to anyone who may not see it; 5 route tests
+- [x] Smoke run: `bingo-off` as a guest, then a member signs in, joins, adds a card, and visits all four screens; `SMOKE_ONLY=bingo` added
+- [x] Docs: DATA_MODEL §11.5, DECISIONS D-132, BINGO_PLAN status, CLAUDE.md commands
+- [x] **D-132:** accepted by Ryan
+
+## Acceptance (from BINGO_PLAN.md S14)
+The Jen walkthrough (code to first card) works at 375px through the real screens, in the smoke run, with the axe, fit, and Extra large text checks passing on every bingo screen. The Rosalie walkthrough (reading a card, knowing whether it's paid) is in the card screen's words and its tests. Typecheck and lint clean; **395 unit tests** (377 before); **203 rules and functions tests** (202 before). The pool's first download: 304.18 KB (303.94 KB before; the difference is the lazy route).
+
+## Notes / learned
+- **The styleguide can change the pool's first download.** Importing a bingo page into the styleguide pulled the bingo data layer into it, and Rollup then merged a 40 KB shared chunk into `index.js`. Caught by comparing the build before and after; fixed by keeping the styleguide on pure UI (D-132). Worth checking the `index-*.js` size in every bingo PR (BINGO_PLAN §7).
+- **The full smoke run crashed twice in the Commissioner's screens** ("Target crashed", the Codespace's memory), before reaching bingo; nothing there changed in this sprint. `SMOKE_ONLY=bingo` runs the guest and bingo parts alone; it passed.
+- The screenshots showed the sixth ball wrapping at 375px and the support numbers breaking mid-number; both fixed and looked at again.
+- My first guess at the account page's button was wrong ("Email me a link", not the admin page's "Email me a sign-in link").
+
+---
+
+## Sprint 13 (done 2026-10-20, PR #53)
+
+**Sprint 13: Bingo functions** · Phase 6c (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
+
+### Goal
+Every money and result action is a callable with an integration test, and a whole game runs in the emulator.
+
+### Persona check
 Reuses the whole-feature check from Sprint 11. For this sprint:
 - **Commissioner and Devon (Counter Test):** Devon takes cash, adds a paper member, types and approves a draw, and pays a winner in cash; every e-Transfer, correction, skip, setting, and undo of an e-Transfer refuses him with "Ask the commissioner"-style words (D-114). Each is audited under his email.
 - **Gerald Trust Test:** the two-game test checks every cent: spend equals winnings plus the operator share, game by game; every audit entry reads as a sentence.
@@ -13,7 +48,7 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
 - **Bingo Check:** the member's own limit binds staff (refused with "Only they can change it"); staff can't call `bingoSetLimit` at all; no paying ahead; late joiners refused.
 - **Privacy:** the totals view has no names or IDs (tested); the code never reaches the audit log (tested).
 
-## Tasks
+### Tasks
 - [x] `functions/src/bingo/`: `common`, `cycle` (load, work out, close, open, `startCycle`), `members` (code, settings, join, paper members, limits), `cards`, `payments` (intent, payments, payouts, totals), `draws` (enter, approve, correct, skip)
 - [x] 16 callables in `functions/src/index.ts`, with the roles of D-114
 - [x] 25 integration tests, one or more per function, and a two-game test from cards to payout (`bingoGame.int.test.ts`)
@@ -21,10 +56,10 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
 - [x] Docs: DATA_MODEL §11, DECISIONS D-131, BINGO_PLAN status
 - [x] **D-131:** accepted by Ryan
 
-## Acceptance (from BINGO_PLAN.md S13)
+### Acceptance (from BINGO_PLAN.md S13)
 The two-game test passes; every callable refuses the wrong role and bad input; every action has an audit entry. Typecheck, lint, and the functions build are clean; **377 unit tests** (373 before) and **202 rules and functions tests** (176 before).
 
-## Notes / learned
+### Notes / learned
 - **Writing the whole-game test found a real gap:** money taken late on the night a game is won was credited to a draw of the finished game, where it would have sat forever. It now moves into the new game (D-131).
 - Firestore transactions read before they write, so `applyDraw` is split: `loadCycle` reads everything (draws, entries, cards, members, pending payments, where the next game would go), and `writeCycle` works it out and writes.
 - The functions take `now`, so the tests run on real Wednesdays across the clock change.
