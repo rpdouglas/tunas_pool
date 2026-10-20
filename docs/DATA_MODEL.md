@@ -378,7 +378,7 @@ Computed in shared code (`shared/`) so the web app and functions agree. Pure fun
 
 ## 11. Weekly 649 Bingo (Phase 6)
 
-The settled design for `docs/BINGO_PLAN.md`, from D-110 to D-130. **Built so far (Sprint 12):** the rules (`firestore.rules`, rows 67 to 80), `shared/bingo.ts` (§11.4, with §11.6 as its fixtures), and the simulation (`shared/bingoSim.ts`, `scripts/bingo-sim.ts`). The functions (§11.5) come in Sprint 13; if code and this section disagree, stop and flag it. Money is integer cents. ✍ marks a document only functions write. **No client writes any bingo document**: every change, a player's own intent and limits included, goes through a callable, so the rules for bingo are reads only.
+The settled design for `docs/BINGO_PLAN.md`, from D-110 to D-130. **Built so far (Sprint 12):** the rules (`firestore.rules`, rows 67 to 80), `shared/bingo.ts` (§11.4, with §11.6 as its fixtures), and the simulation (`shared/bingoSim.ts`, `scripts/bingo-sim.ts`). **Sprint 13:** the functions (§11.5, `functions/src/bingo/`), with an integration test each and a two-game test from cards to payout (`bingoGame.int.test.ts`). The screens come in Sprint 14; if code and this section disagree, stop and flag it. Money is integer cents. ✍ marks a document only functions write. **No client writes any bingo document**: every change, a player's own intent and limits included, goes through a callable, so the rules for bingo are reads only.
 
 ### 11.1 Collections
 
@@ -402,19 +402,19 @@ bingoCycles/{cycleId}                       ✍ one game, until won or capped
 
 **`bingo/secret`**: `codeHash` (a salted hash, never the code), `codeVersion`, `rotatedAt`. Read by nobody; only functions use it (R-14).
 
-**`bingoMembers/{playerId}`**: `displayName` (copied from the profile), `joinedAt`, `ageAttestedAt` (copied from the profile, D-115), `paper` (true if the commissioner added them), `limit` (cards per draw, 1 to `maxCardsPerPlayer`), `pendingLimit` and `pendingFromCycle` (a raise waiting a cycle, D-118), `pausedThroughCycle` (the last cycle `number` sat out, or null), `spent` (`{ cycleCents, byYear: { "2026": cents } }`, worked out again from the member's payments on every payment change). Read by the owner and staff; other members never read it (D-123).
+**`bingoMembers/{playerId}`**: `displayName` (copied from the profile), `joinedAt`, `ageAttestedAt` (copied from the profile, D-115), `paper` (true if the commissioner added them), `limit` (cards per draw, 1 to `maxCardsPerPlayer`), `pendingLimit` and `pendingFromCycle` (a raise waiting a cycle, D-118), `pausedThroughCycle` (the last cycle `number` sat out, or null), `spent` (`{ byCycle: { [cycleId]: cents }, byYear: { "2026": cents } }`, changed in the same transaction as every payment, its undo, and money moved into the next game, D-131). Read by the owner and staff; other members never read it (D-123).
 
 **`bingoRedeemAttempts/{uid}`**: `count`, `windowStart`, `lockedUntil`. Five wrong codes in an hour lock that login for an hour. Read by nobody.
 
 **`bingoCards/{cardId}`**: `playerId`, `numbers` (six distinct integers 1 to 49, sorted), `active` (false once retired), `createdAt`, `createdBy` (`uid`, or a staff `uid` for a paper card), `source` (`web`, `paper`). Read by the owner and staff. A player's **active** cards count toward the cap (D-110, R-9).
 
-**`bingoCycles/{cycleId}`**: `number` (1, 2, 3, … in order; limits and pauses count by it), `status` (`open`, `won`, `capped`), `test` (boolean, left out of totals, R-16), `openedAt`, `closedAt`, `firstDraw`, `config` (the snapshot of price, operator %, cutoff, caps, and join window), `potCents`, `operatorCents`, `drawsApproved`, `board` (`{ at3, at4, at5, cards }`, counts only, D-123), `winners` (on close: `[{ cardId, playerId, displayName, hits, shareCents, paidOut: { method, at, by } | null }]`), `closingDraw`. Read by members and staff.
+**`bingoCycles/{cycleId}`**: `number` (1, 2, 3, … in order; limits and pauses count by it), `status` (`open`, `won`, `capped`), `test` (boolean, left out of totals, R-16), `openedAt`, `closedAt`, `firstDraw`, `config` (the snapshot of price, operator %, cutoff, caps, and join window), `potCents`, `operatorCents`, `drawsApproved`, `board` (`{ at3, at4, at5, cards }`, counts only, D-123), `carriedInCents` and `carriedOutCents` (a pot carried by the cap, D-121), `winners` (on close: `[{ cardId, playerId, displayName, hits, shareCents, paidOut: { method, at, by } | null }]`), `closingDraw`. Read by members and staff.
 
 **`bingoCycles/{c}/entries/{cardId}`**: `playerId`, `joinedDraw`, `paidDraws` (draw dates, kept in step with the payments), `hits` (sorted numbers crossed off, derived), `count` (`hits.length`). Read by the owner and staff.
 
 **`bingoCycles/{c}/draws/{drawDate}`**: `status` (`upcoming`, `proposed`, `approved`, `skipped`), `cutoffAt` (the Timestamp of that week's cutoff), `numbers` (six, sorted, once proposed), `source` (`manual` or the fetch's source), `proposedBy`, `proposedAt`, `approvedBy`, `approvedAt`, `correction` (`{ before, reason, by, at }` or null), `paidCards`, `revenueCents`, `operatorCents`, `potAddCents`. Members read it once `approved` or `skipped`; staff read it always. It is created as `upcoming` the first time anything needs it (the cycle opening, or the first payment for that week), so payments have somewhere to live all week (R-10).
 
-**`bingoCycles/{c}/draws/{d}/payments/{cardId}`**: `playerId`, `paid` (boolean), `method` (`cash`, `etransfer`), `receivedAt`, `confirmedAt`, `confirmedBy`, `late` (received after the cutoff of the draw it was meant for), `reason` (required when late, or when `receivedAt` is more than 5 minutes before the time it is recorded), `intent` (`'cash' | 'etransfer' | null`, the player's "I'll pay cash" / "I sent an e-Transfer", D-116). Read by the owner (paid or not, and intent) and staff.
+**`bingoCycles/{c}/draws/{d}/payments/{cardId}`**: `playerId`, `paid` (boolean), `method` (`cash`, `etransfer`), `receivedAt`, `confirmedAt`, `confirmedBy`, `late` (received after the cutoff of the draw it was meant for), `reason` (required when late, or when `receivedAt` is more than 5 minutes before the time it is recorded), `intent` (`'cash' | 'etransfer' | null`, the player's "I'll pay cash" / "I sent an e-Transfer", D-116), `movedFrom` (set when a skip or the end of a game moved it, D-129, D-131). Read by the owner (paid or not, and intent) and staff.
 
 ### 11.3 A bingo week
 
@@ -428,7 +428,9 @@ bingoCycles/{cycleId}                       ✍ one game, until won or capped
 | On approval | Hits, the pot, and the board counts are worked out again. A card with six crossed off wins. If none does and this was draw `maxWeeks`, the cap rule applies (D-121). |
 | After a win | Staff mark each winner paid. Every card's progress starts at zero in the new cycle; cards carry over and renew for week one. |
 
-A cancelled or postponed draw is **skipped** by the admin: no card changes, and money recorded for it moves to the next draw (D-129).
+A cancelled or postponed draw is **skipped** by the admin: no card changes, and money recorded for it moves to the next draw (D-129); a card already paid late for that next draw has the moved money go to the draw after it.
+
+**When a game ends**, money already taken for a later draw of it (late money) moves to the same draw in the new game, or the new game's first draw, with the member's spend; intents for those draws are dropped, and the old game's later draw documents are removed (D-131). Draws are approved in order: an earlier draw must be approved or skipped first.
 
 ### 11.4 Working it out (`shared/bingo.ts`)
 
@@ -449,7 +451,8 @@ Everything here is a pure function, and `applyDraw` calls it every time, so noth
 |---|---|---|
 | `bingoRedeemCode` | a signed-in player with a saved account | Checks the code against `bingo/secret` (attempts counted, R-14), requires `ageAttestedAt`, creates `bingoMembers` and the `logins` pointer (D-102). |
 | `bingoAddMember` | admin, counter | Adds a paper member with their age confirmed in person (D-114, D-115). |
-| `bingoSetCode` / `bingoSetConfig` | admin | Rotates the code; changes settings (applied from the next cycle). |
+| `bingoSetCode` / `bingoSetConfig` | admin | Rotates the code (8 to 32 letters and numbers, compared without spaces, dashes, or case; stored as a salted hash, never logged); changes settings (applied from the next cycle). |
+| `bingoStartCycle` | admin | Opens the first game (or one after a gap), with `test` if it's the dry run. Refused while a game is open; after that each win opens the next. |
 | `bingoCreateCard` | member; staff for a paper member | Six distinct numbers or quick-pick; join window, cap, limit, and pause, counted inside the transaction. |
 | `bingoRetireCard` | the owner; admin | `active: false`; earlier hits stay, it can't be paid again. |
 | `bingoSetLimit` | the owner only | Lower now, raise next cycle, pause (D-118). |

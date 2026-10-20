@@ -59,18 +59,24 @@ export function describeActor(
   return `Admin ${actorUid.slice(0, 6)}`;
 }
 
+const numbersText = (value: unknown) =>
+  Array.isArray(value) && value.length ? `: ${value.join(' ')}` : '';
+
 export function describeAudit(record: AuditRecord, names: Names, myUid?: string): AuditText {
   const { action, target, before, after } = record;
   const weekId = record.weekId ?? idAfter(target, 'weeks');
   const week = weekNumber(weekId);
-  const playerId = idAfter(target, 'entries') ?? idAfter(target, 'players');
+  const playerId =
+    idAfter(target, 'entries') ?? idAfter(target, 'players') ?? idAfter(target, 'bingoMembers');
   const player =
     (playerId && names(playerId)) ||
     text(after, 'displayName') ||
     text(before, 'displayName') ||
     'a player';
-  const where =
-    week !== undefined
+  const bingoCycle = idAfter(target, 'bingoCycles');
+  const where = action.startsWith('bingo.')
+    ? `Bingo${bingoCycle ? ` · game starting ${bingoCycle}` : ''}`
+    : week !== undefined
       ? `Week ${week}${record.year ? ` · ${record.year}` : ''}`
       : (record.year ?? '');
 
@@ -166,6 +172,73 @@ export function describeAudit(record: AuditRecord, names: Names, myUid?: string)
           ? `Muted ${player} on the board`
           : `Let ${player} post on the board again`;
       break;
+    case 'bingo.memberJoined':
+      what = `${player} joined bingo with the invite code`;
+      break;
+    case 'bingo.memberAdded':
+      what = `Added ${player} to bingo on paper, age checked in person`;
+      break;
+    case 'bingo.code':
+      what = 'Changed the bingo invite code';
+      break;
+    case 'bingo.config':
+      what = 'Changed the bingo settings (they apply from the next game)';
+      break;
+    case 'bingo.cardCreated':
+      what = `Made a bingo card for ${player}${numbersText(field(after, 'numbers'))}`;
+      break;
+    case 'bingo.cardRetired':
+      what = 'Retired a bingo card';
+      break;
+    case 'bingo.limit':
+      what = `${player} changed their own bingo limit`;
+      break;
+    case 'bingo.payment': {
+      const paid = field(after, 'paid') === true;
+      const method = text(after, 'method');
+      const draw = text(after, 'drawDate') ?? idAfter(target, 'draws');
+      what = paid
+        ? `Marked ${player}'s bingo card paid${method ? ` (${method === 'etransfer' ? 'e-Transfer' : 'cash'})` : ''}${draw ? ` for the ${draw} draw` : ''}${field(after, 'late') === true ? ', after the cutoff' : ''}`
+        : `Took the money off ${player}'s bingo card`;
+      break;
+    }
+    case 'bingo.drawEntered':
+      what = `Typed in the bingo draw${numbersText(field(after, 'numbers'))}`;
+      break;
+    case 'bingo.drawApproved':
+      what = `Approved the bingo draw${numbersText(field(after, 'numbers'))}`;
+      break;
+    case 'bingo.drawCorrected':
+      what = `Corrected the bingo draw from${numbersText(field(before, 'numbers'))} to${numbersText(field(after, 'numbers'))}`;
+      break;
+    case 'bingo.drawSkipped':
+      what = 'Skipped the bingo draw';
+      break;
+    case 'bingo.payout':
+      what =
+        field(after, 'paidOut') === true
+          ? `Marked ${player}'s bingo winnings paid`
+          : `Marked ${player}'s bingo winnings not paid`;
+      break;
+    case 'bingo.cycle': {
+      const status = text(after, 'status');
+      const winners = field(after, 'winners');
+      const names = Array.isArray(winners)
+        ? winners
+            .map((w) => text(w, 'displayName'))
+            .filter(Boolean)
+            .join(' & ')
+        : '';
+      if (after === null) what = 'Removed a bingo game that a correction took the win from';
+      else if (status === 'open')
+        what = `Opened bingo game ${String(field(after, 'number') ?? '')}`.trim();
+      else if (status === 'won') what = `Bingo was won${names ? ` by ${names}` : ''}`;
+      else
+        what = names
+          ? `Bingo reached its last week; the closest won: ${names}`
+          : 'Bingo reached its last week with nobody paid; the pot carries over';
+      break;
+    }
     case 'season.status':
       what = text(after, 'status') === 'archived' ? 'Archived the season' : 'Reopened the season';
       break;
