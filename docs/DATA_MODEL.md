@@ -454,7 +454,7 @@ Everything here is a pure function, and `applyDraw` calls it every time, so noth
 | `bingoAddMember` | admin, counter | Adds a paper member with their age confirmed in person (D-114, D-115). |
 | `bingoSetCode` / `bingoSetConfig` | admin | Rotates the code (8 to 32 letters and numbers, compared without spaces, dashes, or case; stored as a salted hash, never logged); changes settings (applied from the next cycle). |
 | `bingoStartCycle` | admin | Opens the first game (or one after a gap), with `test` if it's the dry run. Refused while a game is open; after that each win opens the next. |
-| `bingoCreateCard` | member; staff for a paper member | Six distinct numbers or quick-pick; join window, cap, limit, and pause, counted inside the transaction. |
+| `bingoCreateCard` | member (staff included, for their own card); staff for a paper member, by naming them | Six distinct numbers or quick-pick; join window, cap, limit, and pause, counted inside the transaction. |
 | `bingoRetireCard` | the owner; admin | `active: false`; earlier hits stay, it can't be paid again. |
 | `bingoSetLimit` | the owner only | Lower now, raise next cycle, pause (D-118). |
 | `bingoSetIntent` | the owner | Sets `intent` on this week's payment. |

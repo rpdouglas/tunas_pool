@@ -34,6 +34,7 @@ import {
 import { approveDraw, correctDraw, enterDraw, skipDraw } from './bingo/draws';
 import { bingoStatus as bingoStatusFor } from './bingo/status';
 import { bingoRoster as bingoRosterFor } from './bingo/roster';
+import { cardRequest } from './bingo/callers';
 import { staffRoleOf, type StaffRole } from '../../shared/roles';
 import { createRateLimit, tidyClientError } from './clientErrors';
 import { auditInTransaction } from './audit';
@@ -429,15 +430,21 @@ export const bingoSetConfig = onCall(async (req) => {
 
 export const bingoStartCycle = onCall(async (req) => {
   requireAdmin(req);
-  return startCycle(db, { test: req.data?.test === true, now: new Date(), actorUid: req.auth!.uid });
+  return startCycle(db, {
+    test: req.data?.test === true,
+    now: new Date(),
+    actorUid: req.auth!.uid,
+  });
 });
 
-// A member makes their own card; staff make a paper card for a member (D-114).
+// A member makes their own card (staff included, on their own My cards page); staff make a paper
+// card for a member by naming them (D-114).
 export const bingoCreateCard = onCall(async (req) => {
   const role = staffRoleOf(req.auth?.token);
-  if (role) {
+  const request = cardRequest(role !== null, req.data);
+  if (role && request.kind === 'paper') {
     return createCard(db, {
-      playerId: requireId(req.data?.playerId, 'playerId'),
+      playerId: requireId(request.playerId, 'playerId'),
       numbers: req.data?.numbers ?? null,
       byStaff: true,
       now: new Date(),
@@ -499,7 +506,8 @@ export const bingoSetPayment = onCall(async (req) => {
     paid: req.data.paid,
     method: req.data?.method,
     receivedAt: receivedAtMs === undefined ? undefined : new Date(receivedAtMs),
-    drawDate: req.data?.drawDate === undefined ? undefined : requireId(req.data.drawDate, 'drawDate'),
+    drawDate:
+      req.data?.drawDate === undefined ? undefined : requireId(req.data.drawDate, 'drawDate'),
     reason: req.data?.reason,
     now: new Date(),
     ...actorOf(req, role),
