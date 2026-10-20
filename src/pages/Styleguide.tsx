@@ -11,6 +11,8 @@ import { PawnShopHelmet, TunaBadge, WordmarkArt } from '../components/ui/BrandAr
 import { WordmarkLockup } from '../components/ui/WordmarkLockup';
 import { WinnerBanner } from '../components/ui/WinnerBanner';
 import { WelcomePanel } from '../components/ui/WelcomePanel';
+import { TiebreakerPanel } from '../components/ui/TiebreakerPanel';
+import { tiebreakSummary } from '@shared/tiebreak';
 import { BoardPost } from '../features/board/BoardPost';
 import { BoardComposer } from '../features/board/BoardComposer';
 import { HOUSE_RULES } from '@shared/board';
@@ -423,6 +425,42 @@ export default function Styleguide() {
                 </ol>
               </div>
             </Panel>
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-tiebreak">
+          <h2 id="sg-tiebreak" className="mb-3 font-heading text-h2 italic">
+            Monday night tiebreaker (D-105)
+          </h2>
+          <div className="flex max-w-player flex-col gap-4 rounded-lg bg-surface p-4">
+            <TiebreakerPanel
+              total={47}
+              totalNote="so far · Q4 · 2:10"
+              summary={tiebreakSummary(
+                [
+                  { playerId: 'd', displayName: 'Dale D.', tiebreakerTotal: 44 },
+                  { playerId: 'j', displayName: 'Jen K.', tiebreakerTotal: 50 },
+                  { playerId: 'r', displayName: 'Rosalie M.', tiebreakerTotal: 38 },
+                  { playerId: 'h', displayName: 'Hank O.', tiebreakerTotal: 61 },
+                ],
+                47,
+                'd',
+                ['d', 'j'],
+              )}
+            />
+            <TiebreakerPanel
+              total={null}
+              totalNote="not started. Kickoff Mon 8:15 PM"
+              summary={tiebreakSummary(
+                [
+                  { playerId: 'd', displayName: 'Dale D.', tiebreakerTotal: 44 },
+                  { playerId: 'j', displayName: 'Jen K.', tiebreakerTotal: 50 },
+                ],
+                null,
+                null,
+                ['j'],
+              )}
+            />
           </div>
         </section>
 

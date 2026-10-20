@@ -14,12 +14,14 @@ import {
 } from '@shared/reveal';
 import { gameStatuses, withUnofficialResults, type FeedScore } from '@shared/schedule';
 import { explainOutcome, formatMoney } from '@shared/scoring';
+import { tiebreakSummary } from '@shared/tiebreak';
 import { formatPoolDateTime } from '@shared/time';
 import { Button } from '../../components/ui/Button';
 import { GameDayPage } from '../../components/layout/GameDayPage';
 import { LeaderboardRow } from '../../components/ui/LeaderboardRow';
 import { Panel } from '../../components/ui/Panel';
 import { ShareBar } from '../../components/ui/ShareBar';
+import { TiebreakerPanel } from '../../components/ui/TiebreakerPanel';
 import { WinnerBanner } from '../../components/ui/WinnerBanner';
 import type { WeekView } from '../../lib/weekModel';
 import { useGuestSession } from '../auth/useAuth';
@@ -197,6 +199,27 @@ function Revealed({
   const byId = new Map(entries.map((e) => [e.playerId, e]));
   const myPicks = myPlayerId ? (byId.get(myPlayerId)?.picks ?? null) : null;
   const tied = winner ? winner.tiedPlayerIds.map((id) => byId.get(id)).filter((e) => e) : [];
+
+  // The Monday night tiebreaker under that game (D-105): the saved total first, else the feed's.
+  const mnf = games.find((g) => g.id === week.mnfGameId) ?? null;
+  const mnfStatus = mnf && live ? statusOf[mnf.id] : null;
+  const mnfTotal =
+    week.mnfTotal ??
+    (mnfStatus?.kind === 'final' || mnfStatus?.kind === 'live'
+      ? mnfStatus.awayPoints + mnfStatus.homePoints
+      : null);
+  const mnfNote =
+    week.mnfTotal !== null
+      ? 'final'
+      : mnfStatus?.kind === 'final'
+        ? 'final (unofficial)'
+        : mnfStatus?.kind === 'live'
+          ? `so far · ${mnfStatus.label}`
+          : mnfStatus?.kind === 'upcoming'
+            ? `not started. Kickoff ${mnfStatus.label}`
+            : (mnfStatus?.label ?? 'not in yet');
+  const leaderIds = decided > 0 ? rows.filter((r) => r.rank === 1).map((r) => r.playerId) : [];
+  const tiebreak = tiebreakSummary(entries, mnfTotal, myPlayerId, leaderIds);
 
   return (
     <>
@@ -378,6 +401,9 @@ function Revealed({
                     )}
                   </div>
                 </details>
+                {g.id === mnf?.id && (
+                  <TiebreakerPanel total={mnfTotal} totalNote={mnfNote} summary={tiebreak} />
+                )}
               </li>
             );
           })}
