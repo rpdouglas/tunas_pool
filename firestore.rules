@@ -374,7 +374,7 @@ service cloud.firestore {
       }
     }
 
-    // ---------- Weekly 649 Bingo (D-110 to D-129) ----------
+    // ---------- Tunas 649 Bingo (D-110 to D-129) ----------
     // Every bingo document is written by a function, so these are reads only. A member is a login
     // whose `logins` pointer names a player it owns, with a `bingoMembers` document. The pointer
     // is re-checked, never trusted (D-102). `bingo/secret` and `bingoRedeemAttempts` fall through

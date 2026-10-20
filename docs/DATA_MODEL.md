@@ -49,7 +49,7 @@ auditLog/{logId}                             (function-written)
 logins/{uid}                                 (function-written pointer to a player, D-102)
 ```
 
-Weekly 649 Bingo (planned, Phase 6) adds `bingo/*`, `bingoMembers`, `bingoRedeemAttempts`, `bingoCards`, and `bingoCycles` with its subcollections: see §11.
+Tunas 649 Bingo (planned, Phase 6) adds `bingo/*`, `bingoMembers`, `bingoRedeemAttempts`, `bingoCards`, and `bingoCycles` with its subcollections: see §11.
 
 `year` is a string such as `"2026"`. `weekId` is `"wk04"`, zero-padded.
 
@@ -376,7 +376,7 @@ Computed in shared code (`shared/`) so the web app and functions agree. Pure fun
 
 ---
 
-## 11. Weekly 649 Bingo (Phase 6)
+## 11. Tunas 649 Bingo (Phase 6)
 
 The settled design for `docs/BINGO_PLAN.md`, from D-110 to D-130. **Built so far (Sprint 12):** the rules (`firestore.rules`, rows 67 to 80), `shared/bingo.ts` (§11.4, with §11.6 as its fixtures), and the simulation (`shared/bingoSim.ts`, `scripts/bingo-sim.ts`). **Sprint 13:** the functions (§11.5, `functions/src/bingo/`), with an integration test each and a two-game test from cards to payout (`bingoGame.int.test.ts`). **Sprint 14:** the player screens (`src/features/bingo/`, one lazy chunk, D-132). **Sprint 15:** the staff screens (`src/features/bingo/staff/`, D-133). The automatic fetch and the dry run come in Sprint 16; if code and this section disagree, stop and flag it. Money is integer cents. ✍ marks a document only functions write. **No client writes any bingo document**: every change, a player's own intent and limits included, goes through a callable, so the rules for bingo are reads only.
 

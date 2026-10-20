@@ -1,5 +1,5 @@
 /**
- * Two whole games of Weekly 649 Bingo, from cards to payout, against the Firestore emulator
+ * Two whole games of Tunas 649 Bingo, from cards to payout, against the Firestore emulator
  * (BINGO_PLAN Sprint 13's acceptance). Run with `npm run test:rules`.
  *
  * Game 1: four cards; a missed week; cash handed over before six and typed in after; late money;

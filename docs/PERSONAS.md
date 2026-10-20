@@ -3,7 +3,7 @@
 **Version:** 1.1 · **Last Updated:** October 2026 · **Next Review:** After the Phase 1 soft launch (Sprint 3)
 
 **Change Log:**
-- v1.1 — §8 Weekly 649 Bingo addendum: who plays it, its responsible-play standard, and the Bingo Check (D-112)
+- v1.1 — §8 Tunas 649 Bingo addendum: who plays it, its responsible-play standard, and the Bingo Check (D-112)
 - v1.0 — Initial set of ten personas (Dale, Rosalie, Bernie, Jen, Troy, Dwayne, Kayla, Gerald, The Commissioner, Devon), five anti-personas, season arc, overlap register, pool constraints register, spec-impact log, and assumptions to validate
 
 ---
@@ -24,7 +24,7 @@ Every feature in the Tunas pool is built against these personas. The pool is a c
 6. **Run the Commissioner Counter Test.** Can the commissioner do this one-handed, with a customer waiting, in about 10 seconds, and undo it?
 7. **Run the Border Test.** Does this work identically for a player on the NY side with no Canadian bank account? ("At par" means equal, not nearly equal.)
 8. **Run the Welcome Test.** Can a first-timer from Cornwall understand it with zero insider vocabulary, and does it avoid exposing them to the group before they're ready?
-9. **Run the Responsible-Play Check.** Does this encourage spending beyond the fixed entry fee, create IOUs or tabs, or reward chasing losses? If yes, redesign. (Weekly 649 Bingo runs its own Bingo Check instead, §8.)
+9. **Run the Responsible-Play Check.** Does this encourage spending beyond the fixed entry fee, create IOUs or tabs, or reward chasing losses? If yes, redesign. (Tunas 649 Bingo runs its own Bingo Check instead, §8.)
 10. **Check the privacy test.** Would a reasonable player feel watched, ranked, or exposed by this (phone numbers, who has or hasn't paid, who owes)? If yes, redesign.
 
 **The primary persona rule:** Design decisions are optimised for the primary persona. Secondary personas are tested against the result. Never design for an average of all personas.
@@ -882,7 +882,7 @@ These personas are built on how the pool is described, not on research. Confirm 
 
 ---
 
-## §8 Weekly 649 Bingo addendum (D-112)
+## §8 Tunas 649 Bingo addendum (D-112)
 
 Bingo (`docs/BINGO_PLAN.md`) is a different game from the pool, with more than one card, a weekly renewal, and a pot that grows until someone wins. The pool's one-entry rule (CLAUDE.md §10) and the Responsible-Play Check (§0 step 9) would refuse it as written. This section is the written exception: what bingo allows, what it never does, and the check every bingo sprint runs instead of step 9. It does not loosen anything for the pool.
 

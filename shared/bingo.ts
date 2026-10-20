@@ -1,5 +1,5 @@
 /**
- * Weekly 649 Bingo, the rules of the game (DATA_MODEL §11, D-110 to D-129). All pure: the
+ * Tunas 649 Bingo, the rules of the game (DATA_MODEL §11, D-110 to D-129). All pure: the
  * functions call these every time a draw is approved or corrected, and the simulation
  * (scripts/bingo-sim.ts) runs on the same code. Nothing here is ever added to: a card's crossed-off
  * numbers, the pot, and the winners are worked out again from the approved draws and the paid

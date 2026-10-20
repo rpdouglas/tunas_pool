@@ -56,6 +56,18 @@ describe('MenuView', () => {
     expect(screen.getByRole('link', { name: 'This week' })).toHaveAttribute('href', '/');
   });
 
+  it('shows Tunas 649 Bingo to members only (D-135)', async () => {
+    show({ name: 'Kayla S.', signedIn: true, profileId: 'p1', bingo: true });
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.getByRole('link', { name: 'Tunas 649 Bingo' })).toHaveAttribute('href', '/b');
+  });
+
+  it('never shows bingo to anyone else', async () => {
+    show({ name: 'Dale D.', signedIn: true, profileId: 'p2' });
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.queryByRole('link', { name: /bingo/i })).toBeNull();
+  });
+
   it('closes when a link is tapped', async () => {
     show();
     await userEvent.click(screen.getByRole('button', { name: 'Menu' }));

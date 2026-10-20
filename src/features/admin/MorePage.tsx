@@ -10,7 +10,7 @@ const LINKS = [
   {
     to: '/admin/bingo',
     label: 'Bingo',
-    note: 'Weekly 649 Bingo: payments, draws, members, settings',
+    note: 'Tunas 649 Bingo: payments, draws, members, settings',
   },
 ];
 

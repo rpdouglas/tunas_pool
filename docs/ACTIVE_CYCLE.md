@@ -17,7 +17,7 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
 - [x] **Undo late payment** on the Payments screen (the counter for cash only); 1 more component test
 - [x] **Accessibility:** `npm run test:a11y` 18 of 18, the styleguide with every bingo component at 375px and desktop
 - [x] **The pool's first download:** 305.26 KB, unchanged this sprint (no bingo code in it)
-- [x] **README:** "Weekly 649 Bingo": setting it up, a bingo week, settling a bingo dispute, and the dry-run checklist
+- [x] **README:** "Tunas 649 Bingo": setting it up, a bingo week, settling a bingo dispute, and the dry-run checklist
 - [x] Docs: DECISIONS D-134, PROJECT_PLAN §8, BINGO_PLAN status
 - [ ] **The dry run** (Ryan, with real people and real Wednesdays): the README checklist
 - [ ] **One full smoke run on a machine with enough memory**
@@ -27,6 +27,7 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
 "The dry run ends with a correct payout, checked by hand against the draws. Then G2 is Ryan's." The code side is done; the dry run is a real-world task with the practice game, and the checklist for it is in the README. Typecheck and lint clean; **407 unit tests** (406 before); **205 rules and functions tests** (204 before).
 
 ## Notes / learned
+- **After Sprint 16 (D-135, Ryan asked):** bingo is *Tunas 649 Bingo* everywhere (the pool's name unchanged, 29 mentions before and after); members get a *Tunas 649 Bingo* link in the menu, nobody else. Checked by 2 menu tests, a styleguide state, and the smoke run (a member finds the link; a guest doesn't). **Learned:** my first rename pass also rewrote three history files (the build spec, the review report, DECISIONS) because the exclusion filter didn't match; caught before committing and put back.
 - **Bug found by Ryan in use (2026-10-20):** adding a card on his own My cards page said "playerId is missing or not valid". `bingoCreateCard` treated every staff login as staff entering a paper card for someone else, but staff can be members too. A staff call is now a paper card only when it names the player (`functions/src/bingo/callers.ts`, 2 tests). The callable wrappers in `index.ts` had no tests, which Sprint 13 noted; this decision now has one.
 - **What isn't proven:** the 300-card approval rests on Firestore's current limits (no 500-write cap, 10 MiB a request); the emulator doesn't enforce the old cap, so the dry run can't prove it either at its size. A failure would be whole and visible, not partial.
 - **The bingo smoke run, again:** every step passed up to the commissioner's draw, then the tab ran out of memory, as in Sprint 15. Not chased further here (CLAUDE.md §7).
@@ -174,7 +175,7 @@ Every rules row passes, and all existing tests still pass: typecheck and lint cl
 
 ## Sprint 11 (done 2026-10-20, PR #51)
 
-**Sprint 11: Bingo spec** · Phase 6a (Weekly 649 Bingo, `docs/BINGO_PLAN.md`) · Started: 2026-10-20 · Docs only
+**Sprint 11: Bingo spec** · Phase 6a (Tunas 649 Bingo, `docs/BINGO_PLAN.md`) · Started: 2026-10-20 · Docs only
 
 ### Goal
 The governing docs say exactly what bingo will be. Every open decision has a D-number. Gates G0 and G1 are recorded.

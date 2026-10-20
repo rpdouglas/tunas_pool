@@ -19,7 +19,7 @@ working models; when a persona and a real player disagree, the real player wins.
 1. Read `docs/PERSONAS.md` §0 (the ten checks) and §1 (hierarchy). Then read §3 only
    for the personas you name, plus §4 for any relevant anti-persona (Double-Dipper,
    Late Pick Lobbyist, Snoop). Do not read the whole file.
-   For **Weekly 649 Bingo** (anything under `/b`, `features/bingo`, `functions/src/bingo`,
+   For **Tunas 649 Bingo** (anything under `/b`, `features/bingo`, `functions/src/bingo`,
    or `shared/bingo*`), also read §8: bingo's own responsible-play standard (D-112).
 2. Name the **primary persona**. Optimise for them; test the secondaries against the result.
    Never design for an average.

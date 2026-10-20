@@ -1,5 +1,5 @@
 /**
- * Weekly 649 Bingo: what every bingo function shares (DATA_MODEL §11). The rules of the game are
+ * Tunas 649 Bingo: what every bingo function shares (DATA_MODEL §11). The rules of the game are
  * in shared/bingo.ts; these modules read and write Firestore around them, always in a transaction,
  * and write the audit log in the same transaction (CLAUDE.md principle 5). Every function takes
  * `now`, so the integration tests can run on real Wednesdays.

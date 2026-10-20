@@ -52,7 +52,7 @@ describe('BingoRoutes (D-128, D-132)', () => {
 
   it('a newcomer gets the plain-words welcome and the code form, and can read the rules', () => {
     at('/b', status({}));
-    expect(screen.getByRole('heading', { name: 'Weekly 649 Bingo' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Tunas 649 Bingo' })).toBeInTheDocument();
     expect(screen.getByText(/Nothing is paid on this page/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Invite code/)).toBeInTheDocument();
     expect(screen.getByLabelText("I'm 18 or older")).toBeInTheDocument();

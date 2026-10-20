@@ -394,7 +394,7 @@ service cloud.firestore {
       }
     }
 
-    // ---------- Weekly 649 Bingo (D-110 to D-129) ----------
+    // ---------- Tunas 649 Bingo (D-110 to D-129) ----------
     // Every bingo document is written by a function, so these are reads only. A member is a login
     // whose `logins` pointer names a player it owns, with a `bingoMembers` document. The pointer
     // is re-checked, never trusted (D-102). `bingo/secret` and `bingoRedeemAttempts` fall through
@@ -482,7 +482,7 @@ service cloud.firestore {
 
 - **The weekly board (D-102):** `board` posts are read by anyone who entered that week and by the staff (`admin` or `counter`, row 57, 58). Rules can't look up which player a login belongs to, so `boardJoin` writes a pointer, `logins/{uid}` = `{ playerId }`, which no client can write (row 65). Every read and post re-checks the live profile with `ownsPlayer()`, so a pointer left behind by an unlink or a merge grants nothing (row 59). A post needs a saved account (`sign_in_provider` is not `anonymous`), a **paid** entry that week, no mute, the server time, the poster's own current display name, and 1 to 500 characters (rows 60, 61). The board takes posts from the week opening until three days after the winner is published (row 62). The writer may change the text or delete the post for ten minutes, never once it is hidden (row 63). Hiding a post and muting a player are the audited callables `boardHide` and `boardMute`; no client, the staff included, can do either directly (row 64). A report's ID is `{messageId}_{playerId}`, so each player reports a post once; only the staff read reports (row 65). **Pace (D-109):** at most one post every 30 seconds. Each post is written in a batch with the poster's `boardLast/{playerId}` stamp set to the server time; the rules check the stamp after the write is the server time and the one before it is over 30 seconds old. The stamp holds only `at`, is written only by that player while they can post, is read only by its owner, and is never deleted; setting it on its own only slows the writer down (row 66).
 
-### Weekly 649 Bingo (Sprint 12)
+### Tunas 649 Bingo (Sprint 12)
 
 The bingo rules in plain words, from `DATA_MODEL.md` §11 and D-110 to D-129. Tested by rows 67 to 80 in `tests/rules/bingo.rules.test.ts` (a file of its own, written before the rules).
 
@@ -611,7 +611,7 @@ Each row is at least one passing and one failing test.
 | 65 | A reader reports a post under `{messageId}_{playerId}`; a mismatched ID; a non-entrant reports; a player lists reports; the admin lists them; a login reads its own and another's `logins` pointer; a client writes one | allow / deny / deny / deny / allow / allow-deny / deny |
 | 66 | A post without its `boardLast` stamp, or stamped with the phone's clock; a second post within 30 seconds; a stamp with an extra field, by a guest, or by another player; deleting the stamp; another player reading it | deny (a post 31 seconds after the last, and the owner reading their stamp: allow) |
 
-Rows 67 to 80 are Weekly 649 Bingo (Sprint 12), in `tests/rules/bingo.rules.test.ts`.
+Rows 67 to 80 are Tunas 649 Bingo (Sprint 12), in `tests/rules/bingo.rules.test.ts`.
 
 | # | Scenario | Expected |
 |---|---|---|

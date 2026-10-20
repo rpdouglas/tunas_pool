@@ -1,5 +1,5 @@
 /**
- * Weekly 649 Bingo in plain words, for the player screens (BINGO_PLAN S14). Pure, so every line a
+ * Tunas 649 Bingo in plain words, for the player screens (BINGO_PLAN S14). Pure, so every line a
  * member reads is tested. The Bingo Check (PERSONAS §8) applies to every string here: nothing says
  * a card is "close", nothing ranks people, and money is always in dollars.
  */
