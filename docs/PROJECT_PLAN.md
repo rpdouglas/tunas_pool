@@ -30,6 +30,7 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 | 3 | Reveal and standings | S6–S7 | Reveal at lock, leaderboards, season standings, all-time stats |
 | 4 | Polish and automation | S8–S9 | Print sheet, reminders, share tools, branding, ESPN suggestions |
 | 5 | Season rollover | S10 | New season setup, archive, retrospective |
+| 6 | Weekly 649 Bingo (proposed) | S11–S16 | A hidden, invite-only weekly game. Plan, gates, and sprints in `docs/BINGO_PLAN.md`; nothing built until gates G0 (legal) and G1 (house rules) pass |
 
 ---
 
@@ -257,6 +258,7 @@ All eleven sprints are built and released. What that does and does not mean:
 16. ~~**Team logos and colours on the picks page**~~ Built (D-106). Paper entry and the counter keep plain names.
 17. ~~**A shorter By game card**~~ Built (D-107): Who picked what beside the line, and the line only for an upset or a tie.
 18. ~~**Hall of Fame**~~ Built (D-108), from the parked list.
+19. **Weekly 649 Bingo** (proposed, Phase 6): `docs/BINGO_PLAN.md`. Starts with Sprint 11 (docs only) and the legal gate, G0.
 
 ## 8. Parked (post-v1 ideas)
 
