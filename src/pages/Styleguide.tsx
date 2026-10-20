@@ -184,6 +184,7 @@ const SAMPLE_BINGO_ROWS: PaymentRowData[] = [
     numbers: [3, 11, 19, 27, 35, 43],
     due: null,
     paidNext: false,
+    nextMethod: null,
     paper: false,
   },
   {
@@ -194,6 +195,7 @@ const SAMPLE_BINGO_ROWS: PaymentRowData[] = [
     numbers: [1, 2, 3, 4, 5, 6],
     due: { paid: false, method: null, late: false, intent: 'etransfer' },
     paidNext: false,
+    nextMethod: null,
     paper: false,
   },
   {
@@ -204,6 +206,7 @@ const SAMPLE_BINGO_ROWS: PaymentRowData[] = [
     numbers: [1, 2, 3, 4, 40, 41],
     due: { paid: true, method: 'cash', late: true, intent: null },
     paidNext: false,
+    nextMethod: null,
     paper: true,
   },
   {
@@ -214,6 +217,7 @@ const SAMPLE_BINGO_ROWS: PaymentRowData[] = [
     numbers: [7, 14, 21, 28, 35, 42],
     due: null,
     paidNext: true,
+    nextMethod: 'cash',
     paper: false,
   },
 ];

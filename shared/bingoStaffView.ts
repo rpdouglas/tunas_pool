@@ -72,6 +72,8 @@ export interface PaymentRowData {
   due: StaffPayment | null;
   /** Already paid (late) for next week's. */
   paidNext: boolean;
+  /** How the late money came, so only the commissioner undoes an e-Transfer. */
+  nextMethod: 'cash' | 'etransfer' | null;
   paper: boolean;
 }
 
@@ -96,6 +98,9 @@ export function paymentRows(input: {
         numbers: c.numbers,
         due: input.due.get(c.cardId) ?? null,
         paidNext: input.next.get(c.cardId)?.paid === true,
+        nextMethod: input.next.get(c.cardId)?.paid
+          ? (input.next.get(c.cardId)?.method ?? null)
+          : null,
         paper: member?.paper === true,
       }),
     );

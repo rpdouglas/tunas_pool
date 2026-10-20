@@ -16,6 +16,8 @@ export interface BingoPaymentRowProps {
   busy: boolean;
   onPay: (method: 'cash' | 'etransfer', extra?: PayExtra) => void;
   onUndo: () => void;
+  /** Take back money taken late, which counts for next week's draw. */
+  onUndoNext?: () => void;
 }
 
 /** "2026-11-18T17:50" from a datetime-local box, as the device's own time. */
@@ -26,7 +28,14 @@ const fromLocal = (value: string) => new Date(value).getTime();
  * Undo. "Received earlier?" sets when the money came (D-119) for cash handed over before six and
  * typed in after; it needs a reason.
  */
-export function BingoPaymentRow({ row, isAdmin, busy, onPay, onUndo }: BingoPaymentRowProps) {
+export function BingoPaymentRow({
+  row,
+  isAdmin,
+  busy,
+  onPay,
+  onUndo,
+  onUndoNext,
+}: BingoPaymentRowProps) {
   const [earlier, setEarlier] = useState(false);
   const [when, setWhen] = useState('');
   const [reason, setReason] = useState('');
@@ -34,6 +43,7 @@ export function BingoPaymentRow({ row, isAdmin, busy, onPay, onUndo }: BingoPaym
   const name = row.displayName;
   const extra = earlier && when ? { receivedAtMs: fromLocal(when), reason } : undefined;
   const canUndo = paid && (isAdmin || row.due?.method === 'cash');
+  const canUndoNext = !paid && row.paidNext && onUndoNext && (isAdmin || row.nextMethod === 'cash');
 
   return (
     <li className="flex flex-col gap-2 rounded-md border-2 border-line-subtle bg-surface p-3">
@@ -61,6 +71,16 @@ export function BingoPaymentRow({ row, isAdmin, busy, onPay, onUndo }: BingoPaym
         ) : null}
       </div>
 
+      {canUndoNext ? (
+        <Button
+          variant="ghost"
+          disabled={busy}
+          onClick={onUndoNext}
+          aria-label={`Undo the late payment for ${name}, ${row.label}`}
+        >
+          Undo late payment
+        </Button>
+      ) : null}
       {!paid ? (
         <>
           <div

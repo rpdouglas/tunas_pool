@@ -7,6 +7,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { cutoffAt } from '@shared/bingo';
+import { addDays } from '@shared/time';
 import { dollars, drawDay } from '@shared/bingoView';
 import { drawStep, paidCountText, totalsText } from '@shared/bingoStaffView';
 import { BingoNumberPicker } from '../../../components/ui/BingoNumberPicker';
@@ -131,6 +132,8 @@ export default function BingoStaffRoutes({ base }: { base: string }) {
   );
 }
 
+const nextDrawOf = (drawDate: string) => addDays(drawDate, 7);
+
 function GameLine({ d }: { d: StaffBingo }) {
   if (!d.open) return null;
   return (
@@ -205,6 +208,15 @@ function PaymentsScreen({ d, isAdmin, base }: { d: StaffBingo; isAdmin: boolean;
                         method,
                         ...(extra ? { receivedAtMs: extra.receivedAtMs } : {}),
                         reason: extra?.reason || lateReason || undefined,
+                      }),
+                    )
+                  }
+                  onUndoNext={() =>
+                    run(() =>
+                      pay.mutateAsync({
+                        cardId: row.cardId,
+                        paid: false,
+                        drawDate: nextDrawOf(d.dueDraw!),
                       }),
                     )
                   }
