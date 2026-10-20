@@ -374,6 +374,64 @@ service cloud.firestore {
       }
     }
 
+    // ---------- Weekly 649 Bingo (D-110 to D-129) ----------
+    // Every bingo document is written by a function, so these are reads only. A member is a login
+    // whose `logins` pointer names a player it owns, with a `bingoMembers` document. The pointer
+    // is re-checked, never trusted (D-102). `bingo/secret` and `bingoRedeemAttempts` fall through
+    // to default deny: nobody reads them.
+    function bingoPlayerId() {
+      return get(loginPath()).data.playerId;
+    }
+
+    function isBingoMember() {
+      return signedIn()
+        && exists(loginPath())
+        && ownsPlayer(bingoPlayerId())
+        && exists(/databases/$(database)/documents/bingoMembers/$(bingoPlayerId()));
+    }
+
+    // A member reading something of their own: the document names their player.
+    function bingoOwns(data) {
+      return isBingoMember() && data.playerId == bingoPlayerId();
+    }
+
+    match /bingo/config {
+      allow read: if isStaff() || isBingoMember();
+      allow write: if false;
+    }
+
+    match /bingoMembers/{playerId} {
+      allow read: if isStaff() || (isBingoMember() && playerId == bingoPlayerId());
+      allow write: if false;
+    }
+
+    match /bingoCards/{cardId} {
+      allow read: if isStaff() || bingoOwns(resource.data);
+      allow write: if false;
+    }
+
+    match /bingoCycles/{cycleId} {
+      allow read: if isStaff() || isBingoMember();
+      allow write: if false;
+
+      match /entries/{cardId} {
+        allow read: if isStaff() || bingoOwns(resource.data);
+        allow write: if false;
+      }
+
+      // A typed-in draw nobody has checked yet is never shown to members as a result.
+      match /draws/{drawDate} {
+        allow read: if isStaff()
+          || (isBingoMember() && resource.data.status in ['approved', 'skipped']);
+        allow write: if false;
+
+        match /payments/{cardId} {
+          allow read: if isStaff() || bingoOwns(resource.data);
+          allow write: if false;
+        }
+      }
+    }
+
     // ---------- default deny ----------
     match /{document=**} {
       allow read, write: if false;

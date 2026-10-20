@@ -394,6 +394,64 @@ service cloud.firestore {
       }
     }
 
+    // ---------- Weekly 649 Bingo (D-110 to D-129) ----------
+    // Every bingo document is written by a function, so these are reads only. A member is a login
+    // whose `logins` pointer names a player it owns, with a `bingoMembers` document. The pointer
+    // is re-checked, never trusted (D-102). `bingo/secret` and `bingoRedeemAttempts` fall through
+    // to default deny: nobody reads them.
+    function bingoPlayerId() {
+      return get(loginPath()).data.playerId;
+    }
+
+    function isBingoMember() {
+      return signedIn()
+        && exists(loginPath())
+        && ownsPlayer(bingoPlayerId())
+        && exists(/databases/$(database)/documents/bingoMembers/$(bingoPlayerId()));
+    }
+
+    // A member reading something of their own: the document names their player.
+    function bingoOwns(data) {
+      return isBingoMember() && data.playerId == bingoPlayerId();
+    }
+
+    match /bingo/config {
+      allow read: if isStaff() || isBingoMember();
+      allow write: if false;
+    }
+
+    match /bingoMembers/{playerId} {
+      allow read: if isStaff() || (isBingoMember() && playerId == bingoPlayerId());
+      allow write: if false;
+    }
+
+    match /bingoCards/{cardId} {
+      allow read: if isStaff() || bingoOwns(resource.data);
+      allow write: if false;
+    }
+
+    match /bingoCycles/{cycleId} {
+      allow read: if isStaff() || isBingoMember();
+      allow write: if false;
+
+      match /entries/{cardId} {
+        allow read: if isStaff() || bingoOwns(resource.data);
+        allow write: if false;
+      }
+
+      // A typed-in draw nobody has checked yet is never shown to members as a result.
+      match /draws/{drawDate} {
+        allow read: if isStaff()
+          || (isBingoMember() && resource.data.status in ['approved', 'skipped']);
+        allow write: if false;
+
+        match /payments/{cardId} {
+          allow read: if isStaff() || bingoOwns(resource.data);
+          allow write: if false;
+        }
+      }
+    }
+
     // ---------- default deny ----------
     match /{document=**} {
       allow read, write: if false;
@@ -424,9 +482,9 @@ service cloud.firestore {
 
 - **The weekly board (D-102):** `board` posts are read by anyone who entered that week and by the staff (`admin` or `counter`, row 57, 58). Rules can't look up which player a login belongs to, so `boardJoin` writes a pointer, `logins/{uid}` = `{ playerId }`, which no client can write (row 65). Every read and post re-checks the live profile with `ownsPlayer()`, so a pointer left behind by an unlink or a merge grants nothing (row 59). A post needs a saved account (`sign_in_provider` is not `anonymous`), a **paid** entry that week, no mute, the server time, the poster's own current display name, and 1 to 500 characters (rows 60, 61). The board takes posts from the week opening until three days after the winner is published (row 62). The writer may change the text or delete the post for ten minutes, never once it is hidden (row 63). Hiding a post and muting a player are the audited callables `boardHide` and `boardMute`; no client, the staff included, can do either directly (row 64). A report's ID is `{messageId}_{playerId}`, so each player reports a post once; only the staff read reports (row 65). **Pace (D-109):** at most one post every 30 seconds. Each post is written in a batch with the poster's `boardLast/{playerId}` stamp set to the server time; the rules check the stamp after the write is the server time and the one before it is over 30 seconds old. The stamp holds only `at`, is written only by that player while they can post, is read only by its owner, and is never deleted; setting it on its own only slows the writer down (row 66).
 
-### Weekly 649 Bingo (planned for Sprint 12, not in the rules yet)
+### Weekly 649 Bingo (Sprint 12)
 
-The bingo rules in plain words, from `DATA_MODEL.md` §11 and D-110 to D-129. Sprint 12 writes rows 67 to 80 below as tests first, then the rules, then copies the rules code into the block above. Until then `firestore.rules` has no bingo section, so default deny already refuses every bingo path.
+The bingo rules in plain words, from `DATA_MODEL.md` §11 and D-110 to D-129. Tested by rows 67 to 80 in `tests/rules/bingo.rules.test.ts` (a file of its own, written before the rules).
 
 - **Clients write nothing in bingo.** Every bingo document is written by a function, the player's own intent and limits included (D-129). The rules for every bingo path are reads, and `allow write: if false`.
 - **A member** is a login whose `logins/{uid}` pointer names a player it owns (`ownsPlayer()`, the D-102 pattern) **and** `exists(bingoMembers/{thatPlayerId})`. A pointer is never a grant on its own.
@@ -434,7 +492,7 @@ The bingo rules in plain words, from `DATA_MODEL.md` §11 and D-110 to D-129. Sp
 - **Reads:**
   - `bingo/config`: members and staff.
   - `bingo/secret`, `bingoRedeemAttempts/*`: nobody.
-  - `bingoMembers/{p}`: the owner of `p`, and staff. Never another member (D-123).
+  - `bingoMembers/{p}`: the member whose `logins` pointer names `p`, and staff. Never another member (D-123).
   - `bingoCards/{c}`, `entries/{c}`, `payments/{c}`: the owner of `resource.data.playerId`, and staff. A member listing these must filter by their own `playerId`.
   - `bingoCycles/{c}`: members and staff (it holds only counts and, once closed, the winners).
   - `draws/{d}`: staff always; members only when `status` is `approved` or `skipped`, so a typed-in draw that hasn't been checked is never shown as a result.
@@ -553,7 +611,7 @@ Each row is at least one passing and one failing test.
 | 65 | A reader reports a post under `{messageId}_{playerId}`; a mismatched ID; a non-entrant reports; a player lists reports; the admin lists them; a login reads its own and another's `logins` pointer; a client writes one | allow / deny / deny / deny / allow / allow-deny / deny |
 | 66 | A post without its `boardLast` stamp, or stamped with the phone's clock; a second post within 30 seconds; a stamp with an extra field, by a guest, or by another player; deleting the stamp; another player reading it | deny (a post 31 seconds after the last, and the owner reading their stamp: allow) |
 
-Rows 67 to 80 are **planned** for Weekly 649 Bingo (Sprint 12); they are not tests yet.
+Rows 67 to 80 are Weekly 649 Bingo (Sprint 12), in `tests/rules/bingo.rules.test.ts`.
 
 | # | Scenario | Expected |
 |---|---|---|

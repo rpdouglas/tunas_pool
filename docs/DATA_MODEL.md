@@ -376,9 +376,9 @@ Computed in shared code (`shared/`) so the web app and functions agree. Pure fun
 
 ---
 
-## 11. Weekly 649 Bingo (Phase 6, planned; nothing built yet)
+## 11. Weekly 649 Bingo (Phase 6)
 
-The settled design for `docs/BINGO_PLAN.md`, from D-110 to D-129. Sprint 12 builds `shared/bingo.ts` and the rules against this section; if code and this section disagree, stop and flag it. Money is integer cents. ✍ marks a document only functions write. **No client writes any bingo document**: every change, a player's own intent and limits included, goes through a callable, so the rules for bingo are reads only.
+The settled design for `docs/BINGO_PLAN.md`, from D-110 to D-130. **Built so far (Sprint 12):** the rules (`firestore.rules`, rows 67 to 80), `shared/bingo.ts` (§11.4, with §11.6 as its fixtures), and the simulation (`shared/bingoSim.ts`, `scripts/bingo-sim.ts`). The functions (§11.5) come in Sprint 13; if code and this section disagree, stop and flag it. Money is integer cents. ✍ marks a document only functions write. **No client writes any bingo document**: every change, a player's own intent and limits included, goes through a callable, so the rules for bingo are reads only.
 
 ### 11.1 Collections
 
@@ -402,19 +402,19 @@ bingoCycles/{cycleId}                       ✍ one game, until won or capped
 
 **`bingo/secret`**: `codeHash` (a salted hash, never the code), `codeVersion`, `rotatedAt`. Read by nobody; only functions use it (R-14).
 
-**`bingoMembers/{playerId}`**: `displayName` (copied from the profile), `joinedAt`, `ageAttestedAt` (copied from the profile, D-115), `paper` (true if the commissioner added them), `limit` (cards per draw, 1 to `maxCardsPerPlayer`), `pendingLimit` and `pendingFromCycle` (a raise waiting a cycle, D-118), `pausedUntilCycle` (or null), `spent` (`{ cycleCents, byYear: { "2026": cents } }`, worked out again from the member's payments on every payment change). Read by the owner and staff; other members never read it (D-123).
+**`bingoMembers/{playerId}`**: `displayName` (copied from the profile), `joinedAt`, `ageAttestedAt` (copied from the profile, D-115), `paper` (true if the commissioner added them), `limit` (cards per draw, 1 to `maxCardsPerPlayer`), `pendingLimit` and `pendingFromCycle` (a raise waiting a cycle, D-118), `pausedThroughCycle` (the last cycle `number` sat out, or null), `spent` (`{ cycleCents, byYear: { "2026": cents } }`, worked out again from the member's payments on every payment change). Read by the owner and staff; other members never read it (D-123).
 
 **`bingoRedeemAttempts/{uid}`**: `count`, `windowStart`, `lockedUntil`. Five wrong codes in an hour lock that login for an hour. Read by nobody.
 
 **`bingoCards/{cardId}`**: `playerId`, `numbers` (six distinct integers 1 to 49, sorted), `active` (false once retired), `createdAt`, `createdBy` (`uid`, or a staff `uid` for a paper card), `source` (`web`, `paper`). Read by the owner and staff. A player's **active** cards count toward the cap (D-110, R-9).
 
-**`bingoCycles/{cycleId}`**: `status` (`open`, `won`, `capped`), `test` (boolean, left out of totals, R-16), `openedAt`, `closedAt`, `firstDraw`, `config` (the snapshot of price, operator %, cutoff, caps, and join window), `potCents`, `operatorCents`, `drawsApproved`, `board` (`{ at3, at4, at5, cards }`, counts only, D-123), `winners` (on close: `[{ cardId, playerId, displayName, hits, shareCents, paidOut: { method, at, by } | null }]`), `closingDraw`. Read by members and staff.
+**`bingoCycles/{cycleId}`**: `number` (1, 2, 3, … in order; limits and pauses count by it), `status` (`open`, `won`, `capped`), `test` (boolean, left out of totals, R-16), `openedAt`, `closedAt`, `firstDraw`, `config` (the snapshot of price, operator %, cutoff, caps, and join window), `potCents`, `operatorCents`, `drawsApproved`, `board` (`{ at3, at4, at5, cards }`, counts only, D-123), `winners` (on close: `[{ cardId, playerId, displayName, hits, shareCents, paidOut: { method, at, by } | null }]`), `closingDraw`. Read by members and staff.
 
 **`bingoCycles/{c}/entries/{cardId}`**: `playerId`, `joinedDraw`, `paidDraws` (draw dates, kept in step with the payments), `hits` (sorted numbers crossed off, derived), `count` (`hits.length`). Read by the owner and staff.
 
 **`bingoCycles/{c}/draws/{drawDate}`**: `status` (`upcoming`, `proposed`, `approved`, `skipped`), `cutoffAt` (the Timestamp of that week's cutoff), `numbers` (six, sorted, once proposed), `source` (`manual` or the fetch's source), `proposedBy`, `proposedAt`, `approvedBy`, `approvedAt`, `correction` (`{ before, reason, by, at }` or null), `paidCards`, `revenueCents`, `operatorCents`, `potAddCents`. Members read it once `approved` or `skipped`; staff read it always. It is created as `upcoming` the first time anything needs it (the cycle opening, or the first payment for that week), so payments have somewhere to live all week (R-10).
 
-**`bingoCycles/{c}/draws/{d}/payments/{cardId}`**: `playerId`, `paid` (boolean), `method` (`cash`, `etransfer`), `receivedAt`, `confirmedAt`, `confirmedBy`, `late` (received after the cutoff of the draw it was meant for), `reason` (required when late or when `receivedAt` is set earlier than now), `intent` (`'cash' | 'etransfer' | null`, the player's "I'll pay cash" / "I sent an e-Transfer", D-116). Read by the owner (paid or not, and intent) and staff.
+**`bingoCycles/{c}/draws/{d}/payments/{cardId}`**: `playerId`, `paid` (boolean), `method` (`cash`, `etransfer`), `receivedAt`, `confirmedAt`, `confirmedBy`, `late` (received after the cutoff of the draw it was meant for), `reason` (required when late, or when `receivedAt` is more than 5 minutes before the time it is recorded), `intent` (`'cash' | 'etransfer' | null`, the player's "I'll pay cash" / "I sent an e-Transfer", D-116). Read by the owner (paid or not, and intent) and staff.
 
 ### 11.3 A bingo week
 
@@ -439,9 +439,9 @@ Everything here is a pure function, and `applyDraw` calls it every time, so noth
 - **Winners** on a draw = the paid cards whose hits reach six on it. Identical cards are separate winners (D-110).
 - **Split** (D-120): `share = floor(pot / n)`, `remainder = pot − share × n`; winners ordered by `cardId`, the first `remainder` of them get one cent more.
 - **Cap** (D-121): after draw `maxWeeks` with no winner, the winners are the cards **paid for that draw** with the highest `count`, split the same way. None paid → the pot carries into the next cycle.
-- **Credited draw** for money received at `receivedAt`: the first draw of the cycle, not yet approved, whose `cutoffAt` is after `receivedAt` (D-119). Never a draw after that one (no paying ahead, D-116).
+- **Credited draw** for money received at `receivedAt` (`creditPayment`): the first draw whose cutoff is after `receivedAt`, moving past a skipped draw (D-119, D-129). It is **late** if that is after the cycle's earliest draw not yet approved or skipped. Refused if it is a draw already approved ("record it as received now"), before the cycle's first draw, or in the future; since `receivedAt` can't be in the future, nobody can pay ahead (D-116).
 - **Join window:** a card may be created while the cycle has no approved draw and `now < firstDraw.cutoffAt` (with `joinWindowDraws: 1`).
-- **Limit:** cards a member may have paid for one draw = `min(limit, maxCardsPerPlayer)`, zero while paused. A raise sets `pendingLimit`, applied when the cycle `pendingFromCycle` opens; a lower one applies now (D-118). Staff are held to it too.
+- **Limit** (`cardsAllowed`, `changeLimit`, `pause`): cards a member may have paid for one draw = `min(limit, maxCardsPerPlayer)`, zero while paused. A raise sets `pendingLimit`, applied from cycle `pendingFromCycle` (the next one); a lower one applies now and cancels a waiting raise (D-118). A pause starts now; a longer pause applies now; ending a pause early still sits out the rest of this cycle. Staff are held to it too.
 
 ### 11.5 Functions (planned; all callables write `auditLog`)
 

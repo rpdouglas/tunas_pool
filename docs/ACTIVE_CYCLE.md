@@ -1,11 +1,44 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 11: Bingo spec** · Phase 6a (Weekly 649 Bingo, `docs/BINGO_PLAN.md`) · Started: 2026-10-20 · Docs only
+**Sprint 12: Bingo engine and rules** · Phase 6b (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
 
 ## Goal
+The rules of the game exist as pure, tested code. The database refuses everything it should.
+
+## Persona check
+Reuses the whole-feature check written in Sprint 11 (below). For this sprint:
+- **Gerald Trust Test:** every number crossed off, every pot, and every split is worked out again from the approved draws and paid weeks by one pure function (`evaluateCycle`); the worked examples in DATA_MODEL §11.6 are its tests, and splits always add up to the cent.
+- **Commissioner Counter Test:** cash handed over before six and typed in after counts that night (`creditPayment`); money for an approved draw is refused in plain words instead of quietly moving.
+- **Privacy test:** rows 70 to 77: a member reads only their own membership, cards, entries, and payments; the counter reads bingo records, which hold no phones or emails; nobody reads the code's hash.
+- **Bingo Check:** limits lower at once and raise next cycle, a pause can't be cut short mid-cycle, and no client can write anything in bingo (row 67).
+
+## Tasks
+- [x] `shared/bingo.ts`: numbers, quick-pick, the cutoff and which draw, payment credit (D-119), the join window (D-117), limits and pause (D-118), money per draw, the split (D-120), and `evaluateCycle` (wins, ties, the cap, carried pots, D-121); 26 tests with the §11.6 examples as fixtures
+- [x] `shared/bingoSim.ts` and `scripts/bingo-sim.ts`: seeded, on the engine; checked against the exact cycle length (4 tests)
+- [x] Rules tests first (rows 67 to 80, `tests/rules/bingo.rules.test.ts`, 14 tests; 9 failed before the rules, as they should), then the bingo section of `firestore.rules`
+- [x] Docs: FIRESTORE_RULES (code block synced, rows 67 to 80), DATA_MODEL §11, DECISIONS D-130, BINGO_PLAN status
+- [x] **D-130:** accepted by Ryan; the spec's economics table is retired in favour of the simulation
+
+## Acceptance
+Every rules row passes, and all existing tests still pass: typecheck and lint clean, **373 unit tests** (343 before), **176 rules and functions tests** (162 before). The simulation part is answered by D-130: the spec's table can't be reproduced, and the engine is held to exact maths instead.
+
+## Notes / learned
+- **The spec's economics were off** (D-130): with its inputs reproduced exactly, cycles are about six weeks, not under four, with fewer ties and bigger pots. Worth knowing before anyone quotes a number to a player.
+- The cycle needs a running `number` (1, 2, 3…) so a pause or a raised limit can say "from the next game"; `cycleId` dates can't, since the next cycle's first draw isn't known yet.
+- Two of my own test expectations were wrong at first (the cap fixture's arithmetic, and which numbers quick-pick gives at the top of the range); the engine was right both times. The worked examples were checked by hand again.
+- The bingo rules tests are a file of their own, so the D-109 rule (no Prettier on the big rules test file) doesn't bite.
+- `test:smoke` not run: no screen changed.
+
+---
+
+## Sprint 11 (done 2026-10-20, PR #51)
+
+**Sprint 11: Bingo spec** · Phase 6a (Weekly 649 Bingo, `docs/BINGO_PLAN.md`) · Started: 2026-10-20 · Docs only
+
+### Goal
 The governing docs say exactly what bingo will be. Every open decision has a D-number. Gates G0 and G1 are recorded.
 
-## Persona check (the whole feature, written once and reused by S12–S16)
+### Persona check (the whole feature, written once and reused by S12–S16)
 - **Primary persona:** the Commissioner and Devon (a bingo week is run at the counter: payments by Wednesday 6 PM, a draw approved Thursday morning), with Gerald as the trust anchor (money and results).
 - **Rosalie Inclusion Test:** a paper member is added by the commissioner with their age confirmed in person (D-115), staff enter their cards and record their cash, and their own limit binds staff too (D-118). They are paid like anyone.
 - **Gerald Trust Test:** every crossed-off number is worked out again from approved draws and paid weeks (D-113); every payment, draw, correction, and payout is audited with a name; a member reads the approved numbers for every draw.
@@ -15,7 +48,7 @@ The governing docs say exactly what bingo will be. Every open decision has a D-n
 - **Bingo Check (PERSONAS §8, replaces the Responsible-Play Check):** cap of 5, no prepay or tabs (D-116), no late joining (D-117), limits only the player can raise (D-118), a board of counts not people (D-123), staff totals only (D-128), no notifications.
 - **Privacy test:** members never read another member's document, card, or payment (D-129, rows 70 to 77).
 
-## Tasks
+### Tasks
 - [x] `DECISIONS.md` D-110 to D-129: the spec restated, every open item answered by Ryan (2026-10-20) or defaulted
 - [x] `PERSONAS.md` §8: who plays, the bingo responsible-play standard, the Bingo Check (D-112); CLAUDE.md §10 points at it
 - [x] `DATA_MODEL.md` §11: collections, documents, the week, the working-out, functions, and the worked examples (missed week, per-draw money, three-way split, 26-week cap, late money, join window)
@@ -24,10 +57,10 @@ The governing docs say exactly what bingo will be. Every open decision has a D-n
 - [x] **G0:** passed, JR Law (D-111)
 - [x] **G1:** passed, PERSONAS §8 accepted as written (D-112); D-114, D-121, and D-129 confirmed
 
-## Acceptance (from BINGO_PLAN.md S11)
+### Acceptance (from BINGO_PLAN.md S11)
 Docs merged with no code. Every open decision has a D-number. G0 and G1 are recorded, or the plan is revised.
 
-## Notes / learned
+### Notes / learned
 - DATA_MODEL already had a §9, so bingo is §11, not the plan's "§9".
 - Writing the worked examples turned up three things the plan didn't settle: where money for a skipped draw goes, a correction that removes a win after the next cycle has opened, and that intent could be a callable so the bingo rules are reads only. All three are D-129, Provisional.
 - Ryan chose to go live in the shared project (D-127), against the review's R-3; G2 no longer includes the migration.
