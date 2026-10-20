@@ -1,4 +1,7 @@
+import { TEAM_INFO, badgeInk } from '@shared/teamColors';
+import { resolveTeam } from '@shared/teams';
 import type { Pick } from '@shared/types';
+import { TeamMark } from './TeamMark';
 
 export interface GameCardProps {
   /** Lets the form jump to this game. */
@@ -14,8 +17,10 @@ export interface GameCardProps {
 }
 
 /**
- * One game on the sheet: kickoff on top, then away | at | home (DESIGN_SYSTEM §6).
- * Tap a team to pick it, tap again to clear. Without `onPick` the card is read-only.
+ * One game on the sheet: kickoff on top, then away | at | home (DESIGN_SYSTEM §6), each team with
+ * its logo above its name (D-106). Tap a team to pick it, tap again to clear: the picked team fills
+ * with its colour and keeps the check mark, so the pick is never shown by colour alone. Without
+ * `onPick` the card is read-only.
  */
 export function GameCard({
   id,
@@ -27,18 +32,34 @@ export function GameCard({
   onPick,
 }: GameCardProps) {
   const readOnly = !onPick;
-  const button = (side: Pick, team: string) => (
-    <button
-      type="button"
-      className="pick"
-      aria-pressed={pick === side}
-      data-state={readOnly ? 'locked' : undefined}
-      disabled={readOnly}
-      onClick={() => onPick?.(pick === side ? null : side)}
-    >
-      {team}
-    </button>
-  );
+  const button = (side: Pick, team: string) => {
+    const chosen = pick === side;
+    // A picked team fills with its own colour (D-106); team colours are data, so set inline.
+    const info = resolveTeam(team);
+    const colour = info ? TEAM_INFO[info].primary : null;
+    const teamFill =
+      chosen && !readOnly && colour
+        ? { background: colour, borderColor: colour, color: badgeInk(colour) }
+        : undefined;
+    return (
+      <button
+        type="button"
+        className="pick pick-stacked"
+        aria-pressed={chosen}
+        data-state={readOnly ? 'locked' : undefined}
+        data-team={teamFill ? '' : undefined}
+        style={teamFill}
+        disabled={readOnly}
+        onClick={() => onPick?.(chosen ? null : side)}
+      >
+        {/* On a white disc, so the logo still shows when the button fills with the team's colour. */}
+        <span className="inline-flex rounded-pill bg-surface p-0.5">
+          <TeamMark team={team} size={40} />
+        </span>
+        <span className="break-words">{team}</span>
+      </button>
+    );
+  };
 
   return (
     <li id={id} className="flex scroll-mt-28 flex-col gap-2 rounded-md bg-surface p-3">

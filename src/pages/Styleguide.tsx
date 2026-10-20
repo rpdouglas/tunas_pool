@@ -241,6 +241,20 @@ export default function Styleguide() {
               pick={cardPick}
               onPick={setCardPick}
             />
+            <GameCard
+              away="Steelers"
+              home="Saints"
+              kickoffLabel="Sun 1:00 PM (picked: a dark and a light team colour)"
+              pick="home"
+              onPick={() => undefined}
+            />
+            <GameCard
+              away="Bengals"
+              home="Seahawks"
+              kickoffLabel="Sun 4:05 PM"
+              pick="away"
+              onPick={() => undefined}
+            />
             <GameCard away="Chiefs" home="Chargers" kickoffLabel="Mon 8:15 PM" pick="away" />
             <GameCard
               away="Colts"
