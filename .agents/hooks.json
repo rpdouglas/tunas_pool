@@ -1,0 +1,40 @@
+{
+  "deploy-guard": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          { "type": "command", "command": "node hooks/deploy-guard.mjs", "timeout": 10 }
+        ]
+      }
+    ]
+  },
+  "secrets-guard": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          { "type": "command", "command": "node hooks/secrets-guard.mjs", "timeout": 10 }
+        ]
+      }
+    ]
+  },
+  "style-lint": {
+    "PostToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content",
+        "hooks": [
+          { "type": "command", "command": "node hooks/style-lint.mjs", "timeout": 10 }
+        ]
+      }
+    ],
+    "PreInvocation": [
+      { "type": "command", "command": "node hooks/style-report.mjs", "timeout": 10 }
+    ]
+  },
+  "docs-in-same-commit": {
+    "Stop": [
+      { "type": "command", "command": "node hooks/docs-sync.mjs", "timeout": 20 }
+    ]
+  }
+}
