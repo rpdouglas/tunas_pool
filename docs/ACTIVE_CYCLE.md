@@ -27,6 +27,7 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
 "The dry run ends with a correct payout, checked by hand against the draws. Then G2 is Ryan's." The code side is done; the dry run is a real-world task with the practice game, and the checklist for it is in the README. Typecheck and lint clean; **407 unit tests** (406 before); **205 rules and functions tests** (204 before).
 
 ## Notes / learned
+- **Bug found by Ryan in use (2026-10-20):** adding a card on his own My cards page said "playerId is missing or not valid". `bingoCreateCard` treated every staff login as staff entering a paper card for someone else, but staff can be members too. A staff call is now a paper card only when it names the player (`functions/src/bingo/callers.ts`, 2 tests). The callable wrappers in `index.ts` had no tests, which Sprint 13 noted; this decision now has one.
 - **What isn't proven:** the 300-card approval rests on Firestore's current limits (no 500-write cap, 10 MiB a request); the emulator doesn't enforce the old cap, so the dry run can't prove it either at its size. A failure would be whole and visible, not partial.
 - **The bingo smoke run, again:** every step passed up to the commissioner's draw, then the tab ran out of memory, as in Sprint 15. Not chased further here (CLAUDE.md §7).
 - No Lighthouse run: Lighthouse isn't installed in the repo, and adding a tool for one check was out of scope. The first-download size check stands in for "the pool's first screen doesn't grow".
