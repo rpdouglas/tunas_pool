@@ -40,7 +40,7 @@ docs/
   ACTIVE_CYCLE.md          <- current sprint (create at Sprint 0; update every sprint)
   DECISIONS.md             <- ADR-style log of decisions (create at Sprint 0)
   MIGRATION.md             <- runbook for moving to the pool's own project and tunaspool.ca (D-100, not started)
-  BINGO_PLAN.md            <- Weekly 649 Bingo (Phase 6, proposed): gates, sprints S11–S16, open decisions
+  BINGO_PLAN.md            <- Weekly 649 Bingo (Phase 6): gates, sprints S11–S16; design in DATA_MODEL §11, D-110 to D-129
   bingo/BUILD_SPEC.md      <- Ryan's bingo build spec as written (2026-10-20); the plan and review correct it
   reports/                 <- dated review snapshots (YYYY-MM-DD-name.md); read-only history, never a source of truth
 ```
@@ -142,4 +142,4 @@ Tracked in `docs/PROJECT_PLAN.md` §7. Do not guess on these. Ask Ryan, or use t
 
 ## 10. Out of scope for v1
 
-Multiple entries per person per week, phone OTP login, online payment processing, ESPN auto-import of scores (planned as a suggestion feature later; the schedule suggestion in week setup is in, `DECISIONS.md` D-051), push notifications, auto-claim by verified email (designed for, switched off).
+Multiple entries per person per week (Weekly 649 Bingo is the one written exception: up to 5 cards, under its own responsible-play standard in `docs/PERSONAS.md` §8, D-112), phone OTP login, online payment processing, ESPN auto-import of scores (planned as a suggestion feature later; the schedule suggestion in week setup is in, `DECISIONS.md` D-051), push notifications, auto-claim by verified email (designed for, switched off).

@@ -2,7 +2,7 @@
 
 > The plan for building Weekly 649 Bingo inside `tunas_pool`, the same way the pool was built: docs first, rules tests before rules, one sprint at a time, each ending green and mergeable.
 > Sources: `docs/bingo/BUILD_SPEC.md` (Ryan, 2026-10-20) and its review, `docs/reports/2026-10-20-bingo-spec-review.md` (findings R-1 to R-25).
-> Status: **proposed**. Nothing here is built. Sprint 11 turns it into the governing docs.
+> Status: **Sprint 11 (spec) done in docs, 2026-10-20.** The decisions are D-110 to D-129, the data model is `DATA_MODEL.md` §11, the rules in plain words and rows 67 to 80 are in `FIRESTORE_RULES.md`, and the responsible-play standard is `PERSONAS.md` §8. Where this plan and those docs differ, the docs win. Nothing is built yet.
 
 ## 1. Goal and non-goals
 
@@ -22,9 +22,9 @@ Gates sit outside the code. A sprint can't start, or the feature can't be switch
 
 | Gate | Before | Passes when | Owner |
 |---|---|---|---|
-| **G0 Legal basis** | Sprint 12, the first code | A lawyer has said whether and how this can run in Ontario (and for New York players), and the answer fits the spec. If it says "only as a charity", "only with 0% operator", or "no", the plan is re-cut before any code (R-1). | Ryan |
-| **G1 Rules of the house** | Sprint 12 | The bingo responsible-play standard is in PERSONAS and CLAUDE.md §10 points at it (R-2). Sprint 11's open decisions are answered, or a stated default is logged. | Ryan, with Claude drafting |
-| **G2 Launch** | `bingo/config.enabled = true` with real money | G0 holds for the final design. The dry run (Sprint 16) paid out correctly. The move to the pool's own Firebase project is done (D-100, R-3). Launch price, operator %, and code are set. The responsible-play link numbers are verified. | Ryan |
+| **G0 Legal basis** | Sprint 12, the first code | A lawyer has said whether and how this can run in Ontario (and for New York players), and the answer fits the spec. If it says "only as a charity", "only with 0% operator", or "no", the plan is re-cut before any code (R-1). **Passed (D-111): JR Law, per Ryan, 2026-10-20.** | Ryan |
+| **G1 Rules of the house** | Sprint 12 | The bingo responsible-play standard is in PERSONAS and CLAUDE.md §10 points at it (R-2). Sprint 11's open decisions are answered, or a stated default is logged. **Passed (PERSONAS §8, D-112), 2026-10-20.** | Ryan, with Claude drafting |
+| **G2 Launch** | `bingo/config.enabled = true` with real money | G0 holds for the final design. The dry run (Sprint 16) paid out correctly. (The move to the pool's own project is no longer required: D-127.) Launch price, operator %, and code are set. The responsible-play link numbers are verified. | Ryan |
 
 ## 3. Phases at a glance
 
@@ -47,7 +47,7 @@ This is the spec's model with the review's fixes. Money is integer cents. ✍ ma
 |---|---|---|---|
 | `bingo/config` | `enabled`, `priceCents`, `operatorPct`, cutoff (Wed 18:00 America/Toronto), `maxCardsPerPlayer` (5), `maxWeeks` (26), `joinWindowDraws` (1), odds text | members, staff | admin (rules: admin only, typed fields) |
 | `bingo/secret` | invite code hash, `codeVersion` | nobody (functions) | function `bingoSetCode` (admin) |
-| `bingoMembers/{playerId}` ✍ | `displayName`, `joinedAt`, `ageAttestedAt`, `limit` (cards per draw, pending raise), `pausedUntilCycle`, `paper` (staff-entered) | members (names only), staff, owner (limits) | `bingoRedeemCode`, `bingoSetLimit`, staff paper add (R-4) |
+| `bingoMembers/{playerId}` ✍ | `displayName`, `joinedAt`, `ageAttestedAt`, `limit` (cards per draw, pending raise), `pausedUntilCycle`, `paper` (staff-entered) | owner, staff (D-123, D-129) | `bingoRedeemCode`, `bingoSetLimit`, staff paper add (R-4) |
 | `bingoRedeemAttempts/{uid}` ✍ | `count`, `lockedUntil` | nobody | `bingoRedeemCode` (R-14) |
 | `bingoCards/{cardId}` ✍ | `playerId`, `numbers` (six, sorted), `active`, `createdAt`, `createdBy` | owner, staff; members see only what the board allows (R-19) | `bingoCreateCard`, `bingoRetireCard` (R-9) |
 | `bingoCycles/{cycleId}` ✍ | `status` (`open`, `won`, `capped`), `test`, opened and closed dates, snapshot of price, operator % and caps, `potCents`, `operatorCents`, winners, payouts | members, staff | functions (R-16) |
@@ -116,7 +116,7 @@ Bingo stays dark in production throughout. `enabled` is false and the route rend
   - Default deny.
   - Members and staff read through `logins/{uid}` and `bingoMembers`.
   - Owners read their own cards and payments.
-  - Clients write only the payment intent and nothing else.
+  - Clients write nothing; intent and limits are callables (D-129).
   - The board's reads are limited per R-19.
 - `tests/rules`: the drafted rows. `docs/FIRESTORE_RULES.md` is synced.
 
@@ -198,28 +198,28 @@ Bingo stays dark in production throughout. `enabled` is false and the route rend
 
 **Acceptance:** the dry run ends with a correct payout, checked by hand against the draws. Then G2 is Ryan's.
 
-## 6. Open decisions (answer in Sprint 11)
+## 6. Open decisions (answered in Sprint 11)
 
-The spec's open items, plus those the review adds. Each becomes a D-number, answered, or given its default and marked **Provisional**, as the pool's were.
+The spec's open items, plus those the review adds. All are now answered (2026-10-20); the last column is where.
 
-| # | Decision | Proposed default | From |
-|---|---|---|---|
-| 1 | Legal basis in Ontario and for New York players | none: gate G0 | spec, R-1 |
-| 2 | The bingo responsible-play standard | as drafted in Sprint 11 | R-2 |
-| 3 | Run bingo only after the move to its own project | yes (G2) | R-3 |
-| 4 | What the counter can do in bingo (e-Transfers? approve draws?) | cash and draw approval, as the spec says; e-Transfers admin only, as D-095 | R-6 |
-| 5 | Saved account and 18+ to join | yes, or a staff-entered paper member | R-7, spec |
-| 6 | Prepay several draws | no | R-8 |
-| 7 | Join window: first draw only, or first two | first draw only | spec |
-| 8 | Self-set limits also bind staff-entered paper cards | yes | spec |
-| 9 | Credit late money by when it was received, not when it was confirmed | yes | R-13 |
-| 10 | Uneven split: order and remainder | by card ID, one cent each from the first | R-15 |
-| 11 | The 26-week cap: who splits, and the worked example | the most crossed off among cards paid for the last draw | spec, R-18 |
-| 12 | Wednesday only, or Wednesday and Saturday | Wednesday only | R-17 |
-| 13 | Board: names and numbers, or counts only | counts only | spec, R-19 |
-| 14 | Launch price and operator % | none: set at G2 | spec |
-| 15 | Draw source for the automatic fetch | manual until confirmed | spec |
-| 16 | Payment cutoff: Wednesday 6 PM, money in hand | yes | spec |
+| # | Decision | Proposed default | From | Decided |
+|---|---|---|---|---|
+| 1 | Legal basis in Ontario and for New York players | none: gate G0 | spec, R-1 | D-111 (JR Law: passed) |
+| 2 | The bingo responsible-play standard | as drafted in Sprint 11 | R-2 | D-112, PERSONAS §8 |
+| 3 | Run bingo only after the move to its own project | yes (G2) | R-3 | **No**: live in the shared project, D-127 |
+| 4 | What the counter can do in bingo (e-Transfers? approve draws?) | cash and draw approval, as the spec says; e-Transfers admin only, as D-095 | R-6 | as default, D-114 |
+| 5 | Saved account and 18+ to join | yes, or a staff-entered paper member | R-7, spec | as default, D-115 |
+| 6 | Prepay several draws | no | R-8 | as default, D-116 |
+| 7 | Join window: first draw only, or first two | first draw only | spec | as default, D-117 |
+| 8 | Self-set limits also bind staff-entered paper cards | yes | spec | as default, D-118 |
+| 9 | Credit late money by when it was received, not when it was confirmed | yes | R-13 | as default, D-119 |
+| 10 | Uneven split: order and remainder | by card ID, one cent each from the first | R-15 | as default, D-120 |
+| 11 | The 26-week cap: who splits, and the worked example | the most crossed off among cards paid for the last draw | spec, R-18 | as default, D-121 |
+| 12 | Wednesday only, or Wednesday and Saturday | Wednesday only | R-17 | as default, D-122 |
+| 13 | Board: names and numbers, or counts only | counts only | spec, R-19 | as default, D-123 |
+| 14 | Launch price and operator % | none: set at G2 | spec | at launch, D-125 |
+| 15 | Draw source for the automatic fetch | manual until confirmed | spec | as default, D-126 |
+| 16 | Payment cutoff: Wednesday 6 PM, money in hand | yes | spec | as default, D-124 |
 
 ## 7. Cross-cutting (every bingo sprint)
 

@@ -1,18 +1,54 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 10: Rollover and retro** · Phase 5 (Season rollover) · Started: 2026-10-05
+**Sprint 11: Bingo spec** · Phase 6a (Weekly 649 Bingo, `docs/BINGO_PLAN.md`) · Started: 2026-10-20 · Docs only
 
 ## Goal
+The governing docs say exactly what bingo will be. Every open decision has a D-number. Gates G0 and G1 are recorded.
+
+## Persona check (the whole feature, written once and reused by S12–S16)
+- **Primary persona:** the Commissioner and Devon (a bingo week is run at the counter: payments by Wednesday 6 PM, a draw approved Thursday morning), with Gerald as the trust anchor (money and results).
+- **Rosalie Inclusion Test:** a paper member is added by the commissioner with their age confirmed in person (D-115), staff enter their cards and record their cash, and their own limit binds staff too (D-118). They are paid like anyone.
+- **Gerald Trust Test:** every crossed-off number is worked out again from approved draws and paid weeks (D-113); every payment, draw, correction, and payout is audited with a name; a member reads the approved numbers for every draw.
+- **Commissioner Counter Test:** cash per card is one tap with an Undo; late cash counts by when it was handed over, not when it was typed in (D-119). Devon's scope matches D-095 (D-114).
+- **Border Test:** at par, cash works for both sides; JR Law cleared the game as specced (D-111).
+- **Welcome Test:** Jen joins with a code and a saved account, and reads the rules and the odds in plain words before any money (BINGO_PLAN S14).
+- **Bingo Check (PERSONAS §8, replaces the Responsible-Play Check):** cap of 5, no prepay or tabs (D-116), no late joining (D-117), limits only the player can raise (D-118), a board of counts not people (D-123), staff totals only (D-128), no notifications.
+- **Privacy test:** members never read another member's document, card, or payment (D-129, rows 70 to 77).
+
+## Tasks
+- [x] `DECISIONS.md` D-110 to D-129: the spec restated, every open item answered by Ryan (2026-10-20) or defaulted
+- [x] `PERSONAS.md` §8: who plays, the bingo responsible-play standard, the Bingo Check (D-112); CLAUDE.md §10 points at it
+- [x] `DATA_MODEL.md` §11: collections, documents, the week, the working-out, functions, and the worked examples (missed week, per-draw money, three-way split, 26-week cap, late money, join window)
+- [x] `FIRESTORE_RULES.md`: bingo rules in plain words, rows 67 to 80 planned (no rules code)
+- [x] `BINGO_PLAN.md` status, gates, and §6 answers; `PROJECT_PLAN.md` Phase 6
+- [x] **G0:** passed, JR Law (D-111)
+- [x] **G1:** passed, PERSONAS §8 accepted as written (D-112); D-114, D-121, and D-129 confirmed
+
+## Acceptance (from BINGO_PLAN.md S11)
+Docs merged with no code. Every open decision has a D-number. G0 and G1 are recorded, or the plan is revised.
+
+## Notes / learned
+- DATA_MODEL already had a §9, so bingo is §11, not the plan's "§9".
+- Writing the worked examples turned up three things the plan didn't settle: where money for a skipped draw goes, a correction that removes a win after the next cycle has opened, and that intent could be a callable so the bingo rules are reads only. All three are D-129, Provisional.
+- Ryan chose to go live in the shared project (D-127), against the review's R-3; G2 no longer includes the migration.
+
+---
+
+## Sprint 10 (released 2026-10-05; open: the February rollover, confirm D-090)
+
+**Sprint 10: Rollover and retro** · Phase 5 (Season rollover) · Started: 2026-10-05
+
+### Goal
 The season can be closed cleanly when it ends, a dispute can be settled by reading the record, and it is written down plainly what v1 has and has not proven.
 
-## Persona check
+### Persona check
 - **Primary persona:** the Commissioner (closing a season, answering a dispute) and Gerald (the record). Secondary: Rosalie (never re-registers).
 - **Rosalie Inclusion Test:** there is no rollover step for players at all. The roster, logins, claims, and history are not tied to a season, so nobody is asked to register again (PERSONAS §2: "Seniors never have to re-register").
 - **Gerald Trust Test:** the audit log can now be read in the Back Office, in plain words, with who, when, the typed reason, and the stored before and after. It cannot be edited from anywhere. Archiving and reopening a season are in it too.
 - **Commissioner Counter Test:** the bar is four tabs on one line again. Archive asks once, says what it stops, and has an Undo. Finding a dispute is typing a name.
 - **Privacy test:** the audit log is admin only, as it always was by rule.
 
-## Tasks
+### Tasks
 - [x] Audit log in plain words (`shared/auditText.ts`, 8 tests) and its Back Office screen, fifty entries at a time with search
 - [x] Seasons: `adminListSeasons`, `adminSetSeasonStatus` (`functions/src/seasons.ts`, 3 unit tests and an integration test), and opening a week is refused in an archived season
 - [x] Rules: season `status` and `archivedAt` are function-written, and a season cannot be deleted from a client (row 52, 55 rules tests in all)
@@ -23,10 +59,10 @@ The season can be closed cleanly when it ends, a dispute can be settled by readi
 - [ ] The real rollover, in February, when the 2026 season ends: export, then archive
 - [ ] Confirm D-090 with the commissioner
 
-## Acceptance (from PROJECT_PLAN.md)
+### Acceptance (from PROJECT_PLAN.md)
 None is written for Sprint 10 in the plan. The working test: a finished season can be archived and reopened with both in the audit log, no week can be opened in an archived season, and a dispute about one player's picks can be answered from the Audit log screen.
 
-## Notes / learned
+### Notes / learned
 - **Board extras after Sprint 10** (D-109; `firestore.rules` `boardPaced` and `boardLast`, `useBoardUnread`, `useBoardMutes`, `BoardMutes`). Persona check: primary Kayla (the banter, and seeing there's something new), with the Commissioner and Devon (lift a mute from the board, one tap plus a reason, audited), Rosalie ("3 new" and "Lift mute" in words; fits at Extra large text), and the Snoop (the mute list and its reasons are staff-only; the pace stamp is read only by its owner). Checked by rules row 66 (pace, stamp, ownership) plus a staff mutes listing check in row 61, all 162 rules and functions tests, `shared/board` tests for the wait and the unread count, board section tests (the wait message, the muted list and lifting, players never see it), a week page test for the tab count, `test:a11y`, and the styleguide at 375px and 125% text. **Learned:** Prettier on the rules test file reformats all of it again; edit that file without running Prettier over it. `test:smoke` not run here (proxy).
 - **Hall of Fame added after Sprint 10** (D-108; `shared/hallOfFame.ts`, `HallOfFameList`, `HallOfFamePage`, `/hall-of-fame`). Persona check: primary Dale, the regular (Most weeks played honours showing up, not just winning), with Kayla (bragging rights), Rosalie (places, "Tied", and "You" in words; the record drops under the name at large text), Gerald (every row links to that player's page, so the numbers can be checked), the Snoop (only what the public standings already show), the Slump rule (no worst records), and Responsible-Play and the Chaser (no streaks, no money: "largest pot won" left out). Checked by 12 logic tests (careers across seasons and name changes, perfect weeks and ties, the 5-week rule, cut ties, empty lists), 2 list tests, `test:a11y`, and the styleguide at 375px at normal, 125%, and 200% text. **Learned:** a fixed-width record column squeezed long names to one letter a line at 200%; letting the row wrap fixed it. `test:smoke` not run here (proxy); a `visit` line was added for the new page.
 - **A shorter game card on By game, after Sprint 10** (D-107; `shareLine`, `WhoPicked` in `WeekPage.tsx`). Persona check: primary Dale (less scrolling down 15 games), with Rosalie (the link keeps its words, arrow and 48px target; the counts stay in words beside each team) and the Slump rule (the upset line still talks about the game). Checked by the `shareLine` tests (upset, ordinary, nobody, tie), a week page test that opens Who picked what, and a 375px render at normal and doubled text with no sideways scroll. `test:smoke` not run here (proxy). **Learned (a bug that reached the live site):** the names list carried both `hidden` and the `flex` class, and `flex` overrides the hidden attribute, so the list was always open and the button seemed to do nothing. The unit test passed because it runs without the site's CSS. Fixed by swapping the class to `hidden` when closed, checked in Chromium with the built CSS.
