@@ -33,6 +33,7 @@ import {
 } from './bingo/payments';
 import { approveDraw, correctDraw, enterDraw, skipDraw } from './bingo/draws';
 import { bingoStatus as bingoStatusFor } from './bingo/status';
+import { bingoRoster as bingoRosterFor } from './bingo/roster';
 import { staffRoleOf, type StaffRole } from '../../shared/roles';
 import { createRateLimit, tidyClientError } from './clientErrors';
 import { auditInTransaction } from './audit';
@@ -554,6 +555,12 @@ export const bingoSetPayout = onCall(async (req) => {
     now: new Date(),
     ...actorOf(req, role),
   });
+});
+
+// Names only, for adding a paper member (D-114). Staff.
+export const bingoRoster = onCall(async (req) => {
+  requireStaff(req);
+  return bingoRosterFor(db);
 });
 
 export const bingoTotals = onCall(async (req) => {

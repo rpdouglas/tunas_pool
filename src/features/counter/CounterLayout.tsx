@@ -1,7 +1,11 @@
+import { lazy, Suspense } from 'react';
 import { signOut } from 'firebase/auth';
 import { Link, Outlet } from 'react-router-dom';
 import { auth } from '../../lib/firebase';
 import { useAuth } from '../auth/useAuth';
+
+// Bingo's "a draw is waiting" notice (R-22), in its own chunk so nothing else grows.
+const BingoBanner = lazy(() => import('../bingo/staff/BingoBanner'));
 
 /**
  * The Counter shell (D-095): Back Office look, but only what Devon needs. There is no menu of
@@ -17,6 +21,12 @@ export function CounterLayout() {
             Counter
           </Link>
           <nav aria-label="Counter" className="flex flex-wrap items-center">
+            <Link
+              to="/counter/bingo"
+              className="flex min-h-touch items-center px-2 text-body underline"
+            >
+              Bingo
+            </Link>
             <Link to="/" className="flex min-h-touch items-center px-2 text-body underline">
               The pool
             </Link>
@@ -36,6 +46,9 @@ export function CounterLayout() {
           </nav>
         </div>
       </header>
+      <Suspense fallback={null}>
+        <BingoBanner base="/counter/bingo" />
+      </Suspense>
       <main className="mx-auto max-w-backoffice px-4 py-6">
         <Outlet />
       </main>

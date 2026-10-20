@@ -604,6 +604,130 @@ try {
   await visit(member, 'bingo-rules', '/b/rules', 'A card is $10 a draw.');
   await bingoCtx.close();
 
+  // ---- 7. Bingo staff (BINGO_PLAN S15): a draw needs Wednesday night, and a browser can't move
+  // the clock, so the game above is closed here and a new one started 8 days ago, its first draw
+  // already past its cutoff. Then the commissioner and Devon work it through the screens.
+  const open = await db.collection('bingoCycles').where('status', '==', 'open').get();
+  for (const d of open.docs)
+    await d.ref.update({ status: 'won', closedAt: Timestamp.now(), winners: [] });
+  const past = await startCycle(db, {
+    actorUid: 'smoke',
+    test: true,
+    now: new Date(Date.now() - 8 * 24 * 3_600_000),
+  });
+  const signInStaff = async (email: string, role: 'admin' | 'counter', next: string) => {
+    const ctx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    const page = await ctx.newPage();
+    page.on('pageerror', (e) => errors.push(`${role}: ${e.message}`));
+    await page.goto(`${APP}${next}`);
+    await page.getByLabel('Email').fill(email);
+    await page.getByRole('button', { name: 'Email me a sign-in link' }).click();
+    await page.getByText('Check your email').waitFor();
+    const code = (
+      await (await fetch(`${AUTH}/emulator/v1/projects/${PROJECT}/oobCodes`)).json()
+    ).oobCodes
+      .filter((c: { email: string }) => c.email === email)
+      .pop();
+    await page.goto(
+      `${APP}/auth/finish?next=${encodeURIComponent(next)}&apiKey=demo-api-key&oobCode=${code.oobCode}&mode=signIn&lang=en`,
+    );
+    await page.getByRole('link', { name: 'Continue' }).waitFor();
+    const found = await (
+      await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:query`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnUserInfo: true }),
+      })
+    ).json();
+    const staffUid = found.userInfo.find((u: { email?: string }) => u.email === email).localId;
+    execSync(`npm run -s admin:claim -- ${staffUid}${role === 'counter' ? ' counter' : ''}`, {
+      env: {
+        ...process.env,
+        FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+        GCLOUD_PROJECT: PROJECT,
+      },
+      stdio: 'pipe',
+    });
+    await page.getByRole('link', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Check again' }).click();
+    // Wait for the refreshed token: the "isn't an admin account" notice goes away.
+    await page.getByText(/which isn't an? /).waitFor({ state: 'detached', timeout: 30_000 });
+    return { ctx, page, uid: staffUid };
+  };
+
+  const boss = await signInStaff('ryan.bingo@tunas.test', 'admin', '/admin/bingo');
+  // A fresh tab now and then, same sign-in: one long-lived tab runs this Codespace out of memory
+  // ("Target crashed"), as the full run's commissioner section does.
+  const freshTab = async (staff: { ctx: typeof boss.ctx; page: typeof boss.page }, who: string) => {
+    const page = await staff.ctx.newPage();
+    page.on('pageerror', (e) => errors.push(`${who}: ${e.message}`));
+    await staff.page.close();
+    staff.page = page;
+  };
+  await visit(boss.page, 'bingo-staff-members', '/admin/bingo/members', 'Add a member on paper');
+  await boss.page.getByLabel('Who').selectOption({ label: 'Rosalie M.' });
+  await boss.page.getByLabel("I checked they're 18 or older, in person").check();
+  await boss.page.getByRole('button', { name: 'Add to bingo' }).click();
+  await boss.page.getByText('Added.').waitFor({ timeout: 45_000 });
+  check(
+    'a paper member is added through the screen',
+    (await db.doc('bingoMembers/rosalie').get()).get('paper') === true,
+  );
+  await freshTab(boss, 'admin');
+  await visit(boss.page, 'bingo-staff-settings', '/admin/bingo/settings', 'Invite code');
+  await visit(boss.page, 'bingo-staff-totals', '/admin/bingo/totals', 'Totals only, never names');
+  await boss.page.close();
+
+  const devon = await signInStaff('devon.bingo@tunas.test', 'counter', '/counter/bingo');
+  await visit(
+    devon.page,
+    'bingo-counter-payments',
+    '/counter/bingo/payments',
+    /cards? paid for this draw/,
+  );
+  check(
+    'the counter is offered cash only',
+    (await devon.page.getByRole('button', { name: /paid by e-Transfer/ }).count()) === 0 &&
+      (await devon.page.getByRole('button', { name: /Undo paid for Kayla/ }).count()) === 0,
+  );
+  await visit(devon.page, 'bingo-counter-draw', '/counter/bingo/draw', /draw/);
+  check(
+    'the counter cannot skip or correct a draw',
+    (await devon.page.getByText(/cancelled or postponed|Correct this draw/).count()) === 0,
+  );
+  await devon.ctx.close();
+
+  // Last, the commissioner takes money after the cutoff and works the draw, in a new tab.
+  await freshTab(boss, 'admin');
+  await visit(
+    boss.page,
+    'bingo-staff-payments',
+    '/admin/bingo/payments',
+    /cards? paid for this draw/,
+  );
+  // After the cutoff, money taken now counts for next week, with a reason.
+  await boss.page.getByLabel(/After 6 PM/).fill('Came in after six');
+  await boss.page.getByRole('button', { name: /Kayla S\., Card, paid by e-Transfer/ }).click();
+  await boss.page
+    .getByText('Not paid for this draw. Paid late for the next one.')
+    .waitFor({ timeout: 45_000 });
+  await freshTab(boss, 'admin');
+  await visit(boss.page, 'bingo-staff-draw', '/admin/bingo/draw', /Type in the .* numbers/);
+  await boss.page.getByLabel('The six numbers').fill('4 5 6 33 34 35');
+  await boss.page.getByRole('button', { name: 'Save the numbers' }).click();
+  await boss.page
+    .getByRole('button', { name: 'Approve these numbers' })
+    .waitFor({ timeout: 45_000 });
+  await checkScreen(boss.page, 'bingo-staff-draw-waiting', 'is waiting for approval');
+  await boss.page.getByRole('button', { name: 'Approve these numbers' }).click();
+  await boss.page.getByText('Approved. Cards are updated.').waitFor({ timeout: 45_000 });
+  const approved = (await db.doc(`bingoCycles/${past.cycleId}/draws/${past.cycleId}`).get()).data();
+  check(
+    'the commissioner types and approves a draw through the screens',
+    approved?.status === 'approved' && approved.numbers.join(' ') === '4 5 6 33 34 35',
+  );
+  await boss.ctx.close();
+
   check('no script errors on any screen', errors.length === 0, errors.slice(0, 3).join(' | '));
 } catch (err) {
   check('smoke run', false, (err as Error).message.split('\n')[0]);

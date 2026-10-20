@@ -23,6 +23,7 @@ import { setIntent, setPayment, setPayout, totals } from './payments';
 import { approveDraw, correctDraw, enterDraw, skipDraw } from './draws';
 import { startCycle } from './cycle';
 import { bingoStatus } from './status';
+import { bingoRoster } from './roster';
 
 const db = testDb();
 const CYCLE = `bingoCycles/${FIRST}`;
@@ -559,5 +560,21 @@ describe('bingoStatus (D-132)', () => {
       enabled: true,
       member: false,
     });
+  });
+});
+
+describe('bingoRoster', () => {
+  beforeEach(() => seedBingo(db, { start: false }));
+
+  it('lists roster players not in bingo yet, by name, with nothing private', async () => {
+    await seedPlayer(db, 'p4', 'Dale D.', 'dale');
+    await seedPlayer(db, 'p5', 'Aaron A.', null);
+    await db.doc('players/p5').update({ phone: '+16135550101', email: 'a@x.test' });
+    await seedPlayer(db, 'p6', 'Gone G.', null);
+    await db.doc('players/p6').update({ active: false });
+    expect(await bingoRoster(db)).toEqual([
+      { playerId: 'p5', displayName: 'Aaron A.' },
+      { playerId: 'p4', displayName: 'Dale D.' },
+    ]);
   });
 });

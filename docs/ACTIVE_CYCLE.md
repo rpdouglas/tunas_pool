@@ -1,11 +1,46 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 14: Bingo player screens** · Phase 6d (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
+**Sprint 15: Bingo staff screens** · Phase 6e (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
 
 ## Goal
-A first-timer joins and adds a card at 375px without help.
+A full test cycle runs from cards to payout through the UI.
 
 ## Persona check
+Reuses the whole-feature check from Sprint 11. For this sprint:
+- **Commissioner Counter Test:** a card is one tap ("Paid cash") with Undo; after 6 PM one reason at the top covers every tap; money handed over before six and typed in after is "Received earlier?" with a time and a reason (D-119). The draw is one box of six numbers, then Approve.
+- **Devon:** the same screens with the buttons he can't use left out: no e-Transfer, no undoing an e-Transfer, no skip, no correct, no Settings or Totals (D-114). Checked in the smoke run with a real counter login.
+- **Gerald:** a person approves every draw after checking it against the official result; corrections need a reason and show "Corrected"; all of it is in the audit log in words.
+- **Rosalie:** paper members and paper cards are added from the Members screen, her age checked in person; "Paper" shows on her row.
+- **Bingo Check / privacy:** Totals is commissioner-only and has no names; the payments list shows staff who has paid, which the players never see.
+
+## Tasks
+- [x] `bingoRoster` callable and its test (D-133)
+- [x] `shared/bingoStaffView.ts`: typing the numbers, the draw's step, the banner, the payments list and its words, totals; 4 tests
+- [x] `BingoPaymentRow`, `BingoDrawPanel`, `ApprovedDrawRow`, in the styleguide with their states; 7 component tests
+- [x] Screens: Payments (and winners to pay), Draw (type, approve, skip, correct, last game), Members (paper member, paper card), Settings (settings, code, start a game), Totals; at `/admin/bingo` and `/counter/bingo`
+- [x] The "draw waiting" banner in both shells, lazy; links from More and the Counter bar
+- [x] Smoke run: the commissioner adds a paper member, takes money after the cutoff, types and approves a draw, opens Settings and Totals; Devon is offered cash only and can't skip or correct
+- [x] Docs: DATA_MODEL §11.5, DECISIONS D-133, BINGO_PLAN status
+- [x] **D-133:** accepted by Ryan
+
+## Acceptance (from BINGO_PLAN.md S15)
+**Met in part, said plainly.** The plan asked for the commissioner and the counter to run a month of weeks through the screens in the emulator. A browser can't move the clock to the next Wednesday night, so the month of weeks (payments, late money, a missed week, a typo corrected, a tie, payouts) is the two-game integration test from Sprint 13, through the same functions the screens call. Through the screens, in the smoke run, each staff action is done once against the real functions: a paper member added, money taken after the cutoff with a reason, a draw typed, waiting, and approved, and Devon's limits. The smoke run starts a game eight days in the past (a fixture) so a draw can be typed now. Typecheck and lint clean; **406 unit tests** (395 before); **204 rules and functions tests** (203 before). The pool's first download: 305.26 KB (304.18 KB before; the difference is Vite's list of the new lazy files, no bingo code).
+
+## Notes / learned
+- **The smoke run can't finish in one go in this Codespace.** Seven runs: every bingo and staff check passed in at least one, but the browser tab ran out of memory ("Target crashed") at a different step each time once the staff part started (members, then the draw, then totals), the same way the full run dies in the Commissioner's screens. Fresh tabs between steps helped but didn't cure it. It needs a run on a machine with more memory before launch (G2).
+- A page-level reason after the cutoff came from imagining the counter at 6:10 PM: refusing every tap until a reason is typed would be ten refusals in a row.
+- The empty "last game" panel showed up in the first screenshot; it now shows only when there is a draw to correct.
+
+---
+
+## Sprint 14 (done 2026-10-20, PR #54)
+
+**Sprint 14: Bingo player screens** · Phase 6d (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
+
+### Goal
+A first-timer joins and adds a card at 375px without help.
+
+### Persona check
 Reuses the whole-feature check from Sprint 11. For this sprint:
 - **Jen (Welcome Test):** `/b` says what bingo is in three plain lines and "Nothing is paid on this page" before asking anything; the rules and the odds are one tap away and readable before joining; a guest is asked to save their account first, in plain words. The smoke run joins with the code and adds a quick-pick card through the real screens and functions.
 - **Rosalie:** a card's numbers are balls with crossed-off said in words ("2 of 6 crossed off: 11 and 27"), never colour alone; paid or not is a sentence with a ✓, and fits at Extra large text (checked in the smoke run).
@@ -13,7 +48,7 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
 - **Bingo Check:** the card screen shows what you've put in, in dollars, first; limits and "Sit out this game" are on the same page; the board is counts only (D-123); no word anywhere says a card is close (tested in `shared/bingoView.test.ts`); the support line is on the rules screen with tap-to-call numbers.
 - **Privacy:** members see only their own cards; the board and history read only the cycle documents.
 
-## Tasks
+### Tasks
 - [x] `bingoStatus` callable and its test (D-132)
 - [x] `shared/bingoView.ts`: every player-facing sentence, 8 tests
 - [x] UI: `BingoBalls`, `BingoCardPanel`, `BingoNumberPicker`, `BingoPastGame`, in the styleguide with their states; 5 component tests
@@ -22,10 +57,10 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
 - [x] Docs: DATA_MODEL §11.5, DECISIONS D-132, BINGO_PLAN status, CLAUDE.md commands
 - [x] **D-132:** accepted by Ryan
 
-## Acceptance (from BINGO_PLAN.md S14)
+### Acceptance (from BINGO_PLAN.md S14)
 The Jen walkthrough (code to first card) works at 375px through the real screens, in the smoke run, with the axe, fit, and Extra large text checks passing on every bingo screen. The Rosalie walkthrough (reading a card, knowing whether it's paid) is in the card screen's words and its tests. Typecheck and lint clean; **395 unit tests** (377 before); **203 rules and functions tests** (202 before). The pool's first download: 304.18 KB (303.94 KB before; the difference is the lazy route).
 
-## Notes / learned
+### Notes / learned
 - **The styleguide can change the pool's first download.** Importing a bingo page into the styleguide pulled the bingo data layer into it, and Rollup then merged a 40 KB shared chunk into `index.js`. Caught by comparing the build before and after; fixed by keeping the styleguide on pure UI (D-132). Worth checking the `index-*.js` size in every bingo PR (BINGO_PLAN §7).
 - **The full smoke run crashed twice in the Commissioner's screens** ("Target crashed", the Codespace's memory), before reaching bingo; nothing there changed in this sprint. `SMOKE_ONLY=bingo` runs the guest and bingo parts alone; it passed.
 - The screenshots showed the sixth ball wrapping at 375px and the support numbers breaking mid-number; both fixed and looked at again.

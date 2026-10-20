@@ -15,6 +15,7 @@ const ResultsSheetPage = lazy(() => import('./features/print/ResultsSheetPage'))
 const Styleguide = lazy(() => import('./pages/Styleguide'));
 // Weekly 649 Bingo: its own chunk, linked from nowhere (D-128).
 const BingoRoutes = lazy(() => import('./features/bingo/BingoRoutes'));
+const BingoStaffRoutes = lazy(() => import('./features/bingo/staff/BingoStaffRoutes'));
 import NotFound from './pages/NotFound';
 import { AdminLayout } from './features/admin/AdminLayout';
 import { CounterLayout } from './features/counter/CounterLayout';
@@ -85,6 +86,7 @@ export default function App() {
           <Route path="more" element={<MorePage />} />
           <Route path="weeks/:year/:weekId" element={<WeekEditorPage />} />
           <Route path="settings" element={<PoolSettingsPage />} />
+          <Route path="bingo/*" element={<BingoStaffRoutes base="/admin/bingo" />} />
         </Route>
         <Route
           path="/counter"
@@ -96,6 +98,7 @@ export default function App() {
         >
           <Route index element={<CounterPage />} />
           <Route path="enter/:playerId" element={<CounterEnterPage />} />
+          <Route path="bingo/*" element={<BingoStaffRoutes base="/counter/bingo" />} />
         </Route>
         {showStyleguide && <Route path="/styleguide" element={<Styleguide />} />}
         <Route path="*" element={<NotFound />} />

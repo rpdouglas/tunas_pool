@@ -2,7 +2,7 @@
 
 > The plan for building Weekly 649 Bingo inside `tunas_pool`, the same way the pool was built: docs first, rules tests before rules, one sprint at a time, each ending green and mergeable.
 > Sources: `docs/bingo/BUILD_SPEC.md` (Ryan, 2026-10-20) and its review, `docs/reports/2026-10-20-bingo-spec-review.md` (findings R-1 to R-25).
-> Status: **Sprint 14 (player screens) built, 2026-10-20.** Sprint 13 (functions) built, 2026-10-20. Sprint 12 (engine and rules) built, 2026-10-20. Sprint 11 (spec) done in docs, 2026-10-20. The decisions are D-110 to D-129, the data model is `DATA_MODEL.md` §11, the rules in plain words and rows 67 to 80 are in `FIRESTORE_RULES.md`, and the responsible-play standard is `PERSONAS.md` §8. Where this plan and those docs differ, the docs win. Nothing is built yet.
+> Status: **Sprint 15 (staff screens) built, 2026-10-20.** Sprint 14 (player screens) built, 2026-10-20. Sprint 13 (functions) built, 2026-10-20. Sprint 12 (engine and rules) built, 2026-10-20. Sprint 11 (spec) done in docs, 2026-10-20. The decisions are D-110 to D-129, the data model is `DATA_MODEL.md` §11, the rules in plain words and rows 67 to 80 are in `FIRESTORE_RULES.md`, and the responsible-play standard is `PERSONAS.md` §8. Where this plan and those docs differ, the docs win. Nothing is built yet.
 
 ## 1. Goal and non-goals
 
