@@ -70,6 +70,8 @@ export interface CycleView {
     displayName: string;
     hits: number;
     shareCents: number;
+    /** Set once staff mark it paid (`bingoSetPayout`). */
+    paidOut?: { method: 'cash' | 'etransfer' } | null;
   }[];
 }
 

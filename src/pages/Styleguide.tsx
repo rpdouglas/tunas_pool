@@ -31,6 +31,9 @@ import { HallOfFameList } from '../components/ui/HallOfFameList';
 import { BingoBalls, BingoCardPanel } from '../components/ui/BingoCard';
 import { BingoNumberPicker } from '../components/ui/BingoNumberPicker';
 import { BingoPastGame } from '../components/ui/BingoPastGame';
+import { BingoPaymentRow } from '../features/bingo/staff/BingoPaymentRow';
+import { ApprovedDrawRow, BingoDrawPanel } from '../features/bingo/staff/BingoDrawPanel';
+import type { PaymentRowData } from '@shared/bingoStaffView';
 import type { HallList } from '@shared/hallOfFame';
 import { ShareBar } from '../components/ui/ShareBar';
 import { ShareCard } from '../components/ui/ShareCard';
@@ -172,6 +175,49 @@ const SWATCHES: Array<{ name: string; className: string; hex: string }> = [
 ];
 
 /** Dev-only component gallery. Every new UI component gets an entry here (CLAUDE.md §5). */
+const SAMPLE_BINGO_ROWS: PaymentRowData[] = [
+  {
+    cardId: 's1',
+    playerId: 'a',
+    displayName: 'Bartholomew Featherstonehaugh',
+    label: 'Card 1 of 2',
+    numbers: [3, 11, 19, 27, 35, 43],
+    due: null,
+    paidNext: false,
+    paper: false,
+  },
+  {
+    cardId: 's2',
+    playerId: 'a',
+    displayName: 'Bartholomew Featherstonehaugh',
+    label: 'Card 2 of 2',
+    numbers: [1, 2, 3, 4, 5, 6],
+    due: { paid: false, method: null, late: false, intent: 'etransfer' },
+    paidNext: false,
+    paper: false,
+  },
+  {
+    cardId: 's3',
+    playerId: 'r',
+    displayName: 'Rosalie M.',
+    label: 'Card',
+    numbers: [1, 2, 3, 4, 40, 41],
+    due: { paid: true, method: 'cash', late: true, intent: null },
+    paidNext: false,
+    paper: true,
+  },
+  {
+    cardId: 's4',
+    playerId: 'd',
+    displayName: 'Dale D.',
+    label: 'Card',
+    numbers: [7, 14, 21, 28, 35, 42],
+    due: null,
+    paidNext: true,
+    paper: false,
+  },
+];
+
 export default function Styleguide() {
   const [pick, setPick] = useState<'away' | 'home' | null>('home');
   const [cardPick, setCardPick] = useState<'away' | 'home' | null>(null);
@@ -1004,6 +1050,71 @@ export default function Styleguide() {
                 winners: [],
               }}
             />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-bingo-staff">
+          <h2 id="sg-bingo-staff" className="mb-3 font-heading text-h2 italic">
+            Bingo staff: payments and the draw (Back Office)
+          </h2>
+          <div className="flex max-w-player flex-col gap-4 bg-page-backoffice p-2">
+            <ul className="flex flex-col gap-2">
+              {SAMPLE_BINGO_ROWS.map((row, i) => (
+                <BingoPaymentRow
+                  key={row.cardId}
+                  row={row}
+                  isAdmin={i % 2 === 0}
+                  busy={false}
+                  onPay={() => undefined}
+                  onUndo={() => undefined}
+                />
+              ))}
+            </ul>
+            <BingoDrawPanel
+              drawDate="2026-11-18"
+              step="before-cutoff"
+              numbers={null}
+              isAdmin={false}
+              busy={false}
+              error={null}
+              onEnter={() => undefined}
+              onApprove={() => undefined}
+              onSkip={() => undefined}
+            />
+            <BingoDrawPanel
+              drawDate="2026-11-18"
+              step="needs-numbers"
+              numbers={null}
+              isAdmin
+              busy={false}
+              error="That draw hasn’t happened yet. Numbers go in after the 6 PM cutoff."
+              onEnter={() => undefined}
+              onApprove={() => undefined}
+              onSkip={() => undefined}
+            />
+            <BingoDrawPanel
+              drawDate="2026-11-18"
+              step="waiting-approval"
+              numbers={[4, 5, 6, 33, 34, 35]}
+              isAdmin
+              busy={false}
+              error={null}
+              onEnter={() => undefined}
+              onApprove={() => undefined}
+              onSkip={() => undefined}
+            />
+            <ul className="flex flex-col gap-2">
+              <ApprovedDrawRow
+                drawDate="2026-11-11"
+                label="Wed, Nov 11"
+                numbers={[1, 2, 3, 30, 31, 32]}
+                paidCards={98}
+                corrected
+                isAdmin
+                busy={false}
+                onCorrect={() => undefined}
+              />
+            </ul>
           </div>
         </section>
 

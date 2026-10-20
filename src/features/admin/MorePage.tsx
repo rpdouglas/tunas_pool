@@ -7,6 +7,11 @@ const LINKS = [
   { to: '/admin/audit', label: 'Audit log', note: 'Who changed what, when, and why' },
   { to: '/admin/seasons', label: 'Seasons', note: 'Archive a finished season' },
   { to: '/admin/settings', label: 'Settings', note: 'e-Transfer address and contact email' },
+  {
+    to: '/admin/bingo',
+    label: 'Bingo',
+    note: 'Weekly 649 Bingo: payments, draws, members, settings',
+  },
 ];
 
 /**

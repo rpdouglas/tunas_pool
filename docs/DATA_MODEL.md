@@ -378,7 +378,7 @@ Computed in shared code (`shared/`) so the web app and functions agree. Pure fun
 
 ## 11. Weekly 649 Bingo (Phase 6)
 
-The settled design for `docs/BINGO_PLAN.md`, from D-110 to D-130. **Built so far (Sprint 12):** the rules (`firestore.rules`, rows 67 to 80), `shared/bingo.ts` (§11.4, with §11.6 as its fixtures), and the simulation (`shared/bingoSim.ts`, `scripts/bingo-sim.ts`). **Sprint 13:** the functions (§11.5, `functions/src/bingo/`), with an integration test each and a two-game test from cards to payout (`bingoGame.int.test.ts`). **Sprint 14:** the player screens (`src/features/bingo/`, one lazy chunk, D-132). The staff screens come in Sprint 15; if code and this section disagree, stop and flag it. Money is integer cents. ✍ marks a document only functions write. **No client writes any bingo document**: every change, a player's own intent and limits included, goes through a callable, so the rules for bingo are reads only.
+The settled design for `docs/BINGO_PLAN.md`, from D-110 to D-130. **Built so far (Sprint 12):** the rules (`firestore.rules`, rows 67 to 80), `shared/bingo.ts` (§11.4, with §11.6 as its fixtures), and the simulation (`shared/bingoSim.ts`, `scripts/bingo-sim.ts`). **Sprint 13:** the functions (§11.5, `functions/src/bingo/`), with an integration test each and a two-game test from cards to payout (`bingoGame.int.test.ts`). **Sprint 14:** the player screens (`src/features/bingo/`, one lazy chunk, D-132). **Sprint 15:** the staff screens (`src/features/bingo/staff/`, D-133). The automatic fetch and the dry run come in Sprint 16; if code and this section disagree, stop and flag it. Money is integer cents. ✍ marks a document only functions write. **No client writes any bingo document**: every change, a player's own intent and limits included, goes through a callable, so the rules for bingo are reads only.
 
 ### 11.1 Collections
 
@@ -465,6 +465,7 @@ Everything here is a pure function, and `applyDraw` calls it every time, so noth
 | `bingoSkipDraw` | admin | `skipped`; its money moves on (D-129). |
 | `bingoSetPayout` | admin; counter for cash | Marks a winner paid. |
 | `applyDraw` | internal | Recomputes every entry, the pot, the board counts, winners; closes and opens cycles. Idempotent. |
+| `bingoRoster` | admin, counter | Roster players not in bingo yet, names only, for adding a paper member (D-133). |
 | `bingoTotals` | admin | Spend from 4-to-5-card players, members at the cap: totals only (D-128). |
 
 Audit actions: `bingo.memberJoined`, `bingo.memberAdded`, `bingo.code`, `bingo.config`, `bingo.cardCreated`, `bingo.cardRetired`, `bingo.limit`, `bingo.payment`, `bingo.drawEntered`, `bingo.drawApproved`, `bingo.drawCorrected`, `bingo.drawSkipped`, `bingo.payout`, `bingo.cycle`. Each gets a plain-words line in `shared/auditText.ts`. `bingoSetIntent` is not audited, like the pool's `paymentIntent`.

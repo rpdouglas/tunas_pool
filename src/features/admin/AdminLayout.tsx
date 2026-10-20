@@ -1,8 +1,12 @@
+import { lazy, Suspense } from 'react';
 import { signOut } from 'firebase/auth';
 import { Link, NavLink, Outlet, useSearchParams } from 'react-router-dom';
 import { AppBar } from '../../components/layout/AppMenu';
 import { auth } from '../../lib/firebase';
 import { useAuth } from '../auth/useAuth';
+
+// Bingo's "a draw is waiting" notice (R-22), in its own chunk so nothing else grows.
+const BingoBanner = lazy(() => import('../bingo/staff/BingoBanner'));
 import { usePendingClaimCount } from './claims/claimsData';
 
 // The four screens used every week. Everything else is one tap away under More (D-091), so the bar
@@ -69,6 +73,9 @@ export function AdminLayout() {
           </button>
         </div>
       </header>
+      <Suspense fallback={null}>
+        <BingoBanner base="/admin/bingo" />
+      </Suspense>
       <main className="mx-auto max-w-backoffice px-4 py-6">
         <Outlet />
       </main>
