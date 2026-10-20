@@ -7,6 +7,7 @@
 import { resolveTeam } from './teams';
 import { addDays, formatClock, toZonedParts } from './time';
 import type { GameResult } from './types';
+import { kickoffLabel } from './weeks';
 
 export interface ScheduleGame {
   kickoffMs: number;
@@ -101,6 +102,14 @@ export interface FeedScore {
   final: boolean;
   awayPoints: number;
   homePoints: number;
+  /** Not started, being played, or over (D-104). Over includes postponed and cancelled. */
+  state: 'pre' | 'in' | 'post';
+  /** The quarter, 5 or more for overtime; null before kickoff or when the feed leaves it out. */
+  period: number | null;
+  /** Game clock as the feed writes it, like "7:21". */
+  clock: string | null;
+  /** The feed's status name, like "STATUS_HALFTIME" or "STATUS_POSTPONED". */
+  statusName: string | null;
 }
 
 /** Final scores out of an ESPN scoreboard response, by the pool's own team names. Trusts nothing. */
@@ -125,13 +134,21 @@ export function readEspnScores(payload: unknown): FeedScore[] {
       };
     }
     if (!sides.away?.name || !sides.home?.name) continue;
-    const completed = asRecord(asRecord(competition.status)?.type)?.completed === true;
+    const status = asRecord(competition.status);
+    const type = asRecord(status?.type);
+    const completed = type?.completed === true;
+    const state = type?.state === 'in' || type?.state === 'post' ? type.state : 'pre';
     scores.push({
       away: sides.away.name,
       home: sides.home.name,
       final: completed && Number.isFinite(sides.away.points) && Number.isFinite(sides.home.points),
       awayPoints: sides.away.points,
       homePoints: sides.home.points,
+      // An older feed without `state` still says when a game is completed.
+      state: completed ? 'post' : state,
+      period: typeof status?.period === 'number' && status.period > 0 ? status.period : null,
+      clock: typeof status?.displayClock === 'string' ? status.displayClock : null,
+      statusName: typeof type?.name === 'string' ? type.name : null,
     });
   }
   return scores;
@@ -172,22 +189,64 @@ export function suggestResults(
   return suggestion;
 }
 
-export interface GameScore {
-  awayPoints: number;
-  homePoints: number;
-}
+/** Where one game stands on the By game view (D-104). */
+export type GameStatus =
+  | { kind: 'upcoming'; label: string }
+  | { kind: 'live'; label: string; awayPoints: number; homePoints: number }
+  | { kind: 'final'; label: string; awayPoints: number; homePoints: number }
+  | { kind: 'off'; label: string };
 
-/** Final scores by game ID, for the games on the sheet that the feed says are over. */
-export function finalScores(
-  games: { id: string; away: string; home: string }[],
+const quarter = (period: number) => (period > 4 ? 'OT' : `Q${period}`);
+
+/**
+ * Each game's status in plain words, by game ID: its kickoff before it starts ("Sun 1:00 PM"), the
+ * quarter and clock while it is played ("Q3 · 7:21", "Halftime", "End of Q1"), and "Final" or
+ * "Final (OT)" once it is over. A postponed or cancelled game says so. A game the feed doesn't
+ * have shows its kickoff.
+ */
+export function gameStatuses(
+  games: { id: string; away: string; home: string; kickoffMs: number }[],
   scores: FeedScore[],
-): Record<string, GameScore> {
-  const out: Record<string, GameScore> = {};
+): Record<string, GameStatus> {
+  const out: Record<string, GameStatus> = {};
   for (const game of games) {
     const score = scores.find((s) => s.away === game.away && s.home === game.home);
-    if (score?.final) out[game.id] = { awayPoints: score.awayPoints, homePoints: score.homePoints };
+    const points = score && { awayPoints: score.awayPoints, homePoints: score.homePoints };
+    const hasPoints =
+      points && Number.isFinite(points.awayPoints) && Number.isFinite(points.homePoints);
+    if (score?.final && points) {
+      out[game.id] = {
+        kind: 'final',
+        label: score.period && score.period > 4 ? 'Final (OT)' : 'Final',
+        ...points,
+      };
+    } else if (score?.state === 'post') {
+      out[game.id] = {
+        kind: 'off',
+        label: score.statusName === 'STATUS_CANCELED' ? 'Cancelled' : 'Postponed',
+      };
+    } else if (score?.state === 'in' && points && hasPoints) {
+      const label =
+        score.statusName === 'STATUS_HALFTIME'
+          ? 'Halftime'
+          : score.statusName === 'STATUS_DELAYED'
+            ? 'Delayed'
+            : score.statusName === 'STATUS_END_PERIOD' && score.period
+              ? `End of ${quarter(score.period)}`
+              : score.period
+                ? [quarter(score.period), score.clock].filter(Boolean).join(' · ')
+                : 'In progress';
+      out[game.id] = { kind: 'live', label, ...points };
+    } else {
+      out[game.id] = { kind: 'upcoming', label: kickoffLabel(game) };
+    }
   }
   return out;
+}
+
+/** True while any game on the sheet is being played: the week page then refreshes every minute. */
+export function anyGameLive(statuses: Record<string, GameStatus>): boolean {
+  return Object.values(statuses).some((s) => s.kind === 'live');
 }
 
 /**

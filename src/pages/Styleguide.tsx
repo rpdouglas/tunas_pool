@@ -836,7 +836,7 @@ export default function Styleguide() {
               awayPercent={70}
               homePercent={30}
               winner="home"
-              score={{ away: 17, home: 24 }}
+              status={{ kind: 'final', label: 'Final', awayPoints: 17, homePoints: 24 }}
               unofficial
               myPick="away"
               upset
@@ -849,8 +849,27 @@ export default function Styleguide() {
               awayPercent={50}
               homePercent={50}
               winner="away"
-              score={{ away: 20, home: 13 }}
+              status={{ kind: 'final', label: 'Final (OT)', awayPoints: 20, homePoints: 13 }}
               myPick="away"
+            />
+            <ShareBar
+              awayTeam="Texans"
+              homeTeam="Jaguars"
+              awayCount={7}
+              homeCount={29}
+              awayPercent={19}
+              homePercent={81}
+              status={{ kind: 'live', label: 'Q3 · 7:21', awayPoints: 17, homePoints: 14 }}
+              myPick="home"
+            />
+            <ShareBar
+              awayTeam="Saints"
+              homeTeam="Giants"
+              awayCount={15}
+              homeCount={21}
+              awayPercent={42}
+              homePercent={58}
+              status={{ kind: 'upcoming', label: 'Sun 4:25 PM' }}
             />
             <ShareBar
               awayTeam="Buccaneers"

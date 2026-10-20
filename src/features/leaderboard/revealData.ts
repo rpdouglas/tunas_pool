@@ -91,7 +91,8 @@ export function useLastWinner(year: string, signedIn: boolean) {
 }
 
 /**
- * ESPN's scores for a locked week (D-098), fetched each time the page opens and on Refresh scores.
+ * ESPN's scores for a locked week (D-098), fetched each time the page opens, on Refresh scores, and
+ * every minute while a game is being played (D-104).
  * They fill in games the commissioner hasn't saved yet, marked unofficial. Only while the week is
  * locked: once it is final, every result is the commissioner's.
  */
@@ -103,5 +104,7 @@ export function useWeekScores(year: string, week: WeekView | null | undefined) {
     queryFn: (): Promise<FeedScore[]> => fetchWeekScores(week!.games),
     refetchOnMount: 'always',
     retry: 1,
+    // While a game is being played, look again every minute (D-104); otherwise only on Refresh.
+    refetchInterval: (q) => (q.state.data?.some((s) => s.state === 'in') ? 60_000 : false),
   });
 }

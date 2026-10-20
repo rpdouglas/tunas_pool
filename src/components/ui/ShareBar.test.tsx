@@ -15,7 +15,7 @@ it('shows each team with its score, the winner, your pick, and an upset in words
     <ShareBar
       {...game}
       winner="away"
-      score={{ away: 34, home: 31 }}
+      status={{ kind: 'final', label: 'Final', awayPoints: 34, homePoints: 31 }}
       unofficial
       myPick="home"
       upset
@@ -47,4 +47,24 @@ it('says nothing about a score, an upset, or your pick when there is none', () =
   expect(screen.queryByText(/Final/)).toBeNull();
   expect(screen.queryByText('Upset')).toBeNull();
   expect(screen.queryByText('Your pick')).toBeNull();
+});
+
+it('shows a game being played with its score, quarter, and clock, and says it is not counted yet', () => {
+  render(
+    <ShareBar
+      {...game}
+      status={{ kind: 'live', label: 'Q3 · 7:21', awayPoints: 17, homePoints: 14 }}
+    />,
+  );
+  expect(screen.getByText('17')).toBeInTheDocument();
+  expect(screen.getByText('Live')).toBeInTheDocument();
+  expect(screen.getByText('Q3 · 7:21')).toBeInTheDocument();
+  expect(screen.getByText(/Not counted until it's final/)).toBeInTheDocument();
+  expect(screen.queryByText('Won')).toBeNull();
+});
+
+it('gives the kickoff before a game starts, with no score', () => {
+  render(<ShareBar {...game} status={{ kind: 'upcoming', label: 'Sun 1:00 PM' }} />);
+  expect(screen.getByText('Kickoff Sun 1:00 PM')).toBeInTheDocument();
+  expect(screen.queryByText('Live')).toBeNull();
 });

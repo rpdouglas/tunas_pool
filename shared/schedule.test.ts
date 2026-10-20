@@ -1,10 +1,12 @@
 import {
-  finalScores,
+  anyGameLive,
+  gameStatuses,
   readEspnScores,
   suggestResults,
   readEspnScoreboard,
   scheduleToText,
   withUnofficialResults,
+  type FeedScore,
 } from './schedule';
 import { defaultLockAt, parseMatchups, weekProblems } from './weeks';
 
@@ -146,7 +148,7 @@ describe('results from the feed', () => {
       'Lions at Packers',
       'Falcons at Saints',
     ]);
-    expect(scores[0]).toMatchObject({ final: true, awayPoints: 30, homePoints: 13 });
+    expect(scores[0]).toMatchObject({ final: true, awayPoints: 30, homePoints: 13, state: 'post' });
     expect(scores[3].final).toBe(false);
     expect(readEspnScores(null)).toEqual([]);
   });
@@ -172,19 +174,25 @@ describe('results from the feed', () => {
   });
 });
 
-describe('withUnofficialResults and finalScores', () => {
+describe('withUnofficialResults', () => {
   const games = [
     { id: 'g01', away: 'Texans', home: 'Jaguars', slot: 'sunday' },
     { id: 'g02', away: 'Bears', home: 'Falcons', slot: 'sunday' },
     { id: 'g03', away: 'Ravens', home: 'Browns', slot: 'sunday' },
     { id: 'mnf', away: 'Commanders', home: '49ers', slot: 'mnf' },
   ];
-  const scores = [
+  const scores: FeedScore[] = [
     { away: 'Texans', home: 'Jaguars', final: true, awayPoints: 17, homePoints: 24 },
     { away: 'Bears', home: 'Falcons', final: true, awayPoints: 20, homePoints: 20 },
     { away: 'Ravens', home: 'Browns', final: true, awayPoints: 31, homePoints: 10 },
     { away: 'Commanders', home: '49ers', final: false, awayPoints: 7, homePoints: 3 },
-  ];
+  ].map((s) => ({
+    ...s,
+    state: s.final ? 'post' : 'in',
+    period: 4,
+    clock: null,
+    statusName: null,
+  }));
 
   it('fills in finished games the commissioner has not saved, and says which', () => {
     expect(withUnofficialResults(games, { g01: 'home' }, scores)).toEqual({
@@ -202,12 +210,75 @@ describe('withUnofficialResults and finalScores', () => {
     expect(results.mnf).toBeUndefined();
     expect(unofficial).not.toContain('mnf');
   });
+});
 
-  it('gives the final score of each finished game', () => {
-    expect(finalScores(games, scores)).toEqual({
-      g01: { awayPoints: 17, homePoints: 24 },
-      g02: { awayPoints: 20, homePoints: 20 },
-      g03: { awayPoints: 31, homePoints: 10 },
-    });
+describe('gameStatuses (D-104)', () => {
+  const at = (iso: string) => Date.parse(iso);
+  const games = [
+    { id: 'g01', away: 'Texans', home: 'Jaguars', kickoffMs: at('2026-10-18T17:00:00Z') },
+    { id: 'g02', away: 'Bears', home: 'Falcons', kickoffMs: at('2026-10-18T17:00:00Z') },
+    { id: 'g03', away: 'Ravens', home: 'Browns', kickoffMs: at('2026-10-18T17:00:00Z') },
+    { id: 'g04', away: 'Titans', home: 'Colts', kickoffMs: at('2026-10-18T17:00:00Z') },
+    { id: 'g05', away: 'Jets', home: 'Patriots', kickoffMs: at('2026-10-18T17:00:00Z') },
+    { id: 'g06', away: 'Saints', home: 'Giants', kickoffMs: at('2026-10-18T20:25:00Z') },
+    { id: 'mnf', away: 'Commanders', home: '49ers', kickoffMs: at('2026-10-20T00:15:00Z') },
+  ];
+  const score = (away: string, home: string, rest: Partial<FeedScore>): FeedScore => ({
+    away,
+    home,
+    final: false,
+    awayPoints: 0,
+    homePoints: 0,
+    state: 'in',
+    period: null,
+    clock: null,
+    statusName: null,
+    ...rest,
+  });
+  const feed = [
+    score('Texans', 'Jaguars', { awayPoints: 17, homePoints: 14, period: 3, clock: '7:21' }),
+    score('Bears', 'Falcons', {
+      awayPoints: 10,
+      homePoints: 3,
+      period: 2,
+      statusName: 'STATUS_HALFTIME',
+    }),
+    score('Ravens', 'Browns', {
+      final: true,
+      state: 'post',
+      awayPoints: 23,
+      homePoints: 20,
+      period: 5,
+    }),
+    score('Titans', 'Colts', {
+      awayPoints: 7,
+      homePoints: 7,
+      period: 1,
+      statusName: 'STATUS_END_PERIOD',
+    }),
+    score('Jets', 'Patriots', {
+      state: 'post',
+      statusName: 'STATUS_POSTPONED',
+      awayPoints: NaN,
+      homePoints: NaN,
+    }),
+    score('Saints', 'Giants', { state: 'pre' }),
+  ];
+
+  it('says where each game stands in plain words', () => {
+    const s = gameStatuses(games, feed);
+    expect(s.g01).toEqual({ kind: 'live', label: 'Q3 · 7:21', awayPoints: 17, homePoints: 14 });
+    expect(s.g02).toMatchObject({ kind: 'live', label: 'Halftime' });
+    expect(s.g03).toEqual({ kind: 'final', label: 'Final (OT)', awayPoints: 23, homePoints: 20 });
+    expect(s.g04).toMatchObject({ kind: 'live', label: 'End of Q1' });
+    expect(s.g05).toEqual({ kind: 'off', label: 'Postponed' });
+    // Not started, and not in the feed at all: the kickoff, in pool time.
+    expect(s.g06).toEqual({ kind: 'upcoming', label: 'Sun 4:25 PM' });
+    expect(s.mnf).toEqual({ kind: 'upcoming', label: 'Mon 8:15 PM' });
+  });
+
+  it('knows when any game is being played', () => {
+    expect(anyGameLive(gameStatuses(games, feed))).toBe(true);
+    expect(anyGameLive(gameStatuses(games, []))).toBe(false);
   });
 });
