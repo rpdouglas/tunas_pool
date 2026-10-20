@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
@@ -18,13 +19,15 @@ vi.mock('../entry/entryData', () => ({
 
 it('every Back Office screen has the player Menu, the way back to the main page', () => {
   render(
-    <MemoryRouter initialEntries={['/admin/roster']}>
-      <Routes>
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route path="roster" element={<p>Roster screen</p>} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={['/admin/roster']}>
+        <Routes>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route path="roster" element={<p>Roster screen</p>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
   expect(screen.getByText('Roster screen')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Menu' })).toBeInTheDocument();

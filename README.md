@@ -197,7 +197,7 @@ tells you plainly if it can't:
   first (Roster, Edit picks, Remove this entry), then the player can be deleted if nothing else is attached.
 - **Won't delete** someone with a login linked. Unlink it first, or use Inactive.
 
-### Weekly 649 Bingo (Phase 6, D-110 to D-134)
+### Tunas 649 Bingo (Phase 6, D-110 to D-134)
 
 Bingo is hidden: nothing links to it for players, and while it's switched off `/b` is "Page not found" to everyone but staff and members. The rules are in `docs/DATA_MODEL.md` §11 and the plain-words version on `/b/rules`.
 

@@ -1,5 +1,5 @@
 /**
- * A seeded simulation of Weekly 649 Bingo, run on the game's own rules (shared/bingo.ts), so the
+ * A seeded simulation of Tunas 649 Bingo, run on the game's own rules (shared/bingo.ts), so the
  * engine and the economics are checked by the same code (BINGO_PLAN R-23). `scripts/bingo-sim.ts`
  * prints the table; a short run is in bingoSim.test.ts.
  *

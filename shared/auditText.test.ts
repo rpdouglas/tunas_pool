@@ -178,7 +178,7 @@ describe('describeActor', () => {
   });
 });
 
-describe('describeAudit: Weekly 649 Bingo', () => {
+describe('describeAudit: Tunas 649 Bingo', () => {
   const bingo = (overrides: Partial<AuditRecord>): AuditRecord => ({
     actorUid: 'boss',
     action: 'bingo.payment',

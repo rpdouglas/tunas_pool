@@ -1,5 +1,5 @@
 /**
- * Weekly 649 Bingo, the player side (BINGO_PLAN S14). One lazy chunk, so pool players never
+ * Tunas 649 Bingo, the player side (BINGO_PLAN S14). One lazy chunk, so pool players never
  * download it (D-128). Not linked from anywhere and marked `noindex`. While bingo is off it shows
  * only to staff and existing members (the dry run, D-132); everyone else gets "not found".
  */

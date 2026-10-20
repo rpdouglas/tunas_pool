@@ -1,5 +1,5 @@
 /**
- * Weekly 649 Bingo rules: docs/FIRESTORE_RULES.md §5 rows 67 to 80 (D-110 to D-129).
+ * Tunas 649 Bingo rules: docs/FIRESTORE_RULES.md §5 rows 67 to 80 (D-110 to D-129).
  * Run with: npm run test:rules. Every bingo document is function-written, so these are reads only:
  * members read their own things through the `logins/{uid}` pointer, staff read everything but the
  * secret, and nobody else reads anything.
@@ -140,7 +140,7 @@ const carol = () => as('carol');
 const admin = () => as('boss', { admin: true });
 const counter = () => as('devon', { counter: true });
 
-describe('Weekly 649 Bingo: function-written, members read their own, staff read all', () => {
+describe('Tunas 649 Bingo: function-written, members read their own, staff read all', () => {
   it('row 67: no client, staff included, writes any bingo document', async () => {
     const paths = [
       'bingo/config',

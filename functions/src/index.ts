@@ -373,7 +373,7 @@ export const boardMute = onCall(async (req) => {
   });
 });
 
-// ---- Weekly 649 Bingo (D-110 to D-130; DATA_MODEL §11.5) ---------------------
+// ---- Tunas 649 Bingo (D-110 to D-130; DATA_MODEL §11.5) ---------------------
 // The decisions are in ./bingo; these check who is calling. The counter's limits (D-114) are
 // enforced inside the functions too, so a counter token can't get round them here.
 

@@ -1,5 +1,5 @@
 /**
- * Weekly 649 Bingo functions against the Firestore emulator (DATA_MODEL §11.5). Run with
+ * Tunas 649 Bingo functions against the Firestore emulator (DATA_MODEL §11.5). Run with
  * `npm run test:rules`. Each function: the right role and input work and are audited; the wrong
  * ones are refused in plain words.
  */

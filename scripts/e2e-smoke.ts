@@ -183,7 +183,7 @@ for (const id of ['rosalie']) await db.doc(`players/${id}`).update(roster);
 await db.doc('players/jen').update({ phone: '+13155550199' });
 await recomputeStandings(db, YEAR, async (uids) => new Set(uids));
 await recomputeAllTime(db);
-// Weekly 649 Bingo: set up and a game open, but switched off (D-128).
+// Tunas 649 Bingo: set up and a game open, but switched off (D-128).
 const BINGO_CONFIG = {
   enabled: false,
   priceCents: 1000,
@@ -266,6 +266,12 @@ try {
   await visit(player, 'entry-form', `/picks/${YEAR}/wk03`, '0 of 15 picked');
   // Bingo is off: to a guest it's an ordinary missing page (D-128).
   await visit(player, 'bingo-off', '/b', 'Page not found');
+  await player.goto(`${APP}/`);
+  await player.getByRole('button', { name: 'Menu' }).click();
+  check(
+    'a guest sees no bingo in the menu',
+    (await player.getByRole('link', { name: /bingo/i }).count()) === 0,
+  );
   await playerCtx.close();
 
   // SMOKE_ONLY=bingo skips the commissioner and the counter, for when the Codespace runs short of
@@ -599,6 +605,17 @@ try {
     cards.size === 1 && cards.docs[0].get('source') === 'web',
   );
   await visit(member, 'bingo-cards', '/b/cards', 'Nothing crossed off yet.');
+  // Members find bingo in the menu (D-135); nobody else does (the guest's home above has no link).
+  await member.getByRole('button', { name: 'Menu' }).click();
+  check(
+    'a member finds Tunas 649 Bingo in the menu',
+    await member
+      .getByRole('link', { name: 'Tunas 649 Bingo' })
+      .waitFor({ timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false),
+  );
+  await member.getByRole('button', { name: 'Close menu' }).click();
   await visit(member, 'bingo-board', '/b/board', 'The pot');
   await visit(member, 'bingo-history', '/b/history', 'No games finished yet.');
   await visit(member, 'bingo-rules', '/b/rules', 'A card is $10 a draw.');

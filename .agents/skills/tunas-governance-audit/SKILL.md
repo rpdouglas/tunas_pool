@@ -42,7 +42,7 @@ List collections in rules with no matrix row.
 - Each collection in `docs/DATA_MODEL.md` §2 appears in `firestore.rules`
   (a collection with no rule is a **security gap**, Critical).
 - Each `onCall` exported from `functions/src/index.ts` (or its modules) is listed in
-  DATA_MODEL §5, or §11.5 for the `bingo*` callables (Weekly 649 Bingo); each function
+  DATA_MODEL §5, or §11.5 for the `bingo*` callables (Tunas 649 Bingo); each function
   listed there exists in code.
 - The bingo collections (`bingo/*`, `bingoMembers`, `bingoRedeemAttempts`, `bingoCards`,
   `bingoCycles` and its subcollections) are documented in DATA_MODEL §11, not §2-§3.

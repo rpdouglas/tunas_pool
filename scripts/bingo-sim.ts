@@ -1,5 +1,5 @@
 /**
- * Weekly 649 Bingo economics, simulated on the game's own rules (shared/bingoSim.ts, R-23).
+ * Tunas 649 Bingo economics, simulated on the game's own rules (shared/bingoSim.ts, R-23).
  *
  *   npx tsx scripts/bingo-sim.ts [years=300] [seed=649] [priceCents=1000] [operatorPct=40]
  *
@@ -15,7 +15,7 @@ const dollars = (cents: number) => `$${Math.round(cents / 100).toLocaleString('e
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 console.log(
-  `Weekly 649 Bingo · ${years} years per case · seed ${seed} · $${priceCents / 100} a card · ${operatorPct}% operator · cap 26 weeks\n`,
+  `Tunas 649 Bingo · ${years} years per case · seed ${seed} · $${priceCents / 100} a card · ${operatorPct}% operator · cap 26 weeks\n`,
 );
 const rows = SPEC_SCENARIOS.map((s, i) =>
   simulate(s, { priceCents, operatorPct, maxWeeks: 26 }, years, seed + i),

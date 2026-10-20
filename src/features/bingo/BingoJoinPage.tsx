@@ -50,7 +50,7 @@ export default function BingoJoinPage({ status }: { status: BingoStatus }) {
   }
 
   return (
-    <BingoPage title="Weekly 649 Bingo" status={status}>
+    <BingoPage title="Tunas 649 Bingo" status={status}>
       <Panel title="What this is">
         <div className="flex flex-col gap-2 text-body">
           <p>

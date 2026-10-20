@@ -13,7 +13,7 @@ const PlayerPage = lazy(() => import('./features/leaderboard/PlayerPage'));
 const SheetPage = lazy(() => import('./features/print/SheetPage'));
 const ResultsSheetPage = lazy(() => import('./features/print/ResultsSheetPage'));
 const Styleguide = lazy(() => import('./pages/Styleguide'));
-// Weekly 649 Bingo: its own chunk, linked from nowhere (D-128).
+// Tunas 649 Bingo: its own chunk, linked from nowhere (D-128).
 const BingoRoutes = lazy(() => import('./features/bingo/BingoRoutes'));
 const BingoStaffRoutes = lazy(() => import('./features/bingo/staff/BingoStaffRoutes'));
 import NotFound from './pages/NotFound';

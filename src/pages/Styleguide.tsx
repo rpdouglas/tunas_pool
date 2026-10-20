@@ -414,6 +414,20 @@ export default function Styleguide() {
                 },
               },
               {
+                label: 'A Tunas 649 Bingo member (D-135)',
+                props: {
+                  name: 'Kayla S.',
+                  email: 'kayla@example.com',
+                  signedIn: true,
+                  isAdmin: false,
+                  isCounter: false,
+                  profileId: 'p7',
+                  showClaim: false,
+                  printTo: '/',
+                  bingo: true,
+                },
+              },
+              {
                 label: 'Commissioner',
                 props: {
                   name: 'Ryan',

@@ -1,5 +1,5 @@
 /**
- * Weekly 649 Bingo, the staff side in plain words (BINGO_PLAN S15). Pure, so what the commissioner
+ * Tunas 649 Bingo, the staff side in plain words (BINGO_PLAN S15). Pure, so what the commissioner
  * and the counter read is tested. Totals stay totals: nothing here ranks or names spenders (D-128).
  */
 import { checkNumbers, type BingoDrawStatus } from './bingo';

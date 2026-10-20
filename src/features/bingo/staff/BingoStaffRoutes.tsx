@@ -1,5 +1,5 @@
 /**
- * Weekly 649 Bingo, the staff side (BINGO_PLAN S15): Payments, Draw, Members, and for the
+ * Tunas 649 Bingo, the staff side (BINGO_PLAN S15): Payments, Draw, Members, and for the
  * commissioner Settings and Totals. One lazy chunk, at /admin/bingo for the commissioner and
  * /counter/bingo for Devon, with his limits (D-114) shown as missing buttons and enforced again by
  * the functions. Back Office surface.
