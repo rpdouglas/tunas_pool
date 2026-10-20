@@ -273,6 +273,7 @@ All eleven sprints are built and released. What that does and does not mean:
 - ~~**Hall of Fame**~~ Built (D-108): most weekly wins, best pick rate, best single week, most perfect weeks, most weeks played. No streaks and no money ("largest pot won" left out).
 - **Privacy wipe** for a player who has history and asks to be removed: keep their results but remove name, phone, email, and note, and show "Former player". The name is copied into entries, winner banners, and standings, so it is a job of its own (D-094).
 - Charts for the admin statistics (participation graph, pot history graph). Sprint 7 ships tables.
+- **Bingo: the automatic draw fetch** (BINGO_PLAN S16, D-134). Parked until a reliable official source for the Wednesday Lotto 6/49 numbers is confirmed. When built it only proposes a draw (D-126); staff still check and approve. Manual entry stays.
 
 ### Considered and rejected
 

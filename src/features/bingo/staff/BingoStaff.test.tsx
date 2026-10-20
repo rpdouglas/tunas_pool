@@ -12,6 +12,7 @@ const row: PaymentRowData = {
   numbers: [1, 2, 3, 4, 40, 41],
   due: null,
   paidNext: false,
+  nextMethod: null,
   paper: true,
 };
 
@@ -73,6 +74,38 @@ describe('BingoPaymentRow (D-114, D-119)', () => {
       receivedAtMs: new Date('2026-11-18T17:50').getTime(),
       reason: 'Handed over before six',
     });
+  });
+});
+
+describe('BingoPaymentRow: late money', () => {
+  it('a late payment can be taken back now; the counter only when it was cash', async () => {
+    const onUndoNext = vi.fn();
+    const late = { ...row, paidNext: true, nextMethod: 'cash' as const };
+    const { rerender } = render(
+      <BingoPaymentRow
+        row={late}
+        isAdmin={false}
+        busy={false}
+        onPay={vi.fn()}
+        onUndo={vi.fn()}
+        onUndoNext={onUndoNext}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: /Undo the late payment for Rosalie M./ }),
+    );
+    expect(onUndoNext).toHaveBeenCalledOnce();
+    rerender(
+      <BingoPaymentRow
+        row={{ ...late, nextMethod: 'etransfer' }}
+        isAdmin={false}
+        busy={false}
+        onPay={vi.fn()}
+        onUndo={vi.fn()}
+        onUndoNext={onUndoNext}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Undo the late payment/ })).not.toBeInTheDocument();
   });
 });
 

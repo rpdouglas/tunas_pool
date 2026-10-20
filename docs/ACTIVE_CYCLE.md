@@ -1,11 +1,46 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 15: Bingo staff screens** · Phase 6e (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
+**Sprint 16: Bingo hardening, and the dry run made ready** · Phase 6f (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
 
 ## Goal
-A full test cycle runs from cards to payout through the UI.
+Ready for G2 except the gates outside the code. The automatic fetch is parked (D-134).
 
 ## Persona check
+Reuses the whole-feature check from Sprint 11. For this sprint:
+- **The Commissioner:** the README says how a bingo week runs, step by step, and how to settle a dispute; a mistaken late tap can be undone at once.
+- **Gerald:** the dispute steps start from the draws and the paid weeks, the same inputs the game is worked out from, then the Audit log in words.
+- **Everyone, at size:** a 300-card game approves a winning draw in one go.
+
+## Tasks
+- [x] **Fetch parked** (D-134; PROJECT_PLAN §8). Staff type the numbers; the banner reminds them.
+- [x] **Scale:** `bingoScale.int.test.ts`, 60 members with 5 cards each, a winning draw approved and the next game opened with all 300 cards: one transaction of about 600 writes, 0.7 s in the emulator
+- [x] **Undo late payment** on the Payments screen (the counter for cash only); 1 more component test
+- [x] **Accessibility:** `npm run test:a11y` 18 of 18, the styleguide with every bingo component at 375px and desktop
+- [x] **The pool's first download:** 305.26 KB, unchanged this sprint (no bingo code in it)
+- [x] **README:** "Weekly 649 Bingo": setting it up, a bingo week, settling a bingo dispute, and the dry-run checklist
+- [x] Docs: DECISIONS D-134, PROJECT_PLAN §8, BINGO_PLAN status
+- [ ] **The dry run** (Ryan, with real people and real Wednesdays): the README checklist
+- [ ] **One full smoke run on a machine with enough memory**
+- [ ] **G2** (Ryan): the dry run paid out correctly, the launch price and operator % set, the support numbers checked, then "Bingo is on"
+
+## Acceptance (from BINGO_PLAN.md S16)
+"The dry run ends with a correct payout, checked by hand against the draws. Then G2 is Ryan's." The code side is done; the dry run is a real-world task with the practice game, and the checklist for it is in the README. Typecheck and lint clean; **407 unit tests** (406 before); **205 rules and functions tests** (204 before).
+
+## Notes / learned
+- **What isn't proven:** the 300-card approval rests on Firestore's current limits (no 500-write cap, 10 MiB a request); the emulator doesn't enforce the old cap, so the dry run can't prove it either at its size. A failure would be whole and visible, not partial.
+- **The bingo smoke run, again:** every step passed up to the commissioner's draw, then the tab ran out of memory, as in Sprint 15. Not chased further here (CLAUDE.md §7).
+- No Lighthouse run: Lighthouse isn't installed in the repo, and adding a tool for one check was out of scope. The first-download size check stands in for "the pool's first screen doesn't grow".
+
+---
+
+## Sprint 15 (done 2026-10-20, PR #55)
+
+**Sprint 15: Bingo staff screens** · Phase 6e (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
+
+### Goal
+A full test cycle runs from cards to payout through the UI.
+
+### Persona check
 Reuses the whole-feature check from Sprint 11. For this sprint:
 - **Commissioner Counter Test:** a card is one tap ("Paid cash") with Undo; after 6 PM one reason at the top covers every tap; money handed over before six and typed in after is "Received earlier?" with a time and a reason (D-119). The draw is one box of six numbers, then Approve.
 - **Devon:** the same screens with the buttons he can't use left out: no e-Transfer, no undoing an e-Transfer, no skip, no correct, no Settings or Totals (D-114). Checked in the smoke run with a real counter login.
@@ -13,7 +48,7 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
 - **Rosalie:** paper members and paper cards are added from the Members screen, her age checked in person; "Paper" shows on her row.
 - **Bingo Check / privacy:** Totals is commissioner-only and has no names; the payments list shows staff who has paid, which the players never see.
 
-## Tasks
+### Tasks
 - [x] `bingoRoster` callable and its test (D-133)
 - [x] `shared/bingoStaffView.ts`: typing the numbers, the draw's step, the banner, the payments list and its words, totals; 4 tests
 - [x] `BingoPaymentRow`, `BingoDrawPanel`, `ApprovedDrawRow`, in the styleguide with their states; 7 component tests
@@ -23,10 +58,10 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
 - [x] Docs: DATA_MODEL §11.5, DECISIONS D-133, BINGO_PLAN status
 - [x] **D-133:** accepted by Ryan
 
-## Acceptance (from BINGO_PLAN.md S15)
+### Acceptance (from BINGO_PLAN.md S15)
 **Met in part, said plainly.** The plan asked for the commissioner and the counter to run a month of weeks through the screens in the emulator. A browser can't move the clock to the next Wednesday night, so the month of weeks (payments, late money, a missed week, a typo corrected, a tie, payouts) is the two-game integration test from Sprint 13, through the same functions the screens call. Through the screens, in the smoke run, each staff action is done once against the real functions: a paper member added, money taken after the cutoff with a reason, a draw typed, waiting, and approved, and Devon's limits. The smoke run starts a game eight days in the past (a fixture) so a draw can be typed now. Typecheck and lint clean; **406 unit tests** (395 before); **204 rules and functions tests** (203 before). The pool's first download: 305.26 KB (304.18 KB before; the difference is Vite's list of the new lazy files, no bingo code).
 
-## Notes / learned
+### Notes / learned
 - **The smoke run can't finish in one go in this Codespace.** Seven runs: every bingo and staff check passed in at least one, but the browser tab ran out of memory ("Target crashed") at a different step each time once the staff part started (members, then the draw, then totals), the same way the full run dies in the Commissioner's screens. Fresh tabs between steps helped but didn't cure it. It needs a run on a machine with more memory before launch (G2).
 - A page-level reason after the cutoff came from imagining the counter at 6:10 PM: refusing every tap until a reason is typed would be ten refusals in a row.
 - The empty "last game" panel showed up in the first screenshot; it now shows only when there is a draw to correct.

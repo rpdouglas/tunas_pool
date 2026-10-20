@@ -197,6 +197,29 @@ tells you plainly if it can't:
   first (Roster, Edit picks, Remove this entry), then the player can be deleted if nothing else is attached.
 - **Won't delete** someone with a login linked. Unlink it first, or use Inactive.
 
+### Weekly 649 Bingo (Phase 6, D-110 to D-134)
+
+Bingo is hidden: nothing links to it for players, and while it's switched off `/b` is "Page not found" to everyone but staff and members. The rules are in `docs/DATA_MODEL.md` §11 and the plain-words version on `/b/rules`.
+
+**Setting it up (once).** Back Office, More, **Bingo**, Settings: check the price, the house share, the Wednesday cutoff (18:00), the card cap, and the longest game, then Save. Set an invite code (8 or more letters and numbers; give it out by word of mouth; set a new one any time and the old one stops working). Start a game: tick **Practice game** for the dry run. Leave "Bingo is on" unticked until launch (G2).
+
+**A bingo week.**
+1. **Thursday to Wednesday 6 PM:** members add cards (week one only) and say how they'll pay. At the shop, Bingo, **Payments**: one tap per card for cash, and Undo. Only you confirm an e-Transfer, against the bank. Cash handed over before six but typed in after: **Received earlier?**, the time, and a reason. After six, the box at the top asks for one reason and the money counts for next week; a mistaken late tap has **Undo late payment**.
+2. **Wednesday night or Thursday morning:** Bingo, **Draw**. Type the six main numbers from the official Lotto 6/49 result (not the bonus), in one box: `4 5 6 33 34 35`. Someone checks them against the result and taps **Approve**. Devon can approve; only you can correct or skip. The Back Office shows a banner while a draw waits.
+3. **A win:** the Draw screen says who won and what each gets; a new game opens by itself and every card carries over. Pay winners from **Payments**, Winners to pay (Devon: cash only).
+4. **A cancelled or postponed draw:** Draw, *The draw was cancelled or postponed*, a reason. Its money moves to the next draw.
+
+**Settling a bingo dispute.** Every crossed-off number is worked out again from the approved draws and the weeks a card was paid, so start with those: Bingo, **Draw** lists each approved draw (and *Corrected* where you fixed one). Then the **Audit log**: find the member's name for their cards, payments (with when the money came and any reason), and payouts; find "bingo draw" for every draw typed, approved, corrected, or skipped, with who and why. A wrong number in an approved draw: **Correct this draw**, with a reason, until a winner from that game is paid; the game is worked out again. If the correction takes a win away after the next game has taken money, the app refuses and says so: settle it by hand.
+
+**The dry run (before G2).** With the practice game, real people, and no real money, over real Wednesdays, until a game is won and paid out:
+- [ ] Two or three members join with the code on their own phones; one paper member is added at the counter
+- [ ] Cards: by hand, quick pick, and a paper card from the Members screen
+- [ ] Each week: Payments marked (cash by Devon, an e-Transfer by you), one card left unpaid one week, one payment typed after six
+- [ ] Each Wednesday: numbers typed, checked against the official result, approved; once, a typo fixed before approving
+- [ ] A win: the shares match a hand count from the draws and the paid weeks; the winner is marked paid
+- [ ] The Audit log tells the whole story in words
+- [ ] One full `npm run test:smoke` on a machine with enough memory (it runs out in the Codespace, D-133)
+
 ### End of season
 
 There is nothing to copy over. Players, logins, and history are not tied to a season. When the last week has its winner
