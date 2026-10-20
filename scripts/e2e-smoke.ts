@@ -235,6 +235,7 @@ try {
     .catch(() => undefined);
   await checkScreen(player, 'week-locked-board', 'House rules');
   await visit(player, 'standings', '/standings', 'Season standings');
+  await visit(player, 'hall-of-fame', '/hall-of-fame', 'Most weekly wins');
   await visit(player, 'player', '/player/dale', 'Weeks won');
   await visit(player, 'sheet', `/sheet/${YEAR}/wk03`, 'Tiebreaker:');
   await player

@@ -8,6 +8,7 @@ const ClaimPage = lazy(() => import('./features/claims/ClaimPage'));
 const HistoryPage = lazy(() => import('./features/claims/HistoryPage'));
 const WeekPage = lazy(() => import('./features/leaderboard/WeekPage'));
 const StandingsPage = lazy(() => import('./features/leaderboard/StandingsPage'));
+const HallOfFamePage = lazy(() => import('./features/leaderboard/HallOfFamePage'));
 const PlayerPage = lazy(() => import('./features/leaderboard/PlayerPage'));
 const SheetPage = lazy(() => import('./features/print/SheetPage'));
 const ResultsSheetPage = lazy(() => import('./features/print/ResultsSheetPage'));
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/sheet/:year/:weekId" element={<SheetPage />} />
         <Route path="/sheet/:year/:weekId/results" element={<ResultsSheetPage />} />
         <Route path="/standings" element={<StandingsPage />} />
+        <Route path="/hall-of-fame" element={<HallOfFamePage />} />
         <Route path="/player/:playerId" element={<PlayerPage />} />
         <Route path="/account" element={<SaveAccount />} />
         <Route path="/claim" element={<ClaimPage />} />

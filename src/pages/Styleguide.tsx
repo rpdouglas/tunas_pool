@@ -26,6 +26,8 @@ import type { RosterRow as RosterRowData } from '../features/admin/roster/roster
 import { PhotoField } from '../components/ui/PhotoField';
 import { PickRow } from '../components/ui/PickRow';
 import { LeaderboardRow } from '../components/ui/LeaderboardRow';
+import { HallOfFameList } from '../components/ui/HallOfFameList';
+import type { HallList } from '@shared/hallOfFame';
 import { ShareBar } from '../components/ui/ShareBar';
 import { ShareCard } from '../components/ui/ShareCard';
 import { TextSizeControl } from '../components/ui/TextSizeControl';
@@ -119,6 +121,40 @@ const SAMPLE_WINNER: WeekWinner = {
   shareCents: 20_000,
   leftoverCents: 0,
   publishedAt: { seconds: 0, nanoseconds: 0, toDate: () => new Date(0) },
+};
+
+const SAMPLE_HALL: HallList = {
+  key: 'rate',
+  title: 'Best pick rate',
+  about: 'The share of picks right, for players with 5 or more weeks.',
+  entries: [
+    {
+      playerId: 'dale',
+      displayName: 'Dale D.',
+      place: 1,
+      tied: false,
+      value: '79% right',
+      detail: '70 – 19 over 6 weeks',
+    },
+    {
+      playerId: 'jen',
+      displayName: 'Jen K.',
+      place: 2,
+      tied: true,
+      value: '76% right',
+      detail: '57 – 18 over 5 weeks',
+    },
+    {
+      playerId: 'bernadette',
+      displayName: 'Bernadette Lavallée-Thompson',
+      place: 2,
+      tied: true,
+      value: '76% right',
+      detail: '68 – 21 over 6 weeks',
+    },
+  ],
+  more: 'And 4 others with 61% right.',
+  empty: 'Nobody has played 5 weeks yet.',
 };
 
 const STATUSES: BadgeStatus[] = ['paid', 'unpaid', 'pending', 'draft', 'open', 'locked', 'final'];
@@ -850,6 +886,26 @@ export default function Styleguide() {
               onReject={() => undefined}
             />
           </ul>
+        </section>
+
+        <section aria-labelledby="sg-hall">
+          <h2 id="sg-hall" className="mb-3 font-heading text-h2 italic">
+            Hall of Fame list
+          </h2>
+          <div className="flex max-w-player flex-col gap-4">
+            <HallOfFameList list={SAMPLE_HALL} myPlayerId="jen" />
+            <HallOfFameList
+              list={{
+                ...SAMPLE_HALL,
+                key: 'perfect',
+                title: 'Most perfect weeks',
+                about: 'Every game right, Monday night included.',
+                entries: [],
+                more: null,
+                empty: 'No perfect weeks yet.',
+              }}
+            />
+          </div>
         </section>
 
         <section aria-labelledby="sg-leaderboard">

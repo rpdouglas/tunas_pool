@@ -437,7 +437,12 @@ function WhoPicked({
           Who picked what
         </button>
       </div>
-      <div id={panelId} hidden={!open} className="flex flex-col gap-2 text-body">
+      {/* The class hides it too: `flex` would otherwise override the hidden attribute. */}
+      <div
+        id={panelId}
+        hidden={!open}
+        className={open ? 'flex flex-col gap-2 text-body' : 'hidden'}
+      >
         {children}
       </div>
     </div>
