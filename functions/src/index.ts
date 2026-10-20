@@ -22,6 +22,16 @@ import { deleteEntry, upsertEntry } from './adminEntries';
 import { deletePlayer, inspectPlayerDelete } from './players';
 import { hideMessage, joinBoard, setMute } from './board';
 import { loadCounterOverview, saveCounterPlayer } from './counter';
+import { startCycle } from './bingo/cycle';
+import { addMember, redeemCode, setCode, setConfig, setLimit } from './bingo/members';
+import { createCard, retireCard } from './bingo/cards';
+import {
+  setIntent,
+  setPayment as setBingoPayment,
+  setPayout,
+  totals as bingoTotalsFor,
+} from './bingo/payments';
+import { approveDraw, correctDraw, enterDraw, skipDraw } from './bingo/draws';
 import { staffRoleOf, type StaffRole } from '../../shared/roles';
 import { createRateLimit, tidyClientError } from './clientErrors';
 import { auditInTransaction } from './audit';
@@ -358,6 +368,188 @@ export const boardMute = onCall(async (req) => {
     reason: req.data?.reason,
     ...actorOf(req, role),
   });
+});
+
+// ---- Weekly 649 Bingo (D-110 to D-130; DATA_MODEL §11.5) ---------------------
+// The decisions are in ./bingo; these check who is calling. The counter's limits (D-114) are
+// enforced inside the functions too, so a counter token can't get round them here.
+
+/** The caller's own player, through the D-102 pointer (refreshed first). */
+async function bingoCaller(req: CallableRequest): Promise<string> {
+  requireSignedIn(req);
+  const { playerId } = await joinBoard(db, req.auth!.uid);
+  if (!playerId) throw new HttpsError('failed-precondition', 'Add your name first.');
+  return playerId;
+}
+
+const isSavedAccount = (req: CallableRequest) =>
+  req.auth?.token.firebase?.sign_in_provider !== 'anonymous';
+
+export const bingoRedeemCode = onCall(async (req) => {
+  requireSignedIn(req);
+  const { playerId } = await joinBoard(db, req.auth!.uid);
+  return redeemCode(db, {
+    uid: req.auth!.uid,
+    savedAccount: isSavedAccount(req),
+    playerId,
+    code: req.data?.code,
+    now: new Date(),
+  });
+});
+
+export const bingoAddMember = onCall(async (req) => {
+  const role = requireStaff(req);
+  return addMember(db, {
+    playerId: requireId(req.data?.playerId, 'playerId'),
+    ageConfirmed: req.data?.ageConfirmed,
+    now: new Date(),
+    ...actorOf(req, role),
+  });
+});
+
+export const bingoSetCode = onCall(async (req) => {
+  requireAdmin(req);
+  return setCode(db, { code: req.data?.code, now: new Date(), actorUid: req.auth!.uid });
+});
+
+export const bingoSetConfig = onCall(async (req) => {
+  requireAdmin(req);
+  return setConfig(db, { config: req.data?.config, now: new Date(), actorUid: req.auth!.uid });
+});
+
+export const bingoStartCycle = onCall(async (req) => {
+  requireAdmin(req);
+  return startCycle(db, { test: req.data?.test === true, now: new Date(), actorUid: req.auth!.uid });
+});
+
+// A member makes their own card; staff make a paper card for a member (D-114).
+export const bingoCreateCard = onCall(async (req) => {
+  const role = staffRoleOf(req.auth?.token);
+  if (role) {
+    return createCard(db, {
+      playerId: requireId(req.data?.playerId, 'playerId'),
+      numbers: req.data?.numbers ?? null,
+      byStaff: true,
+      now: new Date(),
+      ...actorOf(req, role),
+    });
+  }
+  const playerId = await bingoCaller(req);
+  return createCard(db, {
+    playerId,
+    numbers: req.data?.numbers ?? null,
+    byStaff: false,
+    now: new Date(),
+    actorUid: req.auth!.uid,
+  });
+});
+
+// The owner, or the commissioner. Not the counter (D-114).
+export const bingoRetireCard = onCall(async (req) => {
+  const cardId = requireId(req.data?.cardId, 'cardId');
+  if (req.auth?.token.admin === true) {
+    return retireCard(db, { cardId, playerId: null, now: new Date(), actorUid: req.auth.uid });
+  }
+  const playerId = await bingoCaller(req);
+  return retireCard(db, { cardId, playerId, now: new Date(), actorUid: req.auth!.uid });
+});
+
+// The member only: staff can never loosen someone's limit (D-118).
+export const bingoSetLimit = onCall(async (req) => {
+  const playerId = await bingoCaller(req);
+  return setLimit(db, {
+    uid: req.auth!.uid,
+    playerId,
+    limit: req.data?.limit,
+    pauseCycles: req.data?.pauseCycles,
+    now: new Date(),
+  });
+});
+
+export const bingoSetIntent = onCall(async (req) => {
+  const playerId = await bingoCaller(req);
+  return setIntent(db, {
+    playerId,
+    cardId: requireId(req.data?.cardId, 'cardId'),
+    intent: req.data?.intent ?? null,
+  });
+});
+
+export const bingoSetPayment = onCall(async (req) => {
+  const role = requireStaff(req);
+  if (typeof req.data?.paid !== 'boolean') {
+    throw new HttpsError('invalid-argument', 'Say whether the card is paid.');
+  }
+  const receivedAtMs = req.data?.receivedAtMs;
+  if (receivedAtMs !== undefined && !Number.isFinite(receivedAtMs)) {
+    throw new HttpsError('invalid-argument', 'The time received is not valid.');
+  }
+  return setBingoPayment(db, {
+    cardId: requireId(req.data?.cardId, 'cardId'),
+    paid: req.data.paid,
+    method: req.data?.method,
+    receivedAt: receivedAtMs === undefined ? undefined : new Date(receivedAtMs),
+    drawDate: req.data?.drawDate === undefined ? undefined : requireId(req.data.drawDate, 'drawDate'),
+    reason: req.data?.reason,
+    now: new Date(),
+    ...actorOf(req, role),
+  });
+});
+
+export const bingoEnterDraw = onCall(async (req) => {
+  const role = requireStaff(req);
+  return enterDraw(db, { numbers: req.data?.numbers, now: new Date(), ...actorOf(req, role) });
+});
+
+export const bingoApproveDraw = onCall(async (req) => {
+  const role = requireStaff(req);
+  return approveDraw(db, {
+    drawDate: requireId(req.data?.drawDate, 'drawDate'),
+    now: new Date(),
+    ...actorOf(req, role),
+  });
+});
+
+export const bingoCorrectDraw = onCall(async (req) => {
+  requireAdmin(req);
+  return correctDraw(db, {
+    cycleId: requireId(req.data?.cycleId, 'cycleId'),
+    drawDate: requireId(req.data?.drawDate, 'drawDate'),
+    numbers: req.data?.numbers,
+    reason: req.data?.reason,
+    now: new Date(),
+    actorUid: req.auth!.uid,
+  });
+});
+
+export const bingoSkipDraw = onCall(async (req) => {
+  requireAdmin(req);
+  return skipDraw(db, {
+    drawDate: requireId(req.data?.drawDate, 'drawDate'),
+    reason: req.data?.reason,
+    now: new Date(),
+    actorUid: req.auth!.uid,
+  });
+});
+
+export const bingoSetPayout = onCall(async (req) => {
+  const role = requireStaff(req);
+  if (typeof req.data?.paid !== 'boolean') {
+    throw new HttpsError('invalid-argument', 'Say whether the winner is paid.');
+  }
+  return setPayout(db, {
+    cycleId: requireId(req.data?.cycleId, 'cycleId'),
+    cardId: requireId(req.data?.cardId, 'cardId'),
+    paid: req.data.paid,
+    method: req.data?.method,
+    now: new Date(),
+    ...actorOf(req, role),
+  });
+});
+
+export const bingoTotals = onCall(async (req) => {
+  requireAdmin(req);
+  return bingoTotalsFor(db);
 });
 
 // ---- adminListEntries (Sprint 3): the payments queue, in one round trip -------

@@ -42,7 +42,21 @@ export type AuditAction =
   | 'player.guestMoved'
   | 'season.status'
   | 'board.hidden'
-  | 'board.mute';
+  | 'board.mute'
+  | 'bingo.memberJoined'
+  | 'bingo.memberAdded'
+  | 'bingo.code'
+  | 'bingo.config'
+  | 'bingo.cardCreated'
+  | 'bingo.cardRetired'
+  | 'bingo.limit'
+  | 'bingo.payment'
+  | 'bingo.drawEntered'
+  | 'bingo.drawApproved'
+  | 'bingo.drawCorrected'
+  | 'bingo.drawSkipped'
+  | 'bingo.payout'
+  | 'bingo.cycle';
 
 // ---- players/{playerId} ----------------------------------------------------
 export interface Player {

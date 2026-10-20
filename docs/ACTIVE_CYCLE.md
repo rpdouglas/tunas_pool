@@ -1,28 +1,63 @@
 # ACTIVE_CYCLE.md
 
-**Sprint 12: Bingo engine and rules** · Phase 6b (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
+**Sprint 13: Bingo functions** · Phase 6c (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
 
 ## Goal
-The rules of the game exist as pure, tested code. The database refuses everything it should.
+Every money and result action is a callable with an integration test, and a whole game runs in the emulator.
 
 ## Persona check
+Reuses the whole-feature check from Sprint 11. For this sprint:
+- **Commissioner and Devon (Counter Test):** Devon takes cash, adds a paper member, types and approves a draw, and pays a winner in cash; every e-Transfer, correction, skip, setting, and undo of an e-Transfer refuses him with "Ask the commissioner"-style words (D-114). Each is audited under his email.
+- **Gerald Trust Test:** the two-game test checks every cent: spend equals winnings plus the operator share, game by game; every audit entry reads as a sentence.
+- **Rosalie Inclusion Test:** in the two-game test Rosalie is a paper member through Devon, misses a week, pays late, has her late money carried into the next game, and wins it at the cap, paid in cash.
+- **Bingo Check:** the member's own limit binds staff (refused with "Only they can change it"); staff can't call `bingoSetLimit` at all; no paying ahead; late joiners refused.
+- **Privacy:** the totals view has no names or IDs (tested); the code never reaches the audit log (tested).
+
+## Tasks
+- [x] `functions/src/bingo/`: `common`, `cycle` (load, work out, close, open, `startCycle`), `members` (code, settings, join, paper members, limits), `cards`, `payments` (intent, payments, payouts, totals), `draws` (enter, approve, correct, skip)
+- [x] 16 callables in `functions/src/index.ts`, with the roles of D-114
+- [x] 25 integration tests, one or more per function, and a two-game test from cards to payout (`bingoGame.int.test.ts`)
+- [x] Audit in plain words for all 14 bingo actions (`shared/auditText.ts`, 4 tests)
+- [x] Docs: DATA_MODEL §11, DECISIONS D-131, BINGO_PLAN status
+- [x] **D-131:** accepted by Ryan
+
+## Acceptance (from BINGO_PLAN.md S13)
+The two-game test passes; every callable refuses the wrong role and bad input; every action has an audit entry. Typecheck, lint, and the functions build are clean; **377 unit tests** (373 before) and **202 rules and functions tests** (176 before).
+
+## Notes / learned
+- **Writing the whole-game test found a real gap:** money taken late on the night a game is won was credited to a draw of the finished game, where it would have sat forever. It now moves into the new game (D-131).
+- Firestore transactions read before they write, so `applyDraw` is split: `loadCycle` reads everything (draws, entries, cards, members, pending payments, where the next game would go), and `writeCycle` works it out and writes.
+- The functions take `now`, so the tests run on real Wednesdays across the clock change.
+- Two of my test expectations were wrong at first (a spread that kept the counter role, and a card made after the join window); the functions were right.
+- Not deployed by this PR in any way players can reach: the functions deploy, but no screen calls them, and nobody has a code yet. `test:smoke` not run: no screen changed.
+
+---
+
+## Sprint 12 (done 2026-10-20, PR #52)
+
+**Sprint 12: Bingo engine and rules** · Phase 6b (`docs/BINGO_PLAN.md`) · Started: 2026-10-20
+
+### Goal
+The rules of the game exist as pure, tested code. The database refuses everything it should.
+
+### Persona check
 Reuses the whole-feature check written in Sprint 11 (below). For this sprint:
 - **Gerald Trust Test:** every number crossed off, every pot, and every split is worked out again from the approved draws and paid weeks by one pure function (`evaluateCycle`); the worked examples in DATA_MODEL §11.6 are its tests, and splits always add up to the cent.
 - **Commissioner Counter Test:** cash handed over before six and typed in after counts that night (`creditPayment`); money for an approved draw is refused in plain words instead of quietly moving.
 - **Privacy test:** rows 70 to 77: a member reads only their own membership, cards, entries, and payments; the counter reads bingo records, which hold no phones or emails; nobody reads the code's hash.
 - **Bingo Check:** limits lower at once and raise next cycle, a pause can't be cut short mid-cycle, and no client can write anything in bingo (row 67).
 
-## Tasks
+### Tasks
 - [x] `shared/bingo.ts`: numbers, quick-pick, the cutoff and which draw, payment credit (D-119), the join window (D-117), limits and pause (D-118), money per draw, the split (D-120), and `evaluateCycle` (wins, ties, the cap, carried pots, D-121); 26 tests with the §11.6 examples as fixtures
 - [x] `shared/bingoSim.ts` and `scripts/bingo-sim.ts`: seeded, on the engine; checked against the exact cycle length (4 tests)
 - [x] Rules tests first (rows 67 to 80, `tests/rules/bingo.rules.test.ts`, 14 tests; 9 failed before the rules, as they should), then the bingo section of `firestore.rules`
 - [x] Docs: FIRESTORE_RULES (code block synced, rows 67 to 80), DATA_MODEL §11, DECISIONS D-130, BINGO_PLAN status
 - [x] **D-130:** accepted by Ryan; the spec's economics table is retired in favour of the simulation
 
-## Acceptance
+### Acceptance
 Every rules row passes, and all existing tests still pass: typecheck and lint clean, **373 unit tests** (343 before), **176 rules and functions tests** (162 before). The simulation part is answered by D-130: the spec's table can't be reproduced, and the engine is held to exact maths instead.
 
-## Notes / learned
+### Notes / learned
 - **The spec's economics were off** (D-130): with its inputs reproduced exactly, cycles are about six weeks, not under four, with fewer ties and bigger pots. Worth knowing before anyone quotes a number to a player.
 - The cycle needs a running `number` (1, 2, 3…) so a pause or a raised limit can say "from the next game"; `cycleId` dates can't, since the next cycle's first draw isn't known yet.
 - Two of my own test expectations were wrong at first (the cap fixture's arithmetic, and which numbers quick-pick gives at the top of the range); the engine was right both times. The worked examples were checked by hand again.

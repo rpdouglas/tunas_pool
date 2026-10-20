@@ -177,3 +177,89 @@ describe('describeActor', () => {
     expect(describeActor('abcdef123456')).toBe('Admin abcdef');
   });
 });
+
+describe('describeAudit: Weekly 649 Bingo', () => {
+  const bingo = (overrides: Partial<AuditRecord>): AuditRecord => ({
+    actorUid: 'boss',
+    action: 'bingo.payment',
+    target: 'bingoCycles/2026-11-11/draws/2026-11-18/payments/cA',
+    ...overrides,
+  });
+
+  it('says where, and payments in words: method, draw, late', () => {
+    const paid = describeAudit(
+      bingo({
+        after: {
+          paid: true,
+          method: 'cash',
+          drawDate: '2026-11-25',
+          late: true,
+          displayName: 'Rosalie M.',
+        },
+      }),
+      names,
+    );
+    expect(paid).toMatchObject({
+      what: "Marked Rosalie M.'s bingo card paid (cash) for the 2026-11-25 draw, after the cutoff",
+      where: 'Bingo · game starting 2026-11-11',
+    });
+    expect(
+      describeAudit(bingo({ after: { paid: false, displayName: 'Dale D.' } }), names).what,
+    ).toBe("Took the money off Dale D.'s bingo card");
+  });
+
+  it('draws with their numbers, and the correction from and to', () => {
+    const target = 'bingoCycles/2026-11-11/draws/2026-11-18';
+    expect(
+      describeAudit(
+        bingo({ action: 'bingo.drawApproved', target, after: { numbers: [4, 5, 7, 33, 34, 35] } }),
+        names,
+      ).what,
+    ).toBe('Approved the bingo draw: 4 5 7 33 34 35');
+    expect(
+      describeAudit(
+        bingo({
+          action: 'bingo.drawCorrected',
+          target,
+          before: { numbers: [1, 2, 3, 4, 5, 7] },
+          after: { numbers: [1, 2, 3, 4, 5, 6] },
+        }),
+        names,
+      ).what,
+    ).toBe('Corrected the bingo draw from: 1 2 3 4 5 7 to: 1 2 3 4 5 6');
+  });
+
+  it('members by name, from the membership path', () => {
+    expect(
+      describeAudit(
+        bingo({ action: 'bingo.memberJoined', target: 'bingoMembers/dale', after: {} }),
+        names,
+      ).what,
+    ).toBe('Dale D. joined bingo with the invite code');
+    expect(
+      describeAudit(
+        bingo({ action: 'bingo.memberAdded', target: 'bingoMembers/rosalie', after: {} }),
+        names,
+      ).what,
+    ).toBe('Added Rosalie M. to bingo on paper, age checked in person');
+  });
+
+  it('games: opened, won, capped, carried, and removed', () => {
+    const cycle = (after: unknown) =>
+      describeAudit(
+        bingo({ action: 'bingo.cycle', target: 'bingoCycles/2026-11-25', after }),
+        names,
+      ).what;
+    expect(cycle({ status: 'open', number: 2 })).toBe('Opened bingo game 2');
+    expect(
+      cycle({ status: 'won', winners: [{ displayName: 'Alice A.' }, { displayName: 'Bob B.' }] }),
+    ).toBe('Bingo was won by Alice A. & Bob B.');
+    expect(cycle({ status: 'capped', winners: [{ displayName: 'Rosalie M.' }] })).toBe(
+      'Bingo reached its last week; the closest won: Rosalie M.',
+    );
+    expect(cycle({ status: 'capped', winners: [] })).toBe(
+      'Bingo reached its last week with nobody paid; the pot carries over',
+    );
+    expect(cycle(null)).toBe('Removed a bingo game that a correction took the win from');
+  });
+});
