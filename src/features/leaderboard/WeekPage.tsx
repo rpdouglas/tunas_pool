@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   PICK_MARK_TEXT,
@@ -382,25 +382,19 @@ function Revealed({
                   myPick={myPicks?.[g.id] ?? null}
                   upset={isUpset(share, result)}
                 />
-                {line && <p className="text-body">{line}</p>}
-                <details>
-                  <summary className="min-h-touch cursor-pointer py-2 text-body font-semibold text-ink-emphasis underline">
-                    Who picked what
-                  </summary>
-                  <div className="flex flex-col gap-2 text-body">
+                <WhoPicked line={line} gameId={g.id}>
+                  <p>
+                    <strong>{g.away}:</strong> {share.away.join(', ') || 'nobody'}
+                  </p>
+                  <p>
+                    <strong>{g.home}:</strong> {share.home.join(', ') || 'nobody'}
+                  </p>
+                  {share.blank.length > 0 && (
                     <p>
-                      <strong>{g.away}:</strong> {share.away.join(', ') || 'nobody'}
+                      <strong>No pick:</strong> {share.blank.join(', ')}
                     </p>
-                    <p>
-                      <strong>{g.home}:</strong> {share.home.join(', ') || 'nobody'}
-                    </p>
-                    {share.blank.length > 0 && (
-                      <p>
-                        <strong>No pick:</strong> {share.blank.join(', ')}
-                      </p>
-                    )}
-                  </div>
-                </details>
+                  )}
+                </WhoPicked>
                 {g.id === mnf?.id && (
                   <TiebreakerPanel total={mnfTotal} totalNote={mnfNote} summary={tiebreak} />
                 )}
@@ -410,6 +404,43 @@ function Revealed({
         </ol>
       )}
     </>
+  );
+}
+
+/**
+ * The upset or tie line on the left and "Who picked what" on the right, on one row to save a line
+ * per card (D-107); the names open below. With large text the button drops under the line.
+ */
+function WhoPicked({
+  line,
+  gameId,
+  children,
+}: {
+  line: string | null;
+  gameId: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const panelId = `who-picked-${gameId}`;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-3">
+        {line && <p className="min-w-0 flex-[1_1_9rem] text-body">{line}</p>}
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          className="ml-auto min-h-touch whitespace-nowrap py-2 text-body font-semibold text-ink-emphasis underline"
+          onClick={() => setOpen((o) => !o)}
+        >
+          <span aria-hidden="true">{open ? '▾ ' : '▸ '}</span>
+          Who picked what
+        </button>
+      </div>
+      <div id={panelId} hidden={!open} className="flex flex-col gap-2 text-body">
+        {children}
+      </div>
+    </div>
   );
 }
 
