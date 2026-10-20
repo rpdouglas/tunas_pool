@@ -195,7 +195,7 @@ All use semantic tokens. Build in `src/components/ui/`, each shown in the dev-on
 | **Button** | `.btn-primary` (**gold, black text**: submit, main action) · `.btn-secondary` (purple, white text) · `.btn-ghost` (purple outline). One primary per screen. 48px min. Sentence-case verb ("Submit picks"). | default · hover · pressed · focus · disabled · loading |
 | **Section bar** | `.section-bar` | n/a |
 | **Panel** | `.panel` with optional `.panel-title` | n/a |
-| **Game card** | Kickoff time on top, two **Pick buttons** (away | home) with "at" between. Venue note (London) under the time. | unpicked · picked · locked · correct · missed · tie |
+| **Game card** | Kickoff time on top, two **Pick buttons** (away | home) with "at" between. Venue note (London) under the time. Each team shows its logo on a white disc above its name (D-106). A picked team fills with its primary colour, with black or white ink (whichever reads better, 4.5:1 or more for every team) and the check mark in the corner, so the pick is never colour alone. Read-only cards keep the plain locked look. | unpicked · picked · locked · correct · missed · tie |
 | **Pick button** | `.pick`, 56px. Selected = purple fill, white text, gold check, hard shadow. Tap again to deselect. `aria-pressed`. | default · selected · pressed · locked · correct (green) · missed (red tint + ✕) |
 | **Sticky progress bar** | Under the safe area. Gold fill on a pale purple track on a purple/black bar. "9 of 14 picked", tap to jump to the next unpicked game. | n/a |
 | **Text field** | `.field` + label above. 16px minimum. Inline errors with icon. | default · focus · filled · invalid · disabled |
@@ -282,7 +282,7 @@ Friendly, plain, a bit of football-fan warmth. Exclamation marks only in the her
 - **Don't use Ravens, Bills, or any NFL logos, helmets, raven-head marks, or uniform marks** on the website. That includes the Ravens' raven-head logo, which would be the obvious temptation now. This is my judgment call, not legal advice.
 - **Exception (D-053):** the commissioner approved the supplied artwork in `docs/BRAND_ASSETS.md` as is, including the round Tuna badge with Ravens and NFL marks. The rules in this section still apply to any other artwork.
 - **The mascot needs a recolor** (unless using the approved badge). On the paper sheet Tuna wears a Bills cap and jersey with Bills logos. For the site, redraw or re-export him in **purple, black, and gold with a neutral emblem** (a "T" or fish), keeping the sunglasses, grin, number 69, and TUNA belt buckle.
-- Team names on game cards are plain text, with no logos. **Exception (D-103):** the By game view on the week page shows each team's logo, with the name written under it. The logos are fetched from ESPN at deploy into `public/teams/` and never committed; when one is missing the card shows a badge in the team's colour with its short code. Team colours for the bar come from `shared/teamColors.ts`.
+- Team names on game cards are plain text, with no logos. **Exception (D-103, D-106):** the By game view on the week page and the pick buttons on the picks page show each team's logo, with the name written under it. The logos are fetched from ESPN at deploy into `public/teams/` and never committed; when one is missing the card shows a badge in the team's colour with its short code. Team colours for the bar come from `shared/teamColors.ts`.
 - Ask whoever produced the sheet for layered or vector originals. The file on hand is a flattened raster.
 
 | Asset | Format | Notes |

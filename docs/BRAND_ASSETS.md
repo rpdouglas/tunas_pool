@@ -23,7 +23,7 @@ Added 2026-10-05 (supplied by Ryan, AI-generated artwork).
 | BA-01 | `brand/originals/wordmark-tunas-pick-em.png` | 1536×1024 | **Cleared** (technical clean-up needed) |
 | BA-02 | `brand/originals/badge-tuna-mascot-weekly-pool.png` | 1254×1254 | **Cleared by commissioner** (D-053, accepted risk: carries Ravens and NFL marks) |
 | BA-03 | `brand/originals/helmet-pawn-shop-2na.png` | 1536×1024 | **Cleared by commissioner** (D-053) |
-| BA-04 | NFL team logos, `public/teams/{abbr}.png` (not in the repo) | 500×500 | **Cleared by commissioner** (D-103, accepted risk: 32 NFL marks). Fetched from ESPN at each deploy by `scripts/fetch-team-logos.ts`, never committed. Used only on the By game view. Fallback: a team-colour badge with the short code. |
+| BA-04 | NFL team logos, `public/teams/{abbr}.png` (not in the repo) | 500×500 | **Cleared by commissioner** (D-103, accepted risk: 32 NFL marks). Fetched from ESPN at each deploy by `scripts/fetch-team-logos.ts`, never committed. Used on the By game view and the picks page's pick buttons (D-106), at 120px when ESPN's resizer answers. Fallback: a team-colour badge with the short code. |
 
 ### BA-01 · Wordmark lockup "TUNAS / PICK EM"
 

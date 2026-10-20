@@ -209,6 +209,12 @@
     color: rgb(var(--gold-300));
     font-weight: 800;
   }
+  /* Logo above the name (D-106); the check sits in the top corner so the button doesn't grow. */
+  .pick-stacked { position: relative; flex-direction: column; gap: 0.25rem; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+  .pick-stacked::before { position: absolute; top: 0.25rem; left: 0.5rem; font-size: 1.25rem; }
+  /* A picked team in its own colour (D-106): the check takes the button's ink, black or white. */
+  .pick[aria-pressed='true'][data-team] { box-shadow: var(--shadow-sticker); }
+  .pick[aria-pressed='true'][data-team]::before { color: inherit; }
   .pick:disabled { cursor: default; }
   .pick[data-state='locked']   { border-color: rgb(var(--neutral-300)); color: rgb(var(--neutral-600)); background: rgb(var(--surface-muted)); }
   .pick[data-state='locked'][aria-pressed='true'] { background: rgb(var(--purple-700)); color: #fff; border-color: rgb(var(--purple-700)); }

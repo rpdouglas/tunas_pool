@@ -75,3 +75,12 @@ describe('badgeInk', () => {
     expect(badgeInk('#FFB612')).toBe('#000000');
   });
 });
+
+describe('a picked team on the entry form (D-106)', () => {
+  it('every team colour keeps the name readable in black or white (4.5:1 or better)', () => {
+    for (const team of TEAMS) {
+      const fill = TEAM_INFO[team].primary;
+      expect(contrastRatio(fill, badgeInk(fill)), team).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
