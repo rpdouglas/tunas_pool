@@ -30,7 +30,7 @@ Sprint length assumed: **1 week**. Adjust dates when Sprint 0 starts. The curren
 | 3 | Reveal and standings | S6–S7 | Reveal at lock, leaderboards, season standings, all-time stats |
 | 4 | Polish and automation | S8–S9 | Print sheet, reminders, share tools, branding, ESPN suggestions |
 | 5 | Season rollover | S10 | New season setup, archive, retrospective |
-| 6 | Weekly 649 Bingo (proposed) | S11–S16 | A hidden, invite-only weekly game. Plan, gates, and sprints in `docs/BINGO_PLAN.md`; nothing built until gates G0 (legal) and G1 (house rules) pass |
+| 6 | Weekly 649 Bingo | S11–S16 | A hidden, invite-only weekly game. Plan, gates, and sprints in `docs/BINGO_PLAN.md`. S11 (spec, docs only) done 2026-10-20: D-110 to D-129, `DATA_MODEL.md` §11. Dark in production until gate G2 |
 
 ---
 

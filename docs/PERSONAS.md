@@ -1,8 +1,9 @@
 # 👥 Persona-Based Development Model — Tunas Weekly Football Pool Pick 'Em
 
-**Version:** 1.0 · **Last Updated:** October 2026 · **Next Review:** After the Phase 1 soft launch (Sprint 3)
+**Version:** 1.1 · **Last Updated:** October 2026 · **Next Review:** After the Phase 1 soft launch (Sprint 3)
 
 **Change Log:**
+- v1.1 — §8 Weekly 649 Bingo addendum: who plays it, its responsible-play standard, and the Bingo Check (D-112)
 - v1.0 — Initial set of ten personas (Dale, Rosalie, Bernie, Jen, Troy, Dwayne, Kayla, Gerald, The Commissioner, Devon), five anti-personas, season arc, overlap register, pool constraints register, spec-impact log, and assumptions to validate
 
 ---
@@ -23,7 +24,7 @@ Every feature in the Tunas pool is built against these personas. The pool is a c
 6. **Run the Commissioner Counter Test.** Can the commissioner do this one-handed, with a customer waiting, in about 10 seconds, and undo it?
 7. **Run the Border Test.** Does this work identically for a player on the NY side with no Canadian bank account? ("At par" means equal, not nearly equal.)
 8. **Run the Welcome Test.** Can a first-timer from Cornwall understand it with zero insider vocabulary, and does it avoid exposing them to the group before they're ready?
-9. **Run the Responsible-Play Check.** Does this encourage spending beyond the fixed entry fee, create IOUs or tabs, or reward chasing losses? If yes, redesign.
+9. **Run the Responsible-Play Check.** Does this encourage spending beyond the fixed entry fee, create IOUs or tabs, or reward chasing losses? If yes, redesign. (Weekly 649 Bingo runs its own Bingo Check instead, §8.)
 10. **Check the privacy test.** Would a reasonable player feel watched, ranked, or exposed by this (phone numbers, who has or hasn't paid, who owes)? If yes, redesign.
 
 **The primary persona rule:** Design decisions are optimised for the primary persona. Secondary personas are tested against the result. Never design for an average of all personas.
@@ -881,4 +882,43 @@ These personas are built on how the pool is described, not on research. Confirm 
 
 ---
 
-*Tunas Weekly Football Pool Pick 'Em · docs/PERSONAS.md · v1.0 · October 2026*
+## §8 Weekly 649 Bingo addendum (D-112)
+
+Bingo (`docs/BINGO_PLAN.md`) is a different game from the pool, with more than one card, a weekly renewal, and a pot that grows until someone wins. The pool's one-entry rule (CLAUDE.md §10) and the Responsible-Play Check (§0 step 9) would refuse it as written. This section is the written exception: what bingo allows, what it never does, and the check every bingo sprint runs instead of step 9. It does not loosen anything for the pool.
+
+### Who plays it
+
+The same people, a smaller group: members invited by code. Expect the regulars (Dale), the hype crowd (Kayla), and some seniors on paper (Rosalie) through the commissioner. Gerald will want to check every crossed-off number against the official draw. The commissioner and Devon run it at the counter on Wednesday evening and Thursday morning. Troy is in only if the border test passes, as for the pool. Jen arrives by an invite code and needs to know what she's signing up for before she pays anything.
+
+### What bingo allows
+
+- Up to **5 cards** per person per cycle (fewer if the config says so, fewer still by the player's own limit).
+- **Weekly renewal**: each card is paid for each draw, that week.
+- A pot that grows over a cycle, shown in dollars.
+
+### What bingo never does
+
+- **No paying ahead, no tabs, no balances, no credit** (D-116). An unpaid card earns nothing that week; the app never says who owes.
+- **No "almost there"**: no prompt, badge, or message that a card is close, and no push or email of any kind.
+- **No ranking of people by closeness.** The board shows counts only (D-123).
+- **No named view of spending.** Staff see totals only (D-128). We do not profile individual players.
+- **Nobody but the player raises their limit** (D-118). Lowering or pausing takes effect at once; a raise waits a full cycle.
+- **No joining late into a cycle** (D-117), so a new card is never a worse deal than an old one.
+- **No loss framing**: no "win it back", no streak of weeks played, no count of money lost.
+
+### What bingo always does
+
+- Shows each member **what they have put in** this cycle and this season, in plain dollars, on their card screen.
+- Says the **odds plainly** on the rules screen: on average a card gets back about what is left after the operator share, and ties are common. The numbers come from the running cycle's config.
+- Offers **limits and a pause** on the card screen, one tap away, not in a settings page.
+- Carries the same discreet **support link** as the pool (ConnexOntario, the New York HOPEline; verify before launch).
+
+### The Bingo Check (every bingo sprint, replaces §0 step 9)
+
+> Does this screen or function make it easier to spend more, faster, or without noticing; tell anyone they are close; compare people by how much they play; or let anyone but the player loosen a limit? If yes, redesign.
+
+The other §0 tests still apply. For bingo, the **Rosalie Inclusion Test** means a paper member can be in, pay, and be paid as fairly as anyone; the **Gerald Trust Test** means a member can check every crossed-off number against the official draw and the audit log.
+
+---
+
+*Tunas Weekly Football Pool Pick 'Em · docs/PERSONAS.md · v1.1 · October 2026*
