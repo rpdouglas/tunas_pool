@@ -25,6 +25,8 @@ import {
   testDb,
 } from '../functions/src/testSupport.int';
 import { enterResults, publishWinner } from '../functions/src/weekActions';
+import { setCode, setConfig } from '../functions/src/bingo/members';
+import { startCycle } from '../functions/src/bingo/cycle';
 
 const fnRequire = createRequire(new URL('../functions/package.json', import.meta.url));
 const { Timestamp } = fnRequire(
@@ -40,6 +42,7 @@ mkdirSync(SHOTS, { recursive: true });
 
 let failures = 0;
 const errors: string[] = [];
+const SMOKE_ONLY = process.env.SMOKE_ONLY;
 function check(label: string, ok: boolean, detail = '') {
   console.log(`${ok ? 'PASS' : 'FAIL'} ${label}${detail ? ` (${detail})` : ''}`);
   if (!ok) failures += 1;
@@ -180,6 +183,19 @@ for (const id of ['rosalie']) await db.doc(`players/${id}`).update(roster);
 await db.doc('players/jen').update({ phone: '+13155550199' });
 await recomputeStandings(db, YEAR, async (uids) => new Set(uids));
 await recomputeAllTime(db);
+// Weekly 649 Bingo: set up and a game open, but switched off (D-128).
+const BINGO_CONFIG = {
+  enabled: false,
+  priceCents: 1000,
+  operatorPct: 40,
+  cutoff: { weekday: 3, time: '18:00', tz: 'America/Toronto' },
+  maxCardsPerPlayer: 5,
+  maxWeeks: 26,
+  joinWindowDraws: 1,
+};
+await setConfig(db, { actorUid: 'smoke', config: BINGO_CONFIG, now: new Date() });
+await setCode(db, { actorUid: 'smoke', code: 'SMOKE-6492-BINGO', now: new Date() });
+await startCycle(db, { actorUid: 'smoke', test: true, now: new Date() });
 console.log('seeded 3 weeks');
 
 // ---- 2. Serve the built site and open a browser ----
@@ -248,285 +264,345 @@ try {
   await visit(player, 'claim', '/claim', 'First, save your account');
   await visit(player, 'account', '/account', 'Continue with Google');
   await visit(player, 'entry-form', `/picks/${YEAR}/wk03`, '0 of 15 picked');
+  // Bingo is off: to a guest it's an ordinary missing page (D-128).
+  await visit(player, 'bingo-off', '/b', 'Page not found');
   await playerCtx.close();
 
-  // ---- 4. The commissioner ----
-  const adminCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
-  const admin = await adminCtx.newPage();
-  admin.on('pageerror', (e) => errors.push(`admin: ${e.message}`));
-  await admin.goto(`${APP}/admin`);
-  await admin.getByLabel('Email').fill(ADMIN_EMAIL);
-  await admin.getByRole('button', { name: 'Email me a sign-in link' }).click();
-  await admin.getByText('Check your email').waitFor();
-  const { oobCodes } = await (
-    await fetch(`${AUTH}/emulator/v1/projects/${PROJECT}/oobCodes`)
-  ).json();
-  const oob = oobCodes.filter((c: { email: string }) => c.email === ADMIN_EMAIL).pop();
-  await admin.goto(
-    `${APP}/auth/finish?next=%2Fadmin&apiKey=demo-api-key&oobCode=${oob.oobCode}&mode=signIn&lang=en`,
-  );
-  await admin.getByRole('link', { name: 'Continue' }).waitFor();
-  const users = await (
-    await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:query`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ returnUserInfo: true }),
-    })
-  ).json();
-  const uid = users.userInfo.find((u: { email?: string }) => u.email === ADMIN_EMAIL).localId;
-  execSync(`npm run -s admin:claim -- ${uid}`, {
-    env: { ...process.env, FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099', GCLOUD_PROJECT: PROJECT },
-    stdio: 'pipe',
-  });
-  await admin.getByRole('link', { name: 'Continue' }).click();
-  await admin.getByRole('button', { name: 'Check again' }).click();
-  await admin.getByRole('heading', { name: 'Payments' }).waitFor();
-
-  await visit(admin, 'admin-payments', '/admin?week=wk03', 'Text about payment');
-  const nudge = await admin
-    .getByRole('link', { name: /Text .* about payment/ })
-    .first()
-    .getAttribute('href')
-    .catch(() => null);
-  check(
-    'payment nudge opens the text app with the message',
-    Boolean(nudge?.startsWith('sms:+13155550199?&body=Hi%20Jen')),
-    nudge?.slice(0, 60) ?? 'no link',
-  );
-  await visit(admin, 'admin-roster', '/admin/roster?week=wk03', 'Text a reminder');
-  const remind = await admin
-    .getByRole('link', { name: /Text a reminder to Rosalie/ })
-    .getAttribute('href')
-    .catch(() => null);
-  check(
-    'roster reminder opens the text app with the message',
-    Boolean(remind?.startsWith('sms:+16135550144?&body=Hi%20Rosalie')),
-    remind?.slice(0, 60) ?? 'no link',
-  );
-  // Someone who has played can't be deleted: the section says why and points to Inactive or Merge (D-094).
-  await admin.getByRole('button', { name: /Details for Rosalie/ }).click();
-  await admin.getByText('Added by mistake? Delete this player').click();
-  const whyNot = await admin
-    // Not just "has played": the closed Merge section above has those words too, and it is hidden.
-    .getByText(/has played (one week|\d+ weeks)/)
-    .first()
-    // The first call to a function that has not run yet can take a while to start in the emulator.
-    .waitFor({ timeout: 45_000 })
-    .then(() => '')
-    .catch((err: unknown) => String(err).replace(/\s+/g, ' ').slice(0, 220));
-  await admin.screenshot({ path: `${SHOTS}/admin-roster-delete.png`, fullPage: true });
-  check('delete explains why not for someone who has played', whyNot === '', whyNot);
-  check(
-    'and offers no delete button for them',
-    (await admin.getByRole('button', { name: /^Delete Rosalie/ }).count()) === 0,
-  );
-  await visit(admin, 'admin-enter', '/admin/enter/rosalie?week=wk03', 'The sheet, top to bottom');
-  // Import picks from a spreadsheet (D-096): Jen is already in and is kept, a new name is added.
-  await visit(admin, 'admin-import', '/admin/import?week=wk03', 'Spreadsheet (CSV file)');
-  {
-    const wk03 = (await db.doc(`seasons/${YEAR}/weeks/wk03`).get()).data()!;
-    const games = (wk03.games as { id: string; away: string; home: string }[]).sort((a, b) =>
-      a.id === 'mnf' ? 1 : b.id === 'mnf' ? -1 : a.id.localeCompare(b.id),
+  // SMOKE_ONLY=bingo skips the commissioner and the counter, for when the Codespace runs short of
+  // memory partway through ("Target crashed").
+  if (!SMOKE_ONLY) {
+    // ---- 4. The commissioner ----
+    const adminCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    const admin = await adminCtx.newPage();
+    admin.on('pageerror', (e) => errors.push(`admin: ${e.message}`));
+    await admin.goto(`${APP}/admin`);
+    await admin.getByLabel('Email').fill(ADMIN_EMAIL);
+    await admin.getByRole('button', { name: 'Email me a sign-in link' }).click();
+    await admin.getByText('Check your email').waitFor();
+    const { oobCodes } = await (
+      await fetch(`${AUTH}/emulator/v1/projects/${PROJECT}/oobCodes`)
+    ).json();
+    const oob = oobCodes.filter((c: { email: string }) => c.email === ADMIN_EMAIL).pop();
+    await admin.goto(
+      `${APP}/auth/finish?next=%2Fadmin&apiKey=demo-api-key&oobCode=${oob.oobCode}&mode=signIn&lang=en`,
     );
-    const csv = [
-      [
-        'Participant',
-        ...games.map((g) => (g.id === 'mnf' ? 'MNF' : `G${Number(g.id.slice(1))}`)),
-        'TB Pts',
-      ],
-      ['Matchup', ...games.map((g) => `${g.away} at ${g.home}`), 'Total'],
-      ['Jen K.', ...games.map((g) => g.away), '41'],
-      ['Walk In Sample', ...games.map((g) => g.home), '38'],
-      [],
-      ['Entry Fee', '$20'],
-    ]
-      .map((r) => r.join(','))
-      .join('\n');
-    await admin
-      .getByLabel('Spreadsheet (CSV file)')
-      .setInputFiles({ name: 'week3.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
-    await checkScreen(admin, 'admin-import-preview', '1 to import');
-    await admin.getByRole('button', { name: 'Import 1 entry' }).click();
-    const imported = await admin
-      .getByText('1 of 1 imported')
+    await admin.getByRole('link', { name: 'Continue' }).waitFor();
+    const users = await (
+      await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:query`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnUserInfo: true }),
+      })
+    ).json();
+    const uid = users.userInfo.find((u: { email?: string }) => u.email === ADMIN_EMAIL).localId;
+    execSync(`npm run -s admin:claim -- ${uid}`, {
+      env: {
+        ...process.env,
+        FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+        GCLOUD_PROJECT: PROJECT,
+      },
+      stdio: 'pipe',
+    });
+    await admin.getByRole('link', { name: 'Continue' }).click();
+    await admin.getByRole('button', { name: 'Check again' }).click();
+    await admin.getByRole('heading', { name: 'Payments' }).waitFor();
+
+    await visit(admin, 'admin-payments', '/admin?week=wk03', 'Text about payment');
+    const nudge = await admin
+      .getByRole('link', { name: /Text .* about payment/ })
+      .first()
+      .getAttribute('href')
+      .catch(() => null);
+    check(
+      'payment nudge opens the text app with the message',
+      Boolean(nudge?.startsWith('sms:+13155550199?&body=Hi%20Jen')),
+      nudge?.slice(0, 60) ?? 'no link',
+    );
+    await visit(admin, 'admin-roster', '/admin/roster?week=wk03', 'Text a reminder');
+    const remind = await admin
+      .getByRole('link', { name: /Text a reminder to Rosalie/ })
+      .getAttribute('href')
+      .catch(() => null);
+    check(
+      'roster reminder opens the text app with the message',
+      Boolean(remind?.startsWith('sms:+16135550144?&body=Hi%20Rosalie')),
+      remind?.slice(0, 60) ?? 'no link',
+    );
+    // Someone who has played can't be deleted: the section says why and points to Inactive or Merge (D-094).
+    await admin.getByRole('button', { name: /Details for Rosalie/ }).click();
+    await admin.getByText('Added by mistake? Delete this player').click();
+    const whyNot = await admin
+      // Not just "has played": the closed Merge section above has those words too, and it is hidden.
+      .getByText(/has played (one week|\d+ weeks)/)
+      .first()
+      // The first call to a function that has not run yet can take a while to start in the emulator.
       .waitFor({ timeout: 45_000 })
       .then(() => '')
       .catch((err: unknown) => String(err).replace(/\s+/g, ' ').slice(0, 220));
-    await admin.screenshot({ path: `${SHOTS}/admin-import-done.png`, fullPage: true });
-    check('import saves the new line and keeps the entry already in', imported === '', imported);
+    await admin.screenshot({ path: `${SHOTS}/admin-roster-delete.png`, fullPage: true });
+    check('delete explains why not for someone who has played', whyNot === '', whyNot);
+    check(
+      'and offers no delete button for them',
+      (await admin.getByRole('button', { name: /^Delete Rosalie/ }).count()) === 0,
+    );
+    await visit(admin, 'admin-enter', '/admin/enter/rosalie?week=wk03', 'The sheet, top to bottom');
+    // Import picks from a spreadsheet (D-096): Jen is already in and is kept, a new name is added.
+    await visit(admin, 'admin-import', '/admin/import?week=wk03', 'Spreadsheet (CSV file)');
+    {
+      const wk03 = (await db.doc(`seasons/${YEAR}/weeks/wk03`).get()).data()!;
+      const games = (wk03.games as { id: string; away: string; home: string }[]).sort((a, b) =>
+        a.id === 'mnf' ? 1 : b.id === 'mnf' ? -1 : a.id.localeCompare(b.id),
+      );
+      const csv = [
+        [
+          'Participant',
+          ...games.map((g) => (g.id === 'mnf' ? 'MNF' : `G${Number(g.id.slice(1))}`)),
+          'TB Pts',
+        ],
+        ['Matchup', ...games.map((g) => `${g.away} at ${g.home}`), 'Total'],
+        ['Jen K.', ...games.map((g) => g.away), '41'],
+        ['Walk In Sample', ...games.map((g) => g.home), '38'],
+        [],
+        ['Entry Fee', '$20'],
+      ]
+        .map((r) => r.join(','))
+        .join('\n');
+      await admin
+        .getByLabel('Spreadsheet (CSV file)')
+        .setInputFiles({ name: 'week3.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+      await checkScreen(admin, 'admin-import-preview', '1 to import');
+      await admin.getByRole('button', { name: 'Import 1 entry' }).click();
+      const imported = await admin
+        .getByText('1 of 1 imported')
+        .waitFor({ timeout: 45_000 })
+        .then(() => '')
+        .catch((err: unknown) => String(err).replace(/\s+/g, ' ').slice(0, 220));
+      await admin.screenshot({ path: `${SHOTS}/admin-import-done.png`, fullPage: true });
+      check('import saves the new line and keeps the entry already in', imported === '', imported);
+    }
+    await visit(admin, 'admin-claims', '/admin/claims', 'No requests waiting');
+    await visit(admin, 'admin-results-final', '/admin/results?week=wk01', 'Correct a result');
+    await admin
+      .getByRole('button', { name: 'Correct a result' })
+      .click()
+      .catch(() => undefined);
+    await admin
+      .getByText("You're correcting a published week")
+      .waitFor({ timeout: 5000 })
+      .catch(() => undefined);
+    await admin.screenshot({ path: `${SHOTS}/admin-results-correcting.png`, fullPage: true });
+    await visit(
+      admin,
+      'admin-results-locked',
+      '/admin/results?week=wk02',
+      'Review and publish winner',
+    );
+    await visit(admin, 'admin-reports', '/admin/reports', 'Download weeks (CSV)');
+    await visit(admin, 'admin-weeks', '/admin/weeks', 'weeks');
+    await visit(admin, 'admin-more', '/admin/more', 'Audit log');
+    await visit(admin, 'admin-audit', '/admin/audit', 'Published the winner: Dale D.');
+    await visit(admin, 'admin-seasons', '/admin/seasons', 'This season');
+    // A player added by mistake can be deleted through the screen, with a reason in the audit log (D-094).
+    await db.doc('players/typo').set({
+      displayName: 'Typo T.',
+      phone: null,
+      email: null,
+      claimedByUid: null,
+      origin: 'admin',
+      usualPayment: null,
+      active: true,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+    await admin.goto(`${APP}/admin/roster?week=wk03`);
+    await admin.getByRole('button', { name: /Details for Typo T/ }).click();
+    await admin.getByText('Added by mistake? Delete this player').click();
+    await admin.getByRole('button', { name: 'Delete Typo T.…' }).click();
+    await admin.getByLabel('Why are you deleting them?').fill('Added by mistake');
+    await admin.getByRole('button', { name: 'Delete Typo T.', exact: true }).click();
+    await admin.getByText('Typo T. deleted').first().waitFor({ timeout: 45_000 });
+    check(
+      'a player with no history is deleted through the screen',
+      !(await db.doc('players/typo').get()).exists,
+    );
+    const deleted = await db.collection('auditLog').where('action', '==', 'player.delete').get();
+    check(
+      'and the audit log keeps who and why',
+      deleted.size === 1 && deleted.docs[0].get('reason') === 'Added by mistake',
+    );
+    await adminCtx.close();
+
+    // ---- 5. Devon, the counter role (D-095) ----
+    const counterCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    const counter = await counterCtx.newPage();
+    counter.on('pageerror', (e) => errors.push(`counter: ${e.message}`));
+    const COUNTER_EMAIL = 'devon@tunas.test';
+    await counter.goto(`${APP}/counter`);
+    await counter.getByLabel('Email').fill(COUNTER_EMAIL);
+    await counter.getByRole('button', { name: 'Email me a sign-in link' }).click();
+    await counter.getByText('Check your email').waitFor();
+    const counterCodes = (
+      await (await fetch(`${AUTH}/emulator/v1/projects/${PROJECT}/oobCodes`)).json()
+    ).oobCodes;
+    const counterOob = counterCodes
+      .filter((c: { email: string }) => c.email === COUNTER_EMAIL)
+      .pop();
+    await counter.goto(
+      `${APP}/auth/finish?next=%2Fcounter&apiKey=demo-api-key&oobCode=${counterOob.oobCode}&mode=signIn&lang=en`,
+    );
+    await counter.getByRole('link', { name: 'Continue' }).waitFor();
+    const counterUsers = await (
+      await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:query`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnUserInfo: true }),
+      })
+    ).json();
+    const counterUid = counterUsers.userInfo.find(
+      (u: { email?: string }) => u.email === COUNTER_EMAIL,
+    ).localId;
+    execSync(`npm run -s admin:claim -- ${counterUid} counter`, {
+      env: {
+        ...process.env,
+        FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+        GCLOUD_PROJECT: PROJECT,
+      },
+      stdio: 'pipe',
+    });
+    await counter.getByRole('link', { name: 'Continue' }).click();
+    await counter.getByRole('button', { name: 'Check again' }).click();
+    await counter.getByRole('heading', { name: 'Counter' }).waitFor();
+
+    await visit(counter, 'counter-home', '/counter', 'Find a player');
+    await counter.getByText('Jen K.').first().waitFor({ timeout: 45_000 }); // the roster arrives after the page
+    await counter.screenshot({ path: `${SHOTS}/counter-home-loaded.png`, fullPage: true });
+    const counterText = (await counter.locator('main').innerText()).replace(/\s+/g, ' ');
+    check(
+      'the counter list shows names and status, and no phone number',
+      counterText.includes('Jen K.') && !/315-555|315555|613-555|\+1\d{10}/.test(counterText),
+    );
+
+    // Take cash for Jen, who said she would e-Transfer.
+    await counter.getByRole('button', { name: 'Paid cash: Jen K.' }).click();
+    await counter.getByRole('button', { name: 'Undo cash: Jen K.' }).waitFor({ timeout: 45_000 });
+    const jenPay = (
+      await db.doc(`seasons/${YEAR}/weeks/wk03/entries/jen/payment/current`).get()
+    ).data();
+    check(
+      'cash received is saved as cash, under Devon',
+      jenPay?.paymentStatus === 'paid' &&
+        jenPay?.paymentMethod === 'cash' &&
+        jenPay?.paidBy === counterUid,
+    );
+
+    // Add a walk-in.
+    await counter.getByRole('button', { name: 'Add a player' }).click();
+    await counter.getByLabel('Name', { exact: true }).fill('Walt W.');
+    await counter.getByRole('button', { name: 'Add player' }).click();
+    await counter.getByText('Walt W.').first().waitFor({ timeout: 45_000 });
+    const walt = await db.collection('players').where('displayName', '==', 'Walt W.').get();
+    check(
+      'a walk-in is added to the roster with only a name',
+      walt.size === 1 &&
+        walt.docs[0].get('origin') === 'admin' &&
+        walt.docs[0].get('phone') === null,
+    );
+
+    // Enter a sheet for Rosalie, in paper order, and take her cash.
+    await visit(counter, 'counter-enter', '/counter/enter/rosalie', 'Entering for');
+    for (const id of GAME_IDS) await counter.locator(`#game-${id} button.pick`).nth(0).click();
+    await counter.getByLabel(/Tiebreaker/).fill('45');
+    check(
+      'the counter is not offered e-Transfer as a way it was paid',
+      (await counter.locator('label.pick', { hasText: 'Paid e-Transfer' }).count()) === 0,
+    );
+    await counter.locator('label.pick', { hasText: 'Paid cash' }).click();
+    await counter.getByRole('button', { name: 'Save picks' }).click();
+    await counter.getByRole('heading', { name: 'Counter' }).waitFor({ timeout: 45_000 });
+    const rosalieEntry = await db.doc(`seasons/${YEAR}/weeks/wk03/entries/rosalie`).get();
+    const rosaliePay = (
+      await db.doc(`seasons/${YEAR}/weeks/wk03/entries/rosalie/payment/current`).get()
+    ).data();
+    check(
+      'a sheet entered at the counter is saved, marked paid cash',
+      rosalieEntry.exists &&
+        rosaliePay?.paymentStatus === 'paid' &&
+        rosaliePay?.paymentMethod === 'cash',
+    );
+
+    // Someone already in: the screen says who to ask, before anything is typed.
+    await counter.goto(`${APP}/counter/enter/jen`);
+    const asked = await counter
+      .getByText(/sheet is already in.*ask the commissioner/i)
+      .first()
+      .waitFor({ timeout: 45_000 })
+      .then(() => true)
+      .catch(() => false);
+    check('a sheet that is already in says "Ask the commissioner"', asked);
+
+    // The audit log has Devon's work under his name.
+    const devonLogs = await db.collection('auditLog').where('actorUid', '==', counterUid).get();
+    check(
+      'everything the counter did is in the audit log under the counter role',
+      devonLogs.size >= 4 &&
+        devonLogs.docs.every(
+          (d) => d.get('actorRole') === 'counter' && d.get('actorEmail') === COUNTER_EMAIL,
+        ),
+      `${devonLogs.size} entries`,
+    );
+
+    // The Back Office is not his.
+    await counter.goto(`${APP}/admin`);
+    const blocked = await counter
+      .getByText(/isn't an admin account/)
+      .waitFor({ timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+    check('the counter is kept out of the Back Office', blocked);
+    await counterCtx.close();
   }
-  await visit(admin, 'admin-claims', '/admin/claims', 'No requests waiting');
-  await visit(admin, 'admin-results-final', '/admin/results?week=wk01', 'Correct a result');
-  await admin
-    .getByRole('button', { name: 'Correct a result' })
-    .click()
-    .catch(() => undefined);
-  await admin
-    .getByText("You're correcting a published week")
-    .waitFor({ timeout: 5000 })
-    .catch(() => undefined);
-  await admin.screenshot({ path: `${SHOTS}/admin-results-correcting.png`, fullPage: true });
-  await visit(
-    admin,
-    'admin-results-locked',
-    '/admin/results?week=wk02',
-    'Review and publish winner',
-  );
-  await visit(admin, 'admin-reports', '/admin/reports', 'Download weeks (CSV)');
-  await visit(admin, 'admin-weeks', '/admin/weeks', 'weeks');
-  await visit(admin, 'admin-more', '/admin/more', 'Audit log');
-  await visit(admin, 'admin-audit', '/admin/audit', 'Published the winner: Dale D.');
-  await visit(admin, 'admin-seasons', '/admin/seasons', 'This season');
-  // A player added by mistake can be deleted through the screen, with a reason in the audit log (D-094).
-  await db.doc('players/typo').set({
-    displayName: 'Typo T.',
-    phone: null,
-    email: null,
-    claimedByUid: null,
-    origin: 'admin',
-    usualPayment: null,
-    active: true,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-  });
-  await admin.goto(`${APP}/admin/roster?week=wk03`);
-  await admin.getByRole('button', { name: /Details for Typo T/ }).click();
-  await admin.getByText('Added by mistake? Delete this player').click();
-  await admin.getByRole('button', { name: 'Delete Typo T.…' }).click();
-  await admin.getByLabel('Why are you deleting them?').fill('Added by mistake');
-  await admin.getByRole('button', { name: 'Delete Typo T.', exact: true }).click();
-  await admin.getByText('Typo T. deleted').first().waitFor({ timeout: 45_000 });
-  check(
-    'a player with no history is deleted through the screen',
-    !(await db.doc('players/typo').get()).exists,
-  );
-  const deleted = await db.collection('auditLog').where('action', '==', 'player.delete').get();
-  check(
-    'and the audit log keeps who and why',
-    deleted.size === 1 && deleted.docs[0].get('reason') === 'Added by mistake',
-  );
-  await adminCtx.close();
 
-  // ---- 5. Devon, the counter role (D-095) ----
-  const counterCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
-  const counter = await counterCtx.newPage();
-  counter.on('pageerror', (e) => errors.push(`counter: ${e.message}`));
-  const COUNTER_EMAIL = 'devon@tunas.test';
-  await counter.goto(`${APP}/counter`);
-  await counter.getByLabel('Email').fill(COUNTER_EMAIL);
-  await counter.getByRole('button', { name: 'Email me a sign-in link' }).click();
-  await counter.getByText('Check your email').waitFor();
-  const counterCodes = (
+  // ---- 6. A bingo member: joins with the code, adds a card (BINGO_PLAN S14) ----
+  await setConfig(db, {
+    actorUid: 'smoke',
+    config: { ...BINGO_CONFIG, enabled: true },
+    now: new Date(),
+  });
+  const bingoCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+  const member = await bingoCtx.newPage();
+  member.on('pageerror', (e) => errors.push(`bingo: ${e.message}`));
+  const MEMBER_EMAIL = 'kayla@tunas.test';
+  await member.goto(`${APP}/account`);
+  await member.getByLabel('Email').fill(MEMBER_EMAIL);
+  await member.getByRole('button', { name: 'Email me a link' }).click();
+  await member.getByText('Check your email').waitFor();
+  const memberOob = (
     await (await fetch(`${AUTH}/emulator/v1/projects/${PROJECT}/oobCodes`)).json()
-  ).oobCodes;
-  const counterOob = counterCodes.filter((c: { email: string }) => c.email === COUNTER_EMAIL).pop();
-  await counter.goto(
-    `${APP}/auth/finish?next=%2Fcounter&apiKey=demo-api-key&oobCode=${counterOob.oobCode}&mode=signIn&lang=en`,
+  ).oobCodes
+    .filter((c: { email: string }) => c.email === MEMBER_EMAIL)
+    .pop();
+  await member.goto(
+    `${APP}/auth/finish?next=%2Fb&apiKey=demo-api-key&oobCode=${memberOob.oobCode}&mode=signIn&lang=en`,
   );
-  await counter.getByRole('link', { name: 'Continue' }).waitFor();
-  const counterUsers = await (
-    await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:query`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ returnUserInfo: true }),
-    })
-  ).json();
-  const counterUid = counterUsers.userInfo.find(
-    (u: { email?: string }) => u.email === COUNTER_EMAIL,
-  ).localId;
-  execSync(`npm run -s admin:claim -- ${counterUid} counter`, {
-    env: { ...process.env, FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099', GCLOUD_PROJECT: PROJECT },
-    stdio: 'pipe',
-  });
-  await counter.getByRole('link', { name: 'Continue' }).click();
-  await counter.getByRole('button', { name: 'Check again' }).click();
-  await counter.getByRole('heading', { name: 'Counter' }).waitFor();
-
-  await visit(counter, 'counter-home', '/counter', 'Find a player');
-  await counter.getByText('Jen K.').first().waitFor({ timeout: 45_000 }); // the roster arrives after the page
-  await counter.screenshot({ path: `${SHOTS}/counter-home-loaded.png`, fullPage: true });
-  const counterText = (await counter.locator('main').innerText()).replace(/\s+/g, ' ');
+  await member.getByRole('link', { name: 'Continue' }).waitFor();
+  await visit(member, 'bingo-join', '/b', 'Join with your code');
+  await member.getByLabel('Your name').fill('Kayla S.');
+  await member.getByLabel("I'm 18 or older").check();
+  await member.getByLabel(/Invite code/).fill('smoke 6492 bingo');
+  await member.getByRole('button', { name: 'Join bingo' }).click();
+  await member.getByText("You don't have a card yet.").waitFor({ timeout: 45_000 });
+  await member.getByRole('button', { name: 'Quick pick' }).click();
+  await member.getByRole('heading', { name: 'Card 1' }).waitFor({ timeout: 45_000 });
+  const cards = await db.collection('bingoCards').get();
   check(
-    'the counter list shows names and status, and no phone number',
-    counterText.includes('Jen K.') && !/315-555|315555|613-555|\+1\d{10}/.test(counterText),
+    'a member joins with the code and adds a card',
+    cards.size === 1 && cards.docs[0].get('source') === 'web',
   );
-
-  // Take cash for Jen, who said she would e-Transfer.
-  await counter.getByRole('button', { name: 'Paid cash: Jen K.' }).click();
-  await counter.getByRole('button', { name: 'Undo cash: Jen K.' }).waitFor({ timeout: 45_000 });
-  const jenPay = (
-    await db.doc(`seasons/${YEAR}/weeks/wk03/entries/jen/payment/current`).get()
-  ).data();
-  check(
-    'cash received is saved as cash, under Devon',
-    jenPay?.paymentStatus === 'paid' &&
-      jenPay?.paymentMethod === 'cash' &&
-      jenPay?.paidBy === counterUid,
-  );
-
-  // Add a walk-in.
-  await counter.getByRole('button', { name: 'Add a player' }).click();
-  await counter.getByLabel('Name', { exact: true }).fill('Walt W.');
-  await counter.getByRole('button', { name: 'Add player' }).click();
-  await counter.getByText('Walt W.').first().waitFor({ timeout: 45_000 });
-  const walt = await db.collection('players').where('displayName', '==', 'Walt W.').get();
-  check(
-    'a walk-in is added to the roster with only a name',
-    walt.size === 1 && walt.docs[0].get('origin') === 'admin' && walt.docs[0].get('phone') === null,
-  );
-
-  // Enter a sheet for Rosalie, in paper order, and take her cash.
-  await visit(counter, 'counter-enter', '/counter/enter/rosalie', 'Entering for');
-  for (const id of GAME_IDS) await counter.locator(`#game-${id} button.pick`).nth(0).click();
-  await counter.getByLabel(/Tiebreaker/).fill('45');
-  check(
-    'the counter is not offered e-Transfer as a way it was paid',
-    (await counter.locator('label.pick', { hasText: 'Paid e-Transfer' }).count()) === 0,
-  );
-  await counter.locator('label.pick', { hasText: 'Paid cash' }).click();
-  await counter.getByRole('button', { name: 'Save picks' }).click();
-  await counter.getByRole('heading', { name: 'Counter' }).waitFor({ timeout: 45_000 });
-  const rosalieEntry = await db.doc(`seasons/${YEAR}/weeks/wk03/entries/rosalie`).get();
-  const rosaliePay = (
-    await db.doc(`seasons/${YEAR}/weeks/wk03/entries/rosalie/payment/current`).get()
-  ).data();
-  check(
-    'a sheet entered at the counter is saved, marked paid cash',
-    rosalieEntry.exists &&
-      rosaliePay?.paymentStatus === 'paid' &&
-      rosaliePay?.paymentMethod === 'cash',
-  );
-
-  // Someone already in: the screen says who to ask, before anything is typed.
-  await counter.goto(`${APP}/counter/enter/jen`);
-  const asked = await counter
-    .getByText(/sheet is already in.*ask the commissioner/i)
-    .first()
-    .waitFor({ timeout: 45_000 })
-    .then(() => true)
-    .catch(() => false);
-  check('a sheet that is already in says "Ask the commissioner"', asked);
-
-  // The audit log has Devon's work under his name.
-  const devonLogs = await db.collection('auditLog').where('actorUid', '==', counterUid).get();
-  check(
-    'everything the counter did is in the audit log under the counter role',
-    devonLogs.size >= 4 &&
-      devonLogs.docs.every(
-        (d) => d.get('actorRole') === 'counter' && d.get('actorEmail') === COUNTER_EMAIL,
-      ),
-    `${devonLogs.size} entries`,
-  );
-
-  // The Back Office is not his.
-  await counter.goto(`${APP}/admin`);
-  const blocked = await counter
-    .getByText(/isn't an admin account/)
-    .waitFor({ timeout: 15_000 })
-    .then(() => true)
-    .catch(() => false);
-  check('the counter is kept out of the Back Office', blocked);
-  await counterCtx.close();
+  await visit(member, 'bingo-cards', '/b/cards', 'Nothing crossed off yet.');
+  await visit(member, 'bingo-board', '/b/board', 'The pot');
+  await visit(member, 'bingo-history', '/b/history', 'No games finished yet.');
+  await visit(member, 'bingo-rules', '/b/rules', 'A card is $10 a draw.');
+  await bingoCtx.close();
 
   check('no script errors on any screen', errors.length === 0, errors.slice(0, 3).join(' | '));
 } catch (err) {

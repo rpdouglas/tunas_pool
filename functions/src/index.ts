@@ -32,6 +32,7 @@ import {
   totals as bingoTotalsFor,
 } from './bingo/payments';
 import { approveDraw, correctDraw, enterDraw, skipDraw } from './bingo/draws';
+import { bingoStatus as bingoStatusFor } from './bingo/status';
 import { staffRoleOf, type StaffRole } from '../../shared/roles';
 import { createRateLimit, tidyClientError } from './clientErrors';
 import { auditInTransaction } from './audit';
@@ -384,6 +385,14 @@ async function bingoCaller(req: CallableRequest): Promise<string> {
 
 const isSavedAccount = (req: CallableRequest) =>
   req.auth?.token.firebase?.sign_in_provider !== 'anonymous';
+
+// Whether to show the bingo screens to this login (D-132). Also refreshes the `logins` pointer the
+// bingo rules read.
+export const bingoStatus = onCall(async (req) => {
+  requireSignedIn(req);
+  const { playerId } = await joinBoard(db, req.auth!.uid);
+  return bingoStatusFor(db, { playerId, staff: staffRoleOf(req.auth?.token) !== null });
+});
 
 export const bingoRedeemCode = onCall(async (req) => {
   requireSignedIn(req);

@@ -22,6 +22,7 @@ import { createCard, retireCard } from './cards';
 import { setIntent, setPayment, setPayout, totals } from './payments';
 import { approveDraw, correctDraw, enterDraw, skipDraw } from './draws';
 import { startCycle } from './cycle';
+import { bingoStatus } from './status';
 
 const db = testDb();
 const CYCLE = `bingoCycles/${FIRST}`;
@@ -523,5 +524,40 @@ describe('draws (D-114, D-126, D-129)', () => {
     ).rejects.toThrow(/cash payout only/);
     await setPayout(db, { ...BOSS, cycleId: FIRST, cardId: cA, paid: false, now: AFTER_DRAW });
     expect(await audits(db, 'bingo.payout')).toHaveLength(2);
+  });
+});
+
+describe('bingoStatus (D-132)', () => {
+  beforeEach(() => seedBingo(db, { start: false }));
+
+  it('while off: only members and staff see bingo; once on, everyone can find the code page', async () => {
+    expect(await bingoStatus(db, { playerId: 'p9', staff: false })).toMatchObject({
+      visible: false,
+      enabled: false,
+      member: false,
+    });
+    expect(await bingoStatus(db, { playerId: null, staff: false })).toMatchObject({
+      visible: false,
+    });
+    expect(await bingoStatus(db, { playerId: 'p1', staff: false })).toMatchObject({
+      visible: true,
+      member: true,
+    });
+    expect(await bingoStatus(db, { playerId: null, staff: true })).toMatchObject({
+      visible: true,
+      staff: true,
+    });
+    expect((await bingoStatus(db, { playerId: 'p9', staff: false })).rules).toBeNull();
+    expect((await bingoStatus(db, { playerId: 'p1', staff: false })).rules).toEqual({
+      priceCents: 1000,
+      operatorPct: 40,
+      maxWeeks: 26,
+    });
+    await setConfig(db, { ...BOSS, config: { ...CONFIG, enabled: true }, now: THU });
+    expect(await bingoStatus(db, { playerId: 'p9', staff: false })).toMatchObject({
+      visible: true,
+      enabled: true,
+      member: false,
+    });
   });
 });

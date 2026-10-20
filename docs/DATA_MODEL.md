@@ -378,7 +378,7 @@ Computed in shared code (`shared/`) so the web app and functions agree. Pure fun
 
 ## 11. Weekly 649 Bingo (Phase 6)
 
-The settled design for `docs/BINGO_PLAN.md`, from D-110 to D-130. **Built so far (Sprint 12):** the rules (`firestore.rules`, rows 67 to 80), `shared/bingo.ts` (§11.4, with §11.6 as its fixtures), and the simulation (`shared/bingoSim.ts`, `scripts/bingo-sim.ts`). **Sprint 13:** the functions (§11.5, `functions/src/bingo/`), with an integration test each and a two-game test from cards to payout (`bingoGame.int.test.ts`). The screens come in Sprint 14; if code and this section disagree, stop and flag it. Money is integer cents. ✍ marks a document only functions write. **No client writes any bingo document**: every change, a player's own intent and limits included, goes through a callable, so the rules for bingo are reads only.
+The settled design for `docs/BINGO_PLAN.md`, from D-110 to D-130. **Built so far (Sprint 12):** the rules (`firestore.rules`, rows 67 to 80), `shared/bingo.ts` (§11.4, with §11.6 as its fixtures), and the simulation (`shared/bingoSim.ts`, `scripts/bingo-sim.ts`). **Sprint 13:** the functions (§11.5, `functions/src/bingo/`), with an integration test each and a two-game test from cards to payout (`bingoGame.int.test.ts`). **Sprint 14:** the player screens (`src/features/bingo/`, one lazy chunk, D-132). The staff screens come in Sprint 15; if code and this section disagree, stop and flag it. Money is integer cents. ✍ marks a document only functions write. **No client writes any bingo document**: every change, a player's own intent and limits included, goes through a callable, so the rules for bingo are reads only.
 
 ### 11.1 Collections
 
@@ -449,6 +449,7 @@ Everything here is a pure function, and `applyDraw` calls it every time, so noth
 
 | Function | Who | Does |
 |---|---|---|
+| `bingoStatus` | any signed-in login | Whether to show the bingo screens (enabled, or a member, or staff, D-132), the caller's player, and the rules screen's price, operator %, and weeks. Refreshes the `logins` pointer. |
 | `bingoRedeemCode` | a signed-in player with a saved account | Checks the code against `bingo/secret` (attempts counted, R-14), requires `ageAttestedAt`, creates `bingoMembers` and the `logins` pointer (D-102). |
 | `bingoAddMember` | admin, counter | Adds a paper member with their age confirmed in person (D-114, D-115). |
 | `bingoSetCode` / `bingoSetConfig` | admin | Rotates the code (8 to 32 letters and numbers, compared without spaces, dashes, or case; stored as a salted hash, never logged); changes settings (applied from the next cycle). |
