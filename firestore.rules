@@ -91,6 +91,19 @@ service cloud.firestore {
           && request.time < w.winner.publishedAt + duration.value(3, 'd'));
     }
 
+    // At most one post every 30 seconds (D-109). Each post is written in a batch with the poster's
+    // `boardLast` stamp set to the server time; the stamp before it must be over 30 seconds old.
+    function boardLastPath(year, weekId, playerId) {
+      return /databases/$(database)/documents/seasons/$(year)/weeks/$(weekId)/boardLast/$(playerId);
+    }
+
+    function boardPaced(year, weekId, playerId) {
+      let last = boardLastPath(year, weekId, playerId);
+      return existsAfter(last)
+        && getAfter(last).data.at == request.time
+        && (!exists(last) || request.time > get(last).data.at + duration.value(30, 's'));
+    }
+
     function isMessageText(v) { return v is string && v.size() > 0 && v.size() <= 500; }
     function isPaymentIntent(v) { return v in ['will_do', 'already_did']; }
 
@@ -301,6 +314,7 @@ service cloud.firestore {
 
         allow create: if boardPoster(year, weekId, request.resource.data.playerId)
           && boardOpen(year, weekId)
+          && boardPaced(year, weekId, request.resource.data.playerId)
           && request.resource.data.keys().hasOnly([
                'playerId', 'displayName', 'text', 'createdAt', 'editedAt', 'hidden'])
           && request.resource.data.displayName
@@ -323,6 +337,16 @@ service cloud.firestore {
           && ownsPlayer(resource.data.playerId)
           && resource.data.hidden == false
           && request.time < resource.data.createdAt + duration.value(10, 'm');
+      }
+
+      // When a player last posted this week (D-109), written with each post. Only the time: setting
+      // it on its own only slows the writer down.
+      match /weeks/{weekId}/boardLast/{playerId} {
+        allow read: if ownsPlayer(playerId);
+        allow create, update: if boardPoster(year, weekId, playerId)
+          && request.resource.data.keys().hasOnly(['at'])
+          && request.resource.data.at == request.time;
+        allow delete: if false;
       }
 
       // Muted for the week: written by `boardMute`. The staff and the muted player can see it.

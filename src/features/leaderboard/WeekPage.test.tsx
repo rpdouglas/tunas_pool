@@ -37,6 +37,14 @@ vi.mock('../auth/useAuth', () => ({
 }));
 vi.mock('../claims/claimsData', () => ({ useMyProfile: () => ({ data: null }) }));
 vi.mock('./standingsData', () => ({ useSeasonWeekList: () => ({ data: [] }) }));
+let unreadPosts = 0;
+const markSeen = vi.fn();
+vi.mock('../board/boardData', () => ({
+  useBoardUnread: () => ({ count: unreadPosts, markSeen }),
+}));
+vi.mock('../board/BoardSection', () => ({
+  BoardSection: () => <section aria-label="Board">The board</section>,
+}));
 vi.mock('../../components/layout/GameDayPage', () => ({
   GameDayPage: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
 }));
@@ -134,6 +142,18 @@ it('counts ESPN finals as unofficial, keeps saved results, and refreshes on requ
   expect(toggle).toHaveAttribute('aria-expanded', 'true');
   expect(names).toBeVisible();
   expect(names).toHaveTextContent('Bears:');
+});
+
+it('says how many posts are new on the Board tab, and marks them seen when it opens (D-109)', async () => {
+  unreadPosts = 3;
+  show();
+  const tab = screen.getByRole('button', { name: /Board/ });
+  expect(tab).toHaveTextContent('Board3 new');
+  expect(markSeen).not.toHaveBeenCalled();
+  await userEvent.click(tab);
+  expect(markSeen).toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: /Board/ })).toHaveTextContent(/^Board$/);
+  unreadPosts = 0;
 });
 
 it('falls back to the saved results when ESPN cannot be reached', () => {

@@ -23,6 +23,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import { deleteObject, getBytes, ref, uploadBytes, uploadString } from 'firebase/storage';
 
@@ -832,6 +833,21 @@ describe('The weekly board (D-102): entrants read, paid players with an account 
     ...overrides,
   });
 
+  // A post goes in a batch with the poster's `boardLast` stamp (D-109), the way the app sends it.
+  const post = (
+    db: ReturnType<typeof google>,
+    id: string,
+    data: Record<string, unknown> = message(),
+    w: string = OPEN_WEEK,
+  ) => {
+    const batch = writeBatch(db);
+    batch.set(doc(db, `${board(w)}/${id}`), data);
+    batch.set(doc(db, `${weekPath(w)}/boardLast/${String(data.playerId)}`), {
+      at: serverTimestamp(),
+    });
+    return batch.commit();
+  };
+
   // Alice (p1) has an entry in the open week; her login is indexed. Paid unless a test says not.
   async function seedBoard({ paid = true }: { paid?: boolean } = {}) {
     await env.withSecurityRulesDisabled(async (ctx) => {
@@ -876,33 +892,28 @@ describe('The weekly board (D-102): entrants read, paid players with an account 
       });
     });
     await assertFails(getDocs(collection(google('mallory'), board())));
-    await assertFails(setDoc(doc(google('mallory'), `${board()}/x`), message()));
+    await assertFails(post(google('mallory'), 'x'));
   });
 
   it('#60 a paid player with a saved account posts, with the server time and their own name', async () => {
     await seedBoard();
-    await assertSucceeds(setDoc(doc(google('alice'), `${board()}/m2`), message()));
-    await assertFails(
-      setDoc(doc(google('alice'), `${board()}/m3`), message({ createdAt: phoneClock() })),
-    );
-    await assertFails(
-      setDoc(doc(google('alice'), `${board()}/m4`), message({ displayName: 'Tuna' })),
-    );
-    await assertFails(setDoc(doc(google('alice'), `${board()}/m5`), message({ hidden: true })));
-    await assertFails(setDoc(doc(google('alice'), `${board()}/m6`), message({ extra: 1 })));
-    await assertFails(setDoc(doc(google('alice'), `${board()}/m7`), message({ text: '' })));
-    await assertFails(
-      setDoc(doc(google('alice'), `${board()}/m8`), message({ text: 'x'.repeat(501) })),
-    );
+    // Refused first, so the 30-second pace (row 66) can't be the reason.
+    await assertFails(post(google('alice'), 'm3', message({ createdAt: phoneClock() })));
+    await assertFails(post(google('alice'), 'm4', message({ displayName: 'Tuna' })));
+    await assertFails(post(google('alice'), 'm5', message({ hidden: true })));
+    await assertFails(post(google('alice'), 'm6', message({ extra: 1 })));
+    await assertFails(post(google('alice'), 'm7', message({ text: '' })));
+    await assertFails(post(google('alice'), 'm8', message({ text: 'x'.repeat(501) })));
     // Never as someone else.
-    await assertFails(setDoc(doc(google('bob'), `${board()}/m9`), message()));
+    await assertFails(post(google('bob'), 'm9'));
+    await assertSucceeds(post(google('alice'), 'm2'));
   });
 
   it('#61 a guest, an unpaid entry, and a muted player cannot post', async () => {
     await seedBoard({ paid: false });
-    await assertFails(setDoc(doc(google('alice'), `${board()}/u1`), message()));
+    await assertFails(post(google('alice'), 'u1'));
     await seedBoard();
-    await assertFails(setDoc(doc(guest('alice'), `${board()}/g1`), message()));
+    await assertFails(post(guest('alice'), 'g1'));
     await env.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), `${weekPath(OPEN_WEEK)}/boardMutes/p1`), {
         reason: 'Over the line',
@@ -910,10 +921,17 @@ describe('The weekly board (D-102): entrants read, paid players with an account 
         at: Timestamp.now(),
       });
     });
-    await assertFails(setDoc(doc(google('alice'), `${board()}/x1`), message()));
+    await assertFails(post(google('alice'), 'x1'));
     // She can see that she is muted; nobody else but the staff can.
     await assertSucceeds(getDoc(doc(google('alice'), `${weekPath(OPEN_WEEK)}/boardMutes/p1`)));
     await assertFails(getDoc(doc(google('bob'), `${weekPath(OPEN_WEEK)}/boardMutes/p1`)));
+    // The staff list the week's mutes, to lift one (D-109); a player can't list them.
+    const mutes = `${weekPath(OPEN_WEEK)}/boardMutes`;
+    await assertSucceeds(getDocs(collection(admin(), mutes)));
+    await assertSucceeds(
+      getDocs(collection(env.authenticatedContext('devon', { counter: true }).firestore(), mutes)),
+    );
+    await assertFails(getDocs(collection(google('alice'), mutes)));
     await assertFails(
       setDoc(doc(google('alice'), `${weekPath(OPEN_WEEK)}/boardMutes/p1`), { reason: 'x' }),
     );
@@ -943,8 +961,8 @@ describe('The weekly board (D-102): entrants read, paid players with an account 
         );
       }
     });
-    await assertSucceeds(setDoc(doc(google('alice'), `${board('finalRecent')}/a`), message()));
-    await assertFails(setDoc(doc(google('alice'), `${board('finalOld')}/a`), message()));
+    await assertSucceeds(post(google('alice'), 'a', message(), 'finalRecent'));
+    await assertFails(post(google('alice'), 'a', message(), 'finalOld'));
   });
 
   it('#63 your own post: edit the text or delete it for ten minutes, never once hidden', async () => {
@@ -1011,5 +1029,32 @@ describe('The weekly board (D-102): entrants read, paid players with an account 
     await assertSucceeds(getDoc(doc(google('alice'), 'logins/alice')));
     await assertFails(getDoc(doc(google('alice'), 'logins/bob')));
     await assertFails(setDoc(doc(google('carol'), 'logins/carol'), { playerId: 'p1' }));
+  });
+
+  it('#66 one post every 30 seconds, stamped with the server time in the same batch (D-109)', async () => {
+    await seedBoard();
+    const last = `${weekPath(OPEN_WEEK)}/boardLast/p1`;
+    // A post without its stamp, or stamped with the phone's clock.
+    await assertFails(setDoc(doc(google('alice'), `${board()}/n1`), message()));
+    const alice = google('alice');
+    const phoneStamp = writeBatch(alice);
+    phoneStamp.set(doc(alice, `${board()}/n2`), message());
+    phoneStamp.set(doc(alice, last), { at: phoneClock() });
+    await assertFails(phoneStamp.commit());
+    // The first post goes; a second straight after it doesn't.
+    await assertSucceeds(post(google('alice'), 'n3'));
+    await assertFails(post(google('alice'), 'n4'));
+    // Over 30 seconds later it does.
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), last), { at: Timestamp.fromMillis(Date.now() - 31_000) });
+    });
+    await assertSucceeds(post(google('alice'), 'n5'));
+    // The stamp is only the time, only for a poster, and never deleted; only its owner reads it.
+    await assertFails(setDoc(doc(google('alice'), last), { at: serverTimestamp(), n: 1 }));
+    await assertFails(setDoc(doc(guest('alice'), last), { at: serverTimestamp() }));
+    await assertFails(setDoc(doc(google('bob'), last), { at: serverTimestamp() }));
+    await assertFails(deleteDoc(doc(google('alice'), last)));
+    await assertSucceeds(getDoc(doc(google('alice'), last)));
+    await assertFails(getDoc(doc(google('bob'), last)));
   });
 });

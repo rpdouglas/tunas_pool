@@ -4,6 +4,8 @@ import {
   boardIsOpen,
   canChangeMessage,
   checkMessage,
+  secondsToWait,
+  unreadCount,
   type BoardViewer,
 } from './board';
 
@@ -82,5 +84,33 @@ describe('canChangeMessage and checkMessage', () => {
     expect(checkMessage('  Go Jags  ')).toEqual({ ok: true, text: 'Go Jags' });
     expect(checkMessage('   ').ok).toBe(false);
     expect(checkMessage('x'.repeat(501)).ok).toBe(false);
+  });
+});
+
+describe('secondsToWait (D-109)', () => {
+  it('counts down the 30 seconds after your last post', () => {
+    expect(secondsToWait(null, 1_000)).toBe(0);
+    expect(secondsToWait(0, 1_000)).toBe(29);
+    expect(secondsToWait(0, 29_001)).toBe(1);
+    expect(secondsToWait(0, 30_000)).toBe(0);
+  });
+});
+
+describe('unreadCount (D-109)', () => {
+  const m = (playerId: string, createdAtMs: number, hidden = false) => ({
+    playerId,
+    createdAtMs,
+    hidden,
+  });
+  const posts = [m('p2', 100), m('p1', 200), m('p3', 300, true), m('p2', 400)];
+
+  it('counts others’ posts since your last look, never your own or a hidden one', () => {
+    expect(unreadCount(posts, 'p1', 150)).toBe(1);
+    expect(unreadCount(posts, 'p1', 400)).toBe(0);
+  });
+
+  it('before your first look, every such post is new', () => {
+    expect(unreadCount(posts, 'p1', null)).toBe(2);
+    expect(unreadCount(posts, null, null)).toBe(3);
   });
 });

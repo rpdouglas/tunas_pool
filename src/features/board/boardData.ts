@@ -3,7 +3,7 @@
  * rules check (firestore.rules, the board section); hiding and muting go through the audited
  * callables `boardHide` and `boardMute`. The board updates live while it is on screen.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   collection,
@@ -17,10 +17,14 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
   type Timestamp,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
+import { unreadCount } from '@shared/board';
 import { db, functions } from '../../lib/firebase';
+import type { WeekView } from '../../lib/weekModel';
+import { useAuth } from '../auth/useAuth';
 
 const weekPath = (year: string, weekId: string) => `seasons/${year}/weeks/${weekId}`;
 
@@ -134,13 +138,18 @@ export function useBoardReports(year: string, weekId: string, staff: boolean) {
   return counts;
 }
 
+/**
+ * A post, in a batch with the poster's `boardLast` stamp: the rules allow one post every 30
+ * seconds and read the stamp to tell (D-109).
+ */
 export function postMessage(
   year: string,
   weekId: string,
   author: { playerId: string; displayName: string },
   text: string,
 ) {
-  return setDoc(doc(collection(db, `${weekPath(year, weekId)}/board`)), {
+  const batch = writeBatch(db);
+  batch.set(doc(collection(db, `${weekPath(year, weekId)}/board`)), {
     playerId: author.playerId,
     displayName: author.displayName,
     text,
@@ -148,6 +157,10 @@ export function postMessage(
     editedAt: null,
     hidden: false,
   });
+  batch.set(doc(db, `${weekPath(year, weekId)}/boardLast/${author.playerId}`), {
+    at: serverTimestamp(),
+  });
+  return batch.commit();
 }
 
 export function editMessage(year: string, weekId: string, id: string, text: string) {
@@ -182,4 +195,82 @@ export function setMute(
   reason: string,
 ) {
   return httpsCallable(functions, 'boardMute')({ year, weekId, playerId, muted, reason });
+}
+
+// When this viewer last opened each week's board, kept in their own browser (D-109). A private
+// window or blocked storage just means every post counts as new.
+const seenKey = (year: string, weekId: string) => `tunas:boardSeen:${year}/${weekId}`;
+
+function readSeen(key: string): number | null {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? Number(value) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * How many posts came in since this viewer last opened the week's board (D-109), for the Board
+ * tab, and `markSeen` for when they open it. Zero for someone who can't read the board.
+ */
+export function useBoardUnread(year: string, week: WeekView) {
+  const { user, isAdmin, isCounter } = useAuth();
+  const join = useBoardJoin(user?.uid);
+  const playerId = join.data ?? null;
+  const standing = useBoardStanding(year, week.id, playerId);
+  const canRead = isAdmin || isCounter || standing.data?.entered === true;
+  const board = useBoardMessages(year, week.id, join.isSuccess && canRead);
+  const key = seenKey(year, week.id);
+  const [seen, setSeen] = useState<Record<string, number | null>>({});
+  const lastSeen = key in seen ? seen[key] : readSeen(key);
+  const latest = board.messages.reduce((max, m) => Math.max(max, m.createdAtMs), 0);
+
+  const markSeen = useCallback(() => {
+    if (!latest || (lastSeen !== null && lastSeen >= latest)) return;
+    try {
+      localStorage.setItem(key, String(latest));
+    } catch {
+      // Storage blocked: remember it for this visit only.
+    }
+    setSeen((prev) => ({ ...prev, [key]: latest }));
+  }, [key, latest, lastSeen]);
+
+  return {
+    count: canRead && !board.loading ? unreadCount(board.messages, playerId, lastSeen) : 0,
+    markSeen,
+  };
+}
+
+/** Who is muted on this week's board, with the reason, for the staff only (D-109). */
+export function useBoardMutes(year: string, weekId: string, staff: boolean) {
+  const [muted, setMuted] = useState<{ playerId: string; displayName: string; reason: string }[]>(
+    [],
+  );
+  useEffect(() => {
+    if (!staff) return;
+    let live = true;
+    const stop = onSnapshot(
+      collection(db, `${weekPath(year, weekId)}/boardMutes`),
+      async (snap) => {
+        const rows = await Promise.all(
+          snap.docs.map(async (d) => {
+            const player = await getDoc(doc(db, `players/${d.id}`)).catch(() => null);
+            return {
+              playerId: d.id,
+              displayName: String(player?.get('displayName') ?? 'A player'),
+              reason: String(d.get('reason') ?? ''),
+            };
+          }),
+        );
+        if (live) setMuted(rows.sort((a, b) => a.displayName.localeCompare(b.displayName)));
+      },
+      () => setMuted([]),
+    );
+    return () => {
+      live = false;
+      stop();
+    };
+  }, [year, weekId, staff]);
+  return muted;
 }
