@@ -20,6 +20,7 @@ expects files this repo does not have.)
 
 Read in full: `CLAUDE.md`, `docs/ACTIVE_CYCLE.md` (the top sprint), `docs/DECISIONS.md`
 (headings and the last ~10 rows), `docs/PROJECT_PLAN.md` §7 (open decisions).
+For bingo, `docs/BINGO_PLAN.md` holds the gates (G0 to G2) and sprint status.
 If any is missing, report MISSING and stop.
 
 ## Step 2: Checks
@@ -41,7 +42,11 @@ List collections in rules with no matrix row.
 - Each collection in `docs/DATA_MODEL.md` §2 appears in `firestore.rules`
   (a collection with no rule is a **security gap**, Critical).
 - Each `onCall` exported from `functions/src/index.ts` (or its modules) is listed in
-  DATA_MODEL §5; each §5 function exists in code.
+  DATA_MODEL §5, or §11.5 for the `bingo*` callables (Weekly 649 Bingo); each function
+  listed there exists in code.
+- The bingo collections (`bingo/*`, `bingoMembers`, `bingoRedeemAttempts`, `bingoCards`,
+  `bingoCycles` and its subcollections) are documented in DATA_MODEL §11, not §2-§3.
+  Their rules tests are in `tests/rules/bingo.rules.test.ts` (matrix rows 67 to 80).
 - Enums in §4 match the types in `shared/`.
 
 **D. Hard-never list (CLAUDE.md §8), by grep.**

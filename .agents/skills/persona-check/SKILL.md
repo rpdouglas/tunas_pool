@@ -18,7 +18,9 @@ working models; when a persona and a real player disagree, the real player wins.
 
 1. Read `docs/PERSONAS.md` §0 (the ten checks) and §1 (hierarchy). Then read §3 only
    for the personas you name, plus §4 for any relevant anti-persona (Double-Dipper,
-   Late Pick Lobbyist, Snoop). Do not read all 885 lines.
+   Late Pick Lobbyist, Snoop). Do not read the whole file.
+   For **Weekly 649 Bingo** (anything under `/b`, `features/bingo`, `functions/src/bingo`,
+   or `shared/bingo*`), also read §8: bingo's own responsible-play standard (D-112).
 2. Name the **primary persona**. Optimise for them; test the secondaries against the result.
    Never design for an average.
 3. Copy that persona's UX Constraints into the feature's acceptance criteria.
@@ -32,7 +34,8 @@ working models; when a persona and a real player disagree, the real player wins.
    | Commissioner Counter | One-handed, customer waiting, ~10 seconds, with an undo? |
    | Border | Identical for a NY-side player with no Canadian bank account? |
    | Welcome | A Cornwall first-timer understands it with no insider words, without exposure? |
-   | Responsible-Play | Encourages spend beyond the fixed fee, IOUs, tabs, or chasing? |
+   | Responsible-Play | Encourages spend beyond the fixed fee, IOUs, tabs, or chasing? (Pool only; bingo runs the Bingo Check below instead.) |
+   | Bingo Check (bingo only, PERSONAS §8) | Makes it easier to spend more, faster, or without noticing; tells anyone they are close; compares people by how much they play; or lets anyone but the player loosen a limit? |
    | Privacy | Would a player feel watched, ranked or exposed (phones, who owes)? |
 
 5. Cross-check the design against the hard constraints in CLAUDE.md §4 and §8
@@ -47,7 +50,7 @@ working models; when a persona and a real player disagree, the real player wins.
 - **Dale Deadline Test:** ...
 - **Gerald Trust Test:** ...
 - **Commissioner Counter Test:** ...
-- **Border / Welcome / Responsible-Play / Privacy:** ...
+- **Border / Welcome / Responsible-Play (or Bingo Check) / Privacy:** ...
 ```
 
 If any test fails, say what to redesign and stop: do not start building until it passes
