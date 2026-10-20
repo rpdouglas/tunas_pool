@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import {
+  Award,
   ClipboardList,
   History,
   House,
@@ -183,6 +184,9 @@ export function MenuView({
               )}
               <DrawerLink to="/standings" icon={<Trophy size={24} />} onNavigate={close}>
                 Season standings
+              </DrawerLink>
+              <DrawerLink to="/hall-of-fame" icon={<Award size={24} />} onNavigate={close}>
+                Hall of Fame
               </DrawerLink>
               <DrawerLink to="/history" icon={<History size={24} />} onNavigate={close}>
                 Your history

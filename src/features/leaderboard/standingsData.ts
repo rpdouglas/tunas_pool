@@ -5,6 +5,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
+import type { HallSeason } from '@shared/hallOfFame';
 import { rankStandings, type AllTimeStats, type StandingRow } from '@shared/standings';
 import type { Standing } from '@shared/types';
 import { db } from '../../lib/firebase';
@@ -87,6 +88,27 @@ export function useMyAllTime(playerId: string | undefined) {
     queryFn: async (): Promise<AllTimeStats | null> => {
       const snap = await getDoc(doc(db, 'players', playerId!, 'stats', 'allTime'));
       return snap.exists() ? (snap.data() as AllTimeStats) : null;
+    },
+  });
+}
+
+/**
+ * Every real season's standings, for the Hall of Fame (D-108). Test seasons never count, the same
+ * as the all-time stats. One read per season: a few a decade.
+ */
+export function useHallOfFameSeasons(signedIn: boolean) {
+  return useQuery({
+    queryKey: ['hallOfFame'],
+    enabled: signedIn,
+    queryFn: async (): Promise<HallSeason[]> => {
+      const seasons = await getDocs(collection(db, 'seasons'));
+      const years = seasons.docs.map((d) => d.id).filter((year) => !year.endsWith('-test'));
+      return Promise.all(
+        years.map(async (year) => {
+          const snap = await getDocs(collection(db, 'seasons', year, 'standings'));
+          return { year, rows: snap.docs.map((d) => toRow(d.id, d.data() as Standing)) };
+        }),
+      );
     },
   });
 }

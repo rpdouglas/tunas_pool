@@ -100,6 +100,12 @@ export default function StandingsPage() {
       )}
 
       <Link
+        to="/hall-of-fame"
+        className="inline-flex min-h-touch items-center justify-center text-body text-ink-inverse underline"
+      >
+        Hall of Fame: the all-time records
+      </Link>
+      <Link
         to="/"
         className="inline-flex min-h-touch items-center justify-center text-body text-ink-inverse underline"
       >

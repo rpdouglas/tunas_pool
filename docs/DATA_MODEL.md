@@ -193,6 +193,7 @@ Readable by the owner and admin. Readable by everyone once `week.revealed == tru
 - **Worked out again from the entries every time, never added to** (`functions/src/season.ts`, `shared/standings.ts`), so a correction, a merge, or a retried call cannot leave them off. Refreshed after a winner is published or corrected and after a claim, unlink, or merge, and on request with `adminRecomputeStandings`.
 - **Ranked** by correct picks, then win rate, then name. Players level on correct picks share a place.
 - Readable by any signed-in player: this document is the public player profile (a name and a record). It holds no phone, email, or payment.
+- The Hall of Fame (D-108) is worked out in the browser from these documents across every real season; it stores nothing of its own.
 
 ### 3.8b The weekly board (D-102)
 
