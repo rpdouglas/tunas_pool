@@ -253,7 +253,7 @@ All eleven sprints are built and released. What that does and does not mean:
 12. **Move to the pool's own project and `tunaspool.ca`** (D-100), between two weeks, whenever it suits. Not urgent. Steps in `docs/MIGRATION.md`: Part 1 (domain, project, dry run) can be done ahead without players noticing.
 13. ~~**Welcome for first-time visitors**~~ Built (D-101): a panel on the home screen for anyone with no profile yet, saying no account is needed.
 14. ~~**Weekly message board**~~ Built (D-102): a Board tab on each week's page. Not built yet: a rate limit, an unread count on the tab, and a button to lift a mute.
-15. ~~**Team logos and colours on By game**~~ Built (D-103), with the score, your pick, and an Upset tag. Live game status built too (D-104). Next: the Monday-night tiebreaker card.
+15. ~~**Team logos and colours on By game**~~ Built (D-103), with the score, your pick, and an Upset tag. Live game status (D-104) and the Monday night tiebreaker card (D-105) built too.
 
 ## 8. Parked (post-v1 ideas)
 
