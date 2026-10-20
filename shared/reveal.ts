@@ -99,8 +99,10 @@ export function sharePercent(count: number, total: number): number {
 }
 
 /**
- * The short line under a decided game, like "Only 12 of 40 picked the Bears." It talks about the
- * game, never about anyone being out of it (PERSONAS: the Slump rule). Null before a result.
+ * The short line under a decided game, only when it tells you something the bar doesn't: an upset
+ * ("Only 7 of 36 picked the Texans.", "Nobody picked the Jets.") or a tie. An ordinary result has
+ * no line, since the counts are already beside each team (D-107). It talks about the game, never
+ * about anyone being out of it (PERSONAS: the Slump rule). Null before a result.
  */
 export function shareLine(
   game: { away: string; home: string },
@@ -109,12 +111,11 @@ export function shareLine(
 ): string | null {
   if (!result || share.total === 0) return null;
   if (result === 'tie') return 'This one ended in a tie, so it is not a win for anyone.';
+  if (!isUpset(share, result)) return null;
   const winner = result === 'home' ? game.home : game.away;
   const count = share[result].length;
-  if (count === share.total) return `Everyone picked the ${winner}.`;
   if (count === 0) return `Nobody picked the ${winner}.`;
-  const few = count / share.total <= UPSET_SHARE;
-  return `${few ? 'Only ' : ''}${count} of ${share.total} picked the ${winner}.`;
+  return `Only ${count} of ${share.total} picked the ${winner}.`;
 }
 
 /** At or under this share of the pool picked the winner: "Only 7 of 36" and an Upset tag (D-103). */

@@ -124,6 +124,16 @@ it('counts ESPN finals as unofficial, keeps saved results, and refreshes on requ
   expect(within(bears).getByText('14')).toBeInTheDocument();
   expect(within(bears).getByText('21')).toBeInTheDocument();
   expect(within(bears).getByText(/Final/)).toHaveTextContent('Final (unofficial)');
+
+  // "Who picked what" sits on the line's row and opens the names below it (D-107).
+  const toggle = within(bears).getByRole('button', { name: /Who picked what/ });
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  const names = document.getElementById(toggle.getAttribute('aria-controls')!)!;
+  expect(names).not.toBeVisible();
+  await userEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  expect(names).toBeVisible();
+  expect(names).toHaveTextContent('Bears:');
 });
 
 it('falls back to the saved results when ESPN cannot be reached', () => {

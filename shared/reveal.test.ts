@@ -118,16 +118,20 @@ describe('gameShare and shareLine', () => {
     expect(shareLine(game, gameShare('g03', ENTRIES), undefined)).toBeNull();
   });
 
-  it('says "Only" when few picked the winner, and never calls anyone out of it', () => {
+  it('says "Only" for an upset, and never calls anyone out of it', () => {
     const line = shareLine(game, gameShare('g03', ENTRIES), 'home');
     expect(line).toBe('Only 1 of 4 picked the Bears.');
     expect(line).not.toMatch(/eliminated|out of/i);
-    expect(shareLine(game, gameShare('g03', ENTRIES), 'away')).toBe('2 of 4 picked the Packers.');
   });
 
-  it('handles everyone, nobody, and a tie', () => {
+  it('says nothing for an ordinary result: the bar already shows the counts (D-107)', () => {
+    expect(shareLine(game, gameShare('g03', ENTRIES), 'away')).toBeNull();
     const all = [entry('A', { g01: 'home' }), entry('B', { g01: 'home' })];
-    expect(shareLine(game, gameShare('g01', all), 'home')).toBe('Everyone picked the Bears.');
+    expect(shareLine(game, gameShare('g01', all), 'home')).toBeNull();
+  });
+
+  it('handles nobody and a tie', () => {
+    const all = [entry('A', { g01: 'home' }), entry('B', { g01: 'home' })];
     expect(shareLine(game, gameShare('g01', all), 'away')).toBe('Nobody picked the Packers.');
     expect(shareLine(game, gameShare('g01', all), 'tie')).toMatch(/tie/);
     expect(shareLine(game, gameShare('g01', []), 'home')).toBeNull();
