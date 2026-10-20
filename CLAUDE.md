@@ -40,6 +40,8 @@ docs/
   ACTIVE_CYCLE.md          <- current sprint (create at Sprint 0; update every sprint)
   DECISIONS.md             <- ADR-style log of decisions (create at Sprint 0)
   MIGRATION.md             <- runbook for moving to the pool's own project and tunaspool.ca (D-100, not started)
+  BINGO_PLAN.md            <- Weekly 649 Bingo (Phase 6, proposed): gates, sprints S11–S16, open decisions
+  bingo/BUILD_SPEC.md      <- Ryan's bingo build spec as written (2026-10-20); the plan and review correct it
   reports/                 <- dated review snapshots (YYYY-MM-DD-name.md); read-only history, never a source of truth
 ```
 
