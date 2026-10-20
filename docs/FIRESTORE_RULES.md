@@ -111,6 +111,19 @@ service cloud.firestore {
           && request.time < w.winner.publishedAt + duration.value(3, 'd'));
     }
 
+    // At most one post every 30 seconds (D-109). Each post is written in a batch with the poster's
+    // `boardLast` stamp set to the server time; the stamp before it must be over 30 seconds old.
+    function boardLastPath(year, weekId, playerId) {
+      return /databases/$(database)/documents/seasons/$(year)/weeks/$(weekId)/boardLast/$(playerId);
+    }
+
+    function boardPaced(year, weekId, playerId) {
+      let last = boardLastPath(year, weekId, playerId);
+      return existsAfter(last)
+        && getAfter(last).data.at == request.time
+        && (!exists(last) || request.time > get(last).data.at + duration.value(30, 's'));
+    }
+
     function isMessageText(v) { return v is string && v.size() > 0 && v.size() <= 500; }
     function isPaymentIntent(v) { return v in ['will_do', 'already_did']; }
 
@@ -321,6 +334,7 @@ service cloud.firestore {
 
         allow create: if boardPoster(year, weekId, request.resource.data.playerId)
           && boardOpen(year, weekId)
+          && boardPaced(year, weekId, request.resource.data.playerId)
           && request.resource.data.keys().hasOnly([
                'playerId', 'displayName', 'text', 'createdAt', 'editedAt', 'hidden'])
           && request.resource.data.displayName
@@ -343,6 +357,16 @@ service cloud.firestore {
           && ownsPlayer(resource.data.playerId)
           && resource.data.hidden == false
           && request.time < resource.data.createdAt + duration.value(10, 'm');
+      }
+
+      // When a player last posted this week (D-109), written with each post. Only the time: setting
+      // it on its own only slows the writer down.
+      match /weeks/{weekId}/boardLast/{playerId} {
+        allow read: if ownsPlayer(playerId);
+        allow create, update: if boardPoster(year, weekId, playerId)
+          && request.resource.data.keys().hasOnly(['at'])
+          && request.resource.data.at == request.time;
+        allow delete: if false;
       }
 
       // Muted for the week: written by `boardMute`. The staff and the muted player can see it.
@@ -398,7 +422,7 @@ service cloud.firestore {
 - **Finding your profile:** a login reads its profile with `where('claimedByUid', '==', uid)`, which the player read rule allows because it checks the document's own `claimedByUid`. After `adoptGuestProfile` or an approved claim, the `playerId` is no longer the login's `uid`, so the client must never assume `players/{uid}`. A direct read of a profile that does not exist is denied rather than returned empty, so use the query.
 - **Draft weeks:** an admin edits a draft directly from the client, but the rules keep derived fields out of reach: a new week must start with `revealed: false`, zero counters, and no winner, and draft edits cannot touch `status`, `revealed`, the counters, results, the winner, or `payoutSent`. Status changes go through `adminSetWeekStatus`.
 
-- **The weekly board (D-102):** `board` posts are read by anyone who entered that week and by the staff (`admin` or `counter`, row 57, 58). Rules can't look up which player a login belongs to, so `boardJoin` writes a pointer, `logins/{uid}` = `{ playerId }`, which no client can write (row 65). Every read and post re-checks the live profile with `ownsPlayer()`, so a pointer left behind by an unlink or a merge grants nothing (row 59). A post needs a saved account (`sign_in_provider` is not `anonymous`), a **paid** entry that week, no mute, the server time, the poster's own current display name, and 1 to 500 characters (rows 60, 61). The board takes posts from the week opening until three days after the winner is published (row 62). The writer may change the text or delete the post for ten minutes, never once it is hidden (row 63). Hiding a post and muting a player are the audited callables `boardHide` and `boardMute`; no client, the staff included, can do either directly (row 64). A report's ID is `{messageId}_{playerId}`, so each player reports a post once; only the staff read reports (row 65).
+- **The weekly board (D-102):** `board` posts are read by anyone who entered that week and by the staff (`admin` or `counter`, row 57, 58). Rules can't look up which player a login belongs to, so `boardJoin` writes a pointer, `logins/{uid}` = `{ playerId }`, which no client can write (row 65). Every read and post re-checks the live profile with `ownsPlayer()`, so a pointer left behind by an unlink or a merge grants nothing (row 59). A post needs a saved account (`sign_in_provider` is not `anonymous`), a **paid** entry that week, no mute, the server time, the poster's own current display name, and 1 to 500 characters (rows 60, 61). The board takes posts from the week opening until three days after the winner is published (row 62). The writer may change the text or delete the post for ten minutes, never once it is hidden (row 63). Hiding a post and muting a player are the audited callables `boardHide` and `boardMute`; no client, the staff included, can do either directly (row 64). A report's ID is `{messageId}_{playerId}`, so each player reports a post once; only the staff read reports (row 65). **Pace (D-109):** at most one post every 30 seconds. Each post is written in a batch with the poster's `boardLast/{playerId}` stamp set to the server time; the rules check the stamp after the write is the server time and the one before it is over 30 seconds old. The stamp holds only `at`, is written only by that player while they can post, is read only by its owner, and is never deleted; setting it on its own only slows the writer down (row 66).
 
 ## 3. Storage rules
 
@@ -511,3 +535,4 @@ Each row is at least one passing and one failing test.
 | 63 | The writer edits text or deletes within ten minutes; edits with a phone time, sets `hidden`, changes the name; another player edits or deletes; edits or deletes after ten minutes or once hidden | allow / deny |
 | 64 | The admin or the counter hides a post, deletes it, or writes a mute from the browser | deny |
 | 65 | A reader reports a post under `{messageId}_{playerId}`; a mismatched ID; a non-entrant reports; a player lists reports; the admin lists them; a login reads its own and another's `logins` pointer; a client writes one | allow / deny / deny / deny / allow / allow-deny / deny |
+| 66 | A post without its `boardLast` stamp, or stamped with the phone's clock; a second post within 30 seconds; a stamp with an extra field, by a guest, or by another player; deleting the stamp; another player reading it | deny (a post 31 seconds after the last, and the owner reading their stamp: allow) |

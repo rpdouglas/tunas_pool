@@ -41,6 +41,7 @@ seasons/{year}
       private/picks                          (hidden until revealed)
     board/{messageId}                        (the weekly board, D-102)
     boardMutes/{playerId}                    (function-written)
+    boardLast/{playerId}                     (the poster's last post time, D-109)
     boardReports/{messageId_playerId}        (staff-read)
   standings/{playerId}                       (function-written)
 config/pool                                  (admin-written settings)
@@ -199,7 +200,11 @@ Readable by the owner and admin. Readable by everyone once `week.revealed == tru
 
 `seasons/{year}/weeks/{weekId}/board/{messageId}`: `playerId`, `displayName` (the poster's current name, checked by the rules), `text` (1 to 500 characters), `createdAt` (server time), `editedAt` (server time or null), `hidden` (boolean). Hiding adds `hiddenAt` and `hiddenBy` and empties `text`; the words are kept only in the audit log. Read by anyone who entered that week and by the staff; posted by a paid entrant with a saved account who isn't muted, from the week opening until three days after the winner is published. The writer may edit `text` or delete the post for ten minutes.
 
-`.../boardMutes/{playerId}`: `reason`, `by`, `at`. Written by `boardMute`; read by the staff and the muted player.
+`.../boardMutes/{playerId}`: `reason`, `by`, `at`. Written by `boardMute`; read by the staff (who list them to lift one, D-109) and the muted player.
+
+`.../boardLast/{playerId}`: `at` (server time). When the player last posted this week (D-109), written by the client in the same batch as each post; the rules allow one post every 30 seconds by comparing it. Read only by its owner; never deleted.
+
+The Board tab's "3 new" count is kept per viewer in their own browser (`localStorage`, the time they last opened that week's board); nothing is stored for it.
 
 `.../boardReports/{messageId}_{playerId}`: `messageId`, `playerId` (the reporter), `createdAt`. One per player per post; read by the staff.
 

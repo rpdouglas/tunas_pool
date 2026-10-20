@@ -15,6 +15,7 @@ import { TiebreakerPanel } from '../components/ui/TiebreakerPanel';
 import { tiebreakSummary } from '@shared/tiebreak';
 import { BoardPost } from '../features/board/BoardPost';
 import { BoardComposer } from '../features/board/BoardComposer';
+import { BoardMutes } from '../features/board/BoardMutes';
 import { HOUSE_RULES } from '@shared/board';
 import { useToast } from '../components/ui/toastContext';
 import { PaymentRow } from '../features/admin/payments/PaymentRow';
@@ -473,6 +474,17 @@ export default function Styleguide() {
                     />
                   ))}
                 </ol>
+                <BoardMutes
+                  muted={[
+                    { playerId: 'p7', displayName: 'Hank O.', reason: 'Brought up a mom' },
+                    {
+                      playerId: 'p8',
+                      displayName: 'Bernadette Lavallée-Thompson',
+                      reason: 'Kept at it after a warning',
+                    },
+                  ]}
+                  onLift={async () => undefined}
+                />
               </div>
             </Panel>
           </div>

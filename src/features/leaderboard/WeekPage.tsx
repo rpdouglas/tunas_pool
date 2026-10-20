@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   PICK_MARK_TEXT,
@@ -26,6 +26,7 @@ import { WinnerBanner } from '../../components/ui/WinnerBanner';
 import type { WeekView } from '../../lib/weekModel';
 import { useGuestSession } from '../auth/useAuth';
 import { BoardSection } from '../board/BoardSection';
+import { useBoardUnread } from '../board/boardData';
 import { useMyProfile } from '../claims/claimsData';
 import { useRevealEntries, useRevealWeek, useWeekScores } from './revealData';
 import { useSeasonWeekList } from './standingsData';
@@ -183,6 +184,12 @@ function Revealed({
   feed: Feed;
 }) {
   const [view, setView] = useState<View>('standings');
+  const unread = useBoardUnread(week.year, week);
+  const { markSeen } = unread;
+  // Open on the board: everything on it is seen, including posts that arrive while it is open.
+  useEffect(() => {
+    if (view === 'board') markSeen();
+  }, [view, markSeen]);
   const games = [...week.games].sort((a, b) => a.order - b.order);
   const gameIds = games.map((g) => g.id);
   // A final week is the commissioner's results only; a locked one also counts ESPN's finals.
@@ -332,6 +339,9 @@ function Revealed({
             className="min-h-touch min-w-[6rem] flex-1 rounded-pill border-2 border-white bg-black/30 px-3 font-heading text-h3 text-ink-inverse aria-pressed:bg-white aria-pressed:text-purple-700"
           >
             {label}
+            {value === 'board' && view !== 'board' && unread.count > 0 && (
+              <span className="badge badge-pending ml-2 align-middle">{unread.count} new</span>
+            )}
           </button>
         ))}
       </div>

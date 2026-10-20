@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { boardAccess, boardIsOpen, canChangeMessage, HOUSE_RULES } from '@shared/board';
+import { FirebaseError } from 'firebase/app';
+import {
+  boardAccess,
+  boardIsOpen,
+  canChangeMessage,
+  HOUSE_RULES,
+  secondsToWait,
+} from '@shared/board';
 import { Panel } from '../../components/ui/Panel';
 import type { WeekView } from '../../lib/weekModel';
 import { useAuth } from '../auth/useAuth';
@@ -15,9 +22,11 @@ import {
   setMute,
   useBoardJoin,
   useBoardMessages,
+  useBoardMutes,
   useBoardReports,
   useBoardStanding,
 } from './boardData';
+import { BoardMutes } from './BoardMutes';
 import { BoardPost } from './BoardPost';
 
 /**
@@ -54,6 +63,7 @@ export function BoardSection({ year, week }: { year: string; week: WeekView }) {
   const ready = join.isSuccess && (!playerId || standing.isSuccess);
   const board = useBoardMessages(year, week.id, ready && access.canRead);
   const reports = useBoardReports(year, week.id, staff);
+  const muted = useBoardMutes(year, week.id, staff);
   const author =
     playerId && profile.data?.id === playerId
       ? { playerId, displayName: profile.data.data.displayName }
@@ -86,8 +96,33 @@ export function BoardSection({ year, week }: { year: string; week: WeekView }) {
               </p>
             )}
 
+            {staff && (
+              <BoardMutes
+                muted={muted}
+                onLift={(id, reason) => setMute(year, week.id, id, false, reason)}
+              />
+            )}
+
             {access.canPost && author && (
-              <BoardComposer onPost={(text) => postMessage(year, week.id, author, text)} />
+              <BoardComposer
+                onPost={async (text) => {
+                  const mine = board.messages.filter((m) => m.playerId === author.playerId);
+                  const last = mine.length ? Math.max(...mine.map((m) => m.createdAtMs)) : null;
+                  const wait = secondsToWait(last, Date.now());
+                  if (wait > 0) {
+                    throw new Error(`Give it ${wait} more seconds before your next post.`);
+                  }
+                  try {
+                    await postMessage(year, week.id, author, text);
+                  } catch (err) {
+                    // Most likely the 30-second pace, after a post that was deleted (D-109).
+                    if (err instanceof FirebaseError && err.code === 'permission-denied') {
+                      throw new Error("The board didn't take that. Wait 30 seconds and try again.");
+                    }
+                    throw err;
+                  }
+                }}
+              />
             )}
 
             {access.canRead &&

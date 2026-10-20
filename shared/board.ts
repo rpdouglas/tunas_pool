@@ -7,6 +7,8 @@
 export const MAX_MESSAGE_LENGTH = 500;
 export const EDIT_WINDOW_MS = 10 * 60_000;
 export const BOARD_OPEN_AFTER_WINNER_MS = 3 * 24 * 60 * 60_000;
+/** At most one post every 30 seconds (D-109). The rules hold the line; this says it first. */
+export const POST_GAP_MS = 30_000;
 
 export const HOUSE_RULES =
   'House rules: no threats of violence, and leave everybody’s mom out of it.';
@@ -106,4 +108,25 @@ export function checkMessage(
     return { ok: false, message: `Keep it under ${MAX_MESSAGE_LENGTH} characters.` };
   }
   return { ok: true, text: trimmed };
+}
+
+/** Whole seconds left before this player can post again, or 0. */
+export function secondsToWait(lastPostMs: number | null, nowMs: number): number {
+  if (lastPostMs === null) return 0;
+  return Math.max(0, Math.ceil((lastPostMs + POST_GAP_MS - nowMs) / 1000));
+}
+
+/**
+ * Posts that came in since you last opened the board (D-109): someone else's, not hidden. Before
+ * your first look, every such post is new.
+ */
+export function unreadCount(
+  messages: { playerId: string; hidden: boolean; createdAtMs: number }[],
+  myPlayerId: string | null,
+  lastSeenMs: number | null,
+): number {
+  return messages.filter(
+    (m) =>
+      !m.hidden && m.playerId !== myPlayerId && (lastSeenMs === null || m.createdAtMs > lastSeenMs),
+  ).length;
 }
