@@ -12,7 +12,7 @@ import {
   type LeaderboardRow as Row,
   type RevealEntry,
 } from '@shared/reveal';
-import { finalScores, withUnofficialResults, type FeedScore } from '@shared/schedule';
+import { gameStatuses, withUnofficialResults, type FeedScore } from '@shared/schedule';
 import { explainOutcome, formatMoney } from '@shared/scoring';
 import { formatPoolDateTime } from '@shared/time';
 import { Button } from '../../components/ui/Button';
@@ -188,7 +188,8 @@ function Revealed({
   const { results, unofficial } = live
     ? withUnofficialResults(games, week.results, feed.scores)
     : { results: week.results, unofficial: [] as string[] };
-  const scoreOf = finalScores(games, live ? feed.scores : []);
+  // Kickoff, live score, or final for each game (D-104). A final week shows only what was saved.
+  const statusOf = gameStatuses(games, live ? feed.scores : []);
   const rows = leaderboard(entries, gameIds, results);
   const decided = gameIds.filter((id) => results[id]).length;
   const final = week.status === 'final' && week.winner !== null;
@@ -342,7 +343,7 @@ function Revealed({
             const share = gameShare(g.id, entries);
             const result = results[g.id];
             const line = shareLine(g, share, result);
-            const score = scoreOf[g.id];
+            const status = statusOf[g.id];
             return (
               <li key={g.id} className="flex flex-col gap-2 rounded-md bg-surface p-3">
                 <ShareBar
@@ -353,7 +354,7 @@ function Revealed({
                   awayPercent={sharePercent(share.away.length, share.total)}
                   homePercent={sharePercent(share.home.length, share.total)}
                   winner={result === 'away' || result === 'home' ? result : null}
-                  score={score ? { away: score.awayPoints, home: score.homePoints } : null}
+                  status={live ? status : null}
                   unofficial={unofficial.includes(g.id)}
                   myPick={myPicks?.[g.id] ?? null}
                   upset={isUpset(share, result)}
