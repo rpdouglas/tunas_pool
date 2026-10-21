@@ -15,6 +15,7 @@ import { weekConverter, type WeekView } from '../../lib/weekModel';
 export const revealKeys = {
   week: (year: string, weekId: string) => ['revealWeek', year, weekId] as const,
   entries: (year: string, weekId: string) => ['revealEntries', year, weekId] as const,
+  entrants: (year: string, weekId: string) => ['weekEntrants', year, weekId] as const,
   lastWinner: (year: string) => ['lastWinner', year] as const,
   scores: (year: string, weekId: string) => ['weekScores', year, weekId] as const,
 };
@@ -67,6 +68,29 @@ export function useRevealEntries(year: string, weekId: string, enabled: boolean)
           };
         }),
       );
+    },
+  });
+}
+
+/** Someone who has entered the week, as shown before the lock (D-139): a name, no picks. */
+export interface Entrant {
+  playerId: string;
+  displayName: string;
+}
+
+/**
+ * Who's in so far, A to Z, for the week page before the lock (D-139). Only the public entry
+ * documents: the picks stay in `private/picks`, which this never reads.
+ */
+export function useWeekEntrants(year: string, weekId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: revealKeys.entrants(year, weekId),
+    enabled,
+    queryFn: async (): Promise<Entrant[]> => {
+      const entries = await getDocs(collection(db, 'seasons', year, 'weeks', weekId, 'entries'));
+      return entries.docs
+        .map((snap) => ({ playerId: snap.id, displayName: (snap.data() as Entry).displayName }))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
     },
   });
 }
