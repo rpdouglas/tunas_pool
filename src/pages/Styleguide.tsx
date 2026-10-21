@@ -16,6 +16,8 @@ import { tiebreakSummary } from '@shared/tiebreak';
 import { BoardPost } from '../features/board/BoardPost';
 import { BoardComposer } from '../features/board/BoardComposer';
 import { BoardMutes } from '../features/board/BoardMutes';
+import { BoardDisclosure } from '../features/board/BoardDisclosure';
+import { GamesBeforeLock, WhoIsIn } from '../features/leaderboard/BeforeLock';
 import { HOUSE_RULES } from '@shared/board';
 import { useToast } from '../components/ui/toastContext';
 import { PaymentRow } from '../features/admin/payments/PaymentRow';
@@ -579,6 +581,58 @@ export default function Styleguide() {
                   onLift={async () => undefined}
                 />
               </div>
+            </Panel>
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-before-lock">
+          <h2 id="sg-before-lock" className="mb-3 font-heading text-h2 italic">
+            The week before the lock, and earlier boards (D-139)
+          </h2>
+          <div className="bg-gameday flex max-w-player flex-col gap-3 rounded-lg p-4">
+            <WhoIsIn
+              entrants={[
+                { playerId: 'b', displayName: 'Bernadette Lavallée-Thompson' },
+                { playerId: 'd', displayName: 'Dale D.' },
+                { playerId: 'r', displayName: 'Rosalie M.' },
+              ]}
+              myPlayerId="d"
+            />
+            <WhoIsIn entrants={[]} myPlayerId={undefined} />
+            <GamesBeforeLock
+              week={
+                {
+                  mnfGameId: 'mnf',
+                  games: [
+                    {
+                      id: 'g01',
+                      order: 1,
+                      away: 'Texans',
+                      home: 'Jaguars',
+                      kickoffMs: Date.UTC(2026, 9, 18, 17),
+                      slot: 'sunday',
+                    },
+                    {
+                      id: 'mnf',
+                      order: 15,
+                      away: 'Commanders',
+                      home: '49ers',
+                      kickoffMs: Date.UTC(2026, 9, 20, 0, 15),
+                      slot: 'mnf',
+                    },
+                  ],
+                } as Parameters<typeof GamesBeforeLock>[0]['week']
+              }
+            />
+            <Panel title="Earlier weeks">
+              <ol className="flex flex-col gap-2" aria-label="Sample earlier boards">
+                <BoardDisclosure label="Week 5 board">
+                  <p className="text-body">Posts for week 5.</p>
+                </BoardDisclosure>
+                <BoardDisclosure label="Week 4 board, open" defaultOpen>
+                  <p className="text-body">Jags by 20. Write it down.</p>
+                </BoardDisclosure>
+              </ol>
             </Panel>
           </div>
         </section>

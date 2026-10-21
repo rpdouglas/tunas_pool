@@ -3,14 +3,26 @@ title: Results and standings
 summary: The week page, the season, and the Hall of Fame
 audience: player
 order: 5
-screens: [week-final, standings]
-covers: [src/features/leaderboard/]
+screens: [week-open-paid, week-final, standings]
+covers: [src/features/leaderboard/, src/features/board/EarlierBoards.tsx]
 reviewed: 2026-10-21
 ---
 
 ## The week page
 
-From the home screen, open the week. Before picks lock it says **Picks are hidden**. After the lock you can see everyone's picks, and each game fills in as results come in.
+From the home screen, open the week. Nobody can see anyone else's picks until they lock. After the lock you can see everyone's picks, and each game fills in as results come in.
+
+### Before picks lock
+
+Once the pool has your payment, the home screen has a **Who's in and the board** button. It shows:
+
+- **Standings:** who's in so far, A to Z.
+- **By game:** this week's games and their kickoff times. Who picked what shows up once picks lock.
+- **Board:** this week's posts. Earlier weeks you played are underneath. Tap a week to open its posts.
+
+<Shot name="week-open-paid" alt="Before the lock: who's in so far, listed by name." />
+
+If you're in but haven't paid yet, the page says so. You'll see who's in and the board once the pool confirms your payment.
 
 When the week is done, the page shows the winner and **How this was decided**, tiebreaker and all.
 

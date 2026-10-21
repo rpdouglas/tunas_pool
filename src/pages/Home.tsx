@@ -172,11 +172,16 @@ export default function Home() {
                         : 'See your picks'}
                   </Link>
                 ) : null}
-                {!open && (
+                {!open ? (
                   <Link to={`/week/${year}/${week.id}`} className="btn btn-secondary">
                     Standings and everyone's picks
                   </Link>
-                )}
+                ) : entry && payment?.paymentStatus === 'paid' ? (
+                  // Paid players see who's in and the board before the lock (D-139).
+                  <Link to={`/week/${year}/${week.id}`} className="btn btn-secondary">
+                    Who's in and the board
+                  </Link>
+                ) : null}
               </div>
             </Panel>
           </>
