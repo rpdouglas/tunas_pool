@@ -7,7 +7,7 @@ const refetchScores = vi.fn();
 const refetchWeek = vi.fn();
 let feedFailed = false;
 
-const WEEK = {
+const LOCKED = {
   id: 'wk06',
   year: '2026',
   weekNumber: 6,
@@ -31,16 +31,38 @@ const WEEK = {
   backfilled: false,
   correctedAtMs: null,
 };
+let WEEK: Omit<typeof LOCKED, 'results'> & { results: Record<string, string> } = LOCKED;
+// The same week before the lock (D-139): open, nothing revealed, nothing decided.
+const OPEN = {
+  ...LOCKED,
+  status: 'open',
+  lockAtMs: Date.UTC(2026, 9, 18, 17),
+  revealed: false,
+  results: {},
+};
+let standing: { entered: boolean; paid: boolean; muted: boolean } | undefined;
+let staff = false;
+const entriesRead = vi.fn();
 
 vi.mock('../auth/useAuth', () => ({
   useGuestSession: () => ({ user: { uid: 'u1' }, failed: false }),
+  useAuth: () => ({ isAdmin: staff, isCounter: false }),
 }));
-vi.mock('../claims/claimsData', () => ({ useMyProfile: () => ({ data: null }) }));
+vi.mock('../claims/claimsData', () => ({
+  useMyProfile: () => ({ isPending: false, data: { playerId: 'lou' } }),
+}));
 vi.mock('./standingsData', () => ({ useSeasonWeekList: () => ({ data: [] }) }));
 let unreadPosts = 0;
 const markSeen = vi.fn();
 vi.mock('../board/boardData', () => ({
   useBoardUnread: () => ({ count: unreadPosts, markSeen }),
+  useBoardStanding: (_y: string, _w: string, playerId: string | null) => ({
+    isPending: false,
+    data: playerId ? standing : undefined,
+  }),
+}));
+vi.mock('../board/EarlierBoards', () => ({
+  EarlierBoards: () => <section aria-label="Earlier weeks">Earlier boards</section>,
 }));
 vi.mock('../board/BoardSection', () => ({
   BoardSection: () => <section aria-label="Board">The board</section>,
@@ -56,28 +78,39 @@ vi.mock('./revealData', () => ({
     data: WEEK,
     refetch: refetchWeek,
   }),
-  useRevealEntries: () => ({
-    isPending: false,
-    isError: false,
-    data: [
-      {
-        playerId: 'pat',
-        displayName: 'Pat',
-        picks: { g01: 'home', g02: 'home', mnf: 'home' },
-        tiebreakerTotal: 40,
-        submittedAtMs: 0,
-        late: false,
-      },
-      {
-        playerId: 'lou',
-        displayName: 'Lou',
-        picks: { g01: 'away', g02: 'away', mnf: 'home' },
-        tiebreakerTotal: 44,
-        submittedAtMs: 0,
-        late: false,
-      },
-    ],
+  useWeekEntrants: (_y: string, _w: string, enabled: boolean) => ({
+    data: enabled
+      ? [
+          { playerId: 'lou', displayName: 'Lou' },
+          { playerId: 'pat', displayName: 'Pat' },
+        ]
+      : undefined,
   }),
+  useRevealEntries: (_y: string, _w: string, enabled: boolean) => {
+    if (enabled) entriesRead();
+    return {
+      isPending: false,
+      isError: false,
+      data: [
+        {
+          playerId: 'pat',
+          displayName: 'Pat',
+          picks: { g01: 'home', g02: 'home', mnf: 'home' },
+          tiebreakerTotal: 40,
+          submittedAtMs: 0,
+          late: false,
+        },
+        {
+          playerId: 'lou',
+          displayName: 'Lou',
+          picks: { g01: 'away', g02: 'away', mnf: 'home' },
+          tiebreakerTotal: 44,
+          submittedAtMs: 0,
+          late: false,
+        },
+      ],
+    };
+  },
   useWeekScores: () => ({
     data: feedFailed
       ? undefined
@@ -105,6 +138,10 @@ function show() {
 }
 
 beforeEach(() => {
+  WEEK = LOCKED;
+  standing = undefined;
+  staff = false;
+  entriesRead.mockReset();
   feedFailed = false;
   refetchScores.mockReset();
   refetchWeek.mockReset();
@@ -162,4 +199,54 @@ it('falls back to the saved results when ESPN cannot be reached', () => {
   expect(screen.getByText(/Couldn't get scores from ESPN just now/)).toBeInTheDocument();
   expect(screen.getByText('1 of 3 games decided.', { exact: false })).toBeInTheDocument();
   expect(screen.queryByText(/unofficial/)).toBeNull();
+});
+
+describe('before the lock (D-139)', () => {
+  beforeEach(() => {
+    WEEK = OPEN;
+  });
+
+  it('shows a paid player who is in, the games without counts, and the boards, and reads no picks', async () => {
+    standing = { entered: true, paid: true, muted: false };
+    show();
+    expect(screen.getByText('Picks are hidden')).toBeInTheDocument();
+    const names = within(screen.getByRole('list', { name: "Who's in" })).getAllByRole('listitem');
+    expect(names.map((li) => li.textContent)).toEqual(['Lou (you)', 'Pat']);
+    expect(screen.getByRole('link', { name: 'See or edit your picks' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'By game' }));
+    const games = screen.getByRole('list', { name: 'Games' });
+    expect(within(games).getAllByRole('listitem')).toHaveLength(3);
+    expect(games).toHaveTextContent('Monday night, the tiebreaker');
+    expect(screen.queryByRole('button', { name: /Who picked what/ })).toBeNull();
+    expect(screen.queryByText(/%/)).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: /Board/ }));
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Earlier weeks' })).toBeInTheDocument();
+    expect(entriesRead).not.toHaveBeenCalled();
+  });
+
+  it('tells an entrant who has not paid yet what they will see, and shows no board', () => {
+    standing = { entered: true, paid: false, muted: false };
+    show();
+    expect(screen.getByText(/Once the pool confirms your payment/)).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: "Who's in" })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Board' })).toBeNull();
+  });
+
+  it('leaves someone who has not entered as before: the board says how to join', () => {
+    standing = { entered: false, paid: false, muted: false };
+    show();
+    expect(screen.queryByText(/Once the pool confirms your payment/)).toBeNull();
+    expect(screen.queryByRole('list', { name: "Who's in" })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
+  });
+
+  it('gives the staff the full page without an entry', () => {
+    staff = true;
+    show();
+    expect(screen.getByRole('list', { name: "Who's in" })).toBeInTheDocument();
+    expect(entriesRead).not.toHaveBeenCalled();
+  });
 });

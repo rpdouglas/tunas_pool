@@ -110,7 +110,7 @@ Deployment targets (see `DECISIONS.md` D-015):
 | Storage bucket | `tunaspool-paper-sheets` (deploy target `paperSheets`, D-058). Never the default bucket. |
 | Local and CI | `demo-tunas-pool` (emulator only, the `.firebaserc` default) |
 
-- **Merging to `main` deploys to production.** After CI passes, the `deploy` job in `.github/workflows/ci.yml` releases Hosting, Firestore rules, and Firestore indexes (`DECISIONS.md` D-019). Treat every merge, and every rules change in particular, as a release. Functions deploy after the site deploy when `functions/`, `shared/`, or `firebase.json` changed (`DECISIONS.md` D-041), and can be re-run with the manual **Deploy functions** workflow (D-035). Storage is not automated.
+- **Merging to `main` deploys to production.** After CI passes, the `deploy` job in `.github/workflows/ci.yml` releases Hosting, Firestore rules, and Firestore indexes (`DECISIONS.md` D-019). Treat every merge, and every rules change in particular, as a release. The one exception: a merge that changes only `docs/`, `.agents/`, `CLAUDE.md`, `AGENTS.md`, or `README.md` runs no CI and deploys nothing (D-138). Functions deploy after the site deploy when `functions/`, `shared/`, or `firebase.json` changed (`DECISIONS.md` D-041), and can be re-run with the manual **Deploy functions** workflow (D-035). Storage is not automated.
 - For a manual deploy, always pass `--project prod` and an explicit `--only` list. Never run a bare `firebase deploy`.
 - Never deploy `storage` or anything targeting the `(default)` database without asking Ryan: those are shared with other apps in the project.
 - Get every Firestore handle with `FIRESTORE_DATABASE_ID` from `shared/config.ts`.
@@ -121,7 +121,7 @@ Deployment targets (see `DECISIONS.md` D-015):
 2. **Run the Persona Check** (`docs/PERSONAS.md` §0) on every feature before building (skip it only for work nobody sees: refactors, dev tooling, tests, and docs with no change to a screen, its words, accessibility, money, or who can see what, D-137): name the primary persona, apply their UX constraints as acceptance criteria, and run the Rosalie, Dale, Gerald, Commissioner, Border, Welcome, and Responsible-Play tests.
 3. Implement only what is in scope for the sprint. Log scope creep in `PROJECT_PLAN.md` under *Parked*.
 4. Write rules tests **before** or alongside any rules change.
-5. Run checks before declaring a task done: `typecheck`, `lint`, and `test` every time (D-137). Run `test:rules` when `firestore.rules`, `storage.rules`, `functions/`, or `shared/` changed, and when closing a sprint. Run `test:smoke` once only if a screen was added or changed. CI runs `typecheck`, `lint`, `test`, and `test:rules` on every PR either way.
+5. Run checks before declaring a task done: `typecheck`, `lint`, and `test` every time (D-137). Run `test:rules` when `firestore.rules`, `storage.rules`, `functions/`, or `shared/` changed, and when closing a sprint. Run `test:smoke` once only if a screen was added or changed. CI runs `typecheck`, `lint`, `test`, and `test:rules` on every PR either way, except a docs-only one (D-138).
 6. Update docs, then update `ACTIVE_CYCLE.md` with status and anything learned.
 7. Use subagents for parallelizable work (for example: rules tests, UI components, function stubs). Review diffs before merging.
 
