@@ -46,6 +46,7 @@ import { Panel } from '../components/ui/Panel';
 import { SectionBar } from '../components/ui/SectionBar';
 import { StatusBadge, type BadgeStatus } from '../components/ui/StatusBadge';
 import { TextAreaField } from '../components/ui/TextAreaField';
+import { Shot, Steps, Tip } from '../features/help/GuideBlocks';
 
 const SAMPLE_ROW: EntryRow = {
   playerId: 'p1',
@@ -483,6 +484,31 @@ export default function Styleguide() {
               onDismiss={() => undefined}
             />
             <WelcomePanel fee="$20" lockLabel={null} signedIn onDismiss={() => undefined} />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-guide">
+          <h2 id="sg-guide" className="mb-3 font-heading text-h2 italic">
+            Guide pages (D-136)
+          </h2>
+          <div className="bg-gameday flex max-w-player flex-col gap-4 rounded-lg p-4">
+            <Panel>
+              <Steps>
+                <li>One action a step.</li>
+                <li>
+                  Tap <strong>Submit picks</strong>.
+                </li>
+              </Steps>
+              <Tip>
+                <p>Words too small? Open Menu and use Text size.</p>
+              </Tip>
+              <Shot
+                name="home"
+                alt="The home screen: this week's games and a Make your picks button."
+                caption="With a caption"
+              />
+              <Shot name="home" alt="The same screen without a caption." />
+            </Panel>
           </div>
         </section>
 

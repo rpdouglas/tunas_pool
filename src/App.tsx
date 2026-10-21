@@ -16,6 +16,8 @@ const Styleguide = lazy(() => import('./pages/Styleguide'));
 // Tunas 649 Bingo: its own chunk, linked from nowhere (D-128).
 const BingoRoutes = lazy(() => import('./features/bingo/BingoRoutes'));
 const BingoStaffRoutes = lazy(() => import('./features/bingo/staff/BingoStaffRoutes'));
+// The guide (D-136): its own chunk, for players, the commissioner, and the counter.
+const HelpRoutes = lazy(() => import('./features/help/HelpRoutes'));
 import NotFound from './pages/NotFound';
 import { AdminLayout } from './features/admin/AdminLayout';
 import { CounterLayout } from './features/counter/CounterLayout';
@@ -64,6 +66,7 @@ export default function App() {
         <Route path="/claim" element={<ClaimPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/auth/finish" element={<FinishSignIn />} />
+        <Route path="/help/*" element={<HelpRoutes shell="player" />} />
         <Route path="/b/*" element={<BingoRoutes />} />
         <Route
           path="/admin"
@@ -87,6 +90,7 @@ export default function App() {
           <Route path="weeks/:year/:weekId" element={<WeekEditorPage />} />
           <Route path="settings" element={<PoolSettingsPage />} />
           <Route path="bingo/*" element={<BingoStaffRoutes base="/admin/bingo" />} />
+          <Route path="help/*" element={<HelpRoutes shell="admin" />} />
         </Route>
         <Route
           path="/counter"
@@ -99,6 +103,7 @@ export default function App() {
           <Route index element={<CounterPage />} />
           <Route path="enter/:playerId" element={<CounterEnterPage />} />
           <Route path="bingo/*" element={<BingoStaffRoutes base="/counter/bingo" />} />
+          <Route path="help/*" element={<HelpRoutes shell="counter" />} />
         </Route>
         {showStyleguide && <Route path="/styleguide" element={<Styleguide />} />}
         <Route path="*" element={<NotFound />} />
