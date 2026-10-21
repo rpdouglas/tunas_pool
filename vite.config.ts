@@ -27,12 +27,30 @@ export default defineConfig({
   // host: true lets Codespaces forward the dev server port
   server: { host: true, port: 5173 },
   test: {
-    environment: 'jsdom',
-    pool: 'vmThreads',
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}', 'shared/**/*.test.ts', 'functions/src/**/*.test.ts'],
     exclude: ['**/*.int.test.ts', '**/node_modules/**'], // integration tests need the emulator: npm run test:rules
     css: false,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'web',
+          environment: 'jsdom',
+          pool: 'vmThreads', // one jsdom per worker, not per file (D-137)
+          setupFiles: ['./src/test/setup.ts'],
+          include: ['src/**/*.test.{ts,tsx}', 'shared/**/*.test.ts'],
+        },
+      },
+      {
+        // The functions' tests stay on the default pool: on Node 22 (CI) vmThreads can't load
+        // jose, an ES module that firebase-admin requires through jwks-rsa.
+        extends: true,
+        test: {
+          name: 'functions',
+          environment: 'node',
+          include: ['functions/src/**/*.test.ts'],
+        },
+      },
+    ],
   },
 });
