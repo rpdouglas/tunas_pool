@@ -27,6 +27,12 @@ export function CounterLayout() {
             >
               Bingo
             </Link>
+            <Link
+              to="/counter/help"
+              className="flex min-h-touch items-center px-2 text-body underline"
+            >
+              Help
+            </Link>
             <Link to="/" className="flex min-h-touch items-center px-2 text-body underline">
               The pool
             </Link>

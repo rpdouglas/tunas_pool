@@ -7,11 +7,14 @@
  *
  *   npm run test:smoke      (PW_CHROMIUM_PATH=... to use a preinstalled Chromium)
  *
+ * GUIDE_SHOTS=1 (npm run guide:shots, D-136) also saves the screens the in-app guide names in its
+ * pages' `screens:` lists, as WebP in public/guide/shots/, for the guide to show.
+ *
  * It does not replace the rules and function tests, which check that things are right. This checks
  * that the screens load and fit.
  */
 import { spawn, execSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import AxeBuilder from '@axe-core/playwright';
 import { chromium, type Page } from '@playwright/test';
@@ -40,6 +43,40 @@ const SHOTS = 'test-results/smoke';
 const ADMIN_EMAIL = 'ryan@tunas.test';
 mkdirSync(SHOTS, { recursive: true });
 
+// The guide's screenshots (D-136): only the names some guide page lists, so the repo holds no extras.
+const GUIDE_DIR = 'public/guide/shots';
+const GUIDE_PAGES = 'src/features/help/pages';
+const guideWanted = process.env.GUIDE_SHOTS
+  ? new Set(
+      readdirSync(GUIDE_PAGES, { recursive: true, encoding: 'utf8' })
+        .filter((f) => f.endsWith('.mdx'))
+        .flatMap((f) => {
+          const list = /^screens:\s*\[(.*)\]/m.exec(readFileSync(`${GUIDE_PAGES}/${f}`, 'utf8'));
+          return list ? list[1].split(',').map((n) => n.trim()) : [];
+        }),
+    )
+  : null;
+const guideSaved = new Set<string>();
+if (guideWanted) mkdirSync(GUIDE_DIR, { recursive: true });
+
+/** In guide mode, save what the phone shows now (one screen high) as WebP, encoded by Chromium. */
+async function guideShot(page: Page, name: string) {
+  if (!guideWanted?.has(name)) return;
+  const png = (await page.screenshot()).toString('base64');
+  const webp = await page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext('2d')!.drawImage(img, 0, 0);
+    return canvas.toDataURL('image/webp', 0.8);
+  }, png);
+  writeFileSync(`${GUIDE_DIR}/${name}.webp`, Buffer.from(webp.split(',')[1], 'base64'));
+  guideSaved.add(name);
+}
+
 let failures = 0;
 const errors: string[] = [];
 const SMOKE_ONLY = process.env.SMOKE_ONLY;
@@ -63,6 +100,7 @@ async function checkScreen(page: Page, name: string, expected: string | RegExp) 
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
     );
     await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
+    await guideShot(page, name);
     check(name, fits, fits ? '' : 'scrolls sideways at 375px');
     // The same accessibility rules as test:a11y (WCAG 2.2 AA), on the real screen with data in it.
     const axe = await new AxeBuilder({ page })
@@ -264,6 +302,10 @@ try {
   await visit(player, 'claim', '/claim', 'First, save your account');
   await visit(player, 'account', '/account', 'Continue with Google');
   await visit(player, 'entry-form', `/picks/${YEAR}/wk03`, '0 of 15 picked');
+  // The guide (D-136): the list of pages, a page with a screenshot, and no bingo pages for a guest.
+  await visit(player, 'help', '/help', 'Playing the pool');
+  await visit(player, 'help-page', '/help/make-your-picks', 'The tiebreaker');
+  await visit(player, 'help-bingo-hidden', '/help/bingo-how-to-play', 'Page not found');
   // Bingo is off: to a guest it's an ordinary missing page (D-128).
   await visit(player, 'bingo-off', '/b', 'Page not found');
   await player.goto(`${APP}/`);
@@ -408,6 +450,8 @@ try {
     await visit(admin, 'admin-more', '/admin/more', 'Audit log');
     await visit(admin, 'admin-audit', '/admin/audit', 'Published the winner: Dale D.');
     await visit(admin, 'admin-seasons', '/admin/seasons', 'This season');
+    await visit(admin, 'admin-help', '/admin/help', 'Running the pool');
+    await visit(admin, 'admin-help-page', '/admin/help/payments', 'The Payments screen');
     // A player added by mistake can be deleted through the screen, with a reason in the audit log (D-094).
     await db.doc('players/typo').set({
       displayName: 'Typo T.',
@@ -482,6 +526,7 @@ try {
     await visit(counter, 'counter-home', '/counter', 'Find a player');
     await counter.getByText('Jen K.').first().waitFor({ timeout: 45_000 }); // the roster arrives after the page
     await counter.screenshot({ path: `${SHOTS}/counter-home-loaded.png`, fullPage: true });
+    await guideShot(counter, 'counter-home-loaded');
     const counterText = (await counter.locator('main').innerText()).replace(/\s+/g, ' ');
     check(
       'the counter list shows names and status, and no phone number',
@@ -565,6 +610,7 @@ try {
       .then(() => true)
       .catch(() => false);
     check('the counter is kept out of the Back Office', blocked);
+    await visit(counter, 'counter-help', '/counter/help', 'At the counter');
     await counterCtx.close();
   }
 
@@ -745,6 +791,11 @@ try {
   );
   await boss.ctx.close();
 
+  // A SMOKE_ONLY run skips screens, so it takes only some; the shots already saved stay.
+  if (guideWanted && !SMOKE_ONLY) {
+    const notTaken = [...guideWanted].filter((name) => !guideSaved.has(name));
+    check('every screen the guide names was saved', notTaken.length === 0, notTaken.join(', '));
+  }
   check('no script errors on any screen', errors.length === 0, errors.slice(0, 3).join(' | '));
 } catch (err) {
   check('smoke run', false, (err as Error).message.split('\n')[0]);

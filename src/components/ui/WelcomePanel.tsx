@@ -35,6 +35,12 @@ export function WelcomePanel({ fee, lockLabel, signedIn, onDismiss }: WelcomePan
             : "This week's picks are locked, so come back when the next week opens."}{' '}
           You can save an account later to use another phone.
         </p>
+        <Link
+          to="/help"
+          className="inline-flex min-h-touch items-center text-ink-emphasis underline"
+        >
+          How the pool works, step by step
+        </Link>
         {!signedIn && (
           <Link
             to="/account"

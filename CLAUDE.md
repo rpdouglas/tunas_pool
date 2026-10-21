@@ -43,12 +43,14 @@ docs/
   BINGO_PLAN.md            <- Tunas 649 Bingo (Phase 6): gates, sprints S11–S16; design in DATA_MODEL §11, D-110 to D-129
   bingo/BUILD_SPEC.md      <- Ryan's bingo build spec as written (2026-10-20); the plan and review correct it
   reports/                 <- dated review snapshots (YYYY-MM-DD-name.md); read-only history, never a source of truth
+src/features/help/pages/   <- the in-app user guide (D-136): one .mdx per page, by audience; screenshots in public/guide/shots/
 ```
 
 Rules for docs:
 - Any schema, rule, or function-contract change updates the matching doc **in the same commit**.
 - `firestore.rules` must match the code block in `docs/FIRESTORE_RULES.md`. Treat the file as the source and sync the doc.
 - Record every non-obvious decision in `DECISIONS.md` with date and rationale.
+- The in-app guide is user-facing docs. A page's frontmatter names the screens it shows (`screens:`, smoke run names) and the source it describes (`covers:`). A change under `covers:` updates the page's words and `reviewed:` in the same commit, and its shots when the screen looks different.
 
 ## 4. Architecture principles
 
@@ -86,6 +88,8 @@ npm run test:rules     # rules tests and the functions' integration tests (Fires
 npm run test:a11y      # axe, fonts, and 375px checks on /styleguide and the sign-in pages (Playwright)
 npm run test:smoke     # every screen once at 375px against the emulators, about a minute (D-082)
 # SMOKE_ONLY=bingo npm run test:smoke   # guest and bingo screens only, when the Codespace runs short of memory
+npm run guide:check    # the in-app guide: shots present and used, screens are smoke names, links and covers real (D-136)
+npm run guide:shots    # the smoke run, also saving the guide's screenshots to public/guide/shots/ (SMOKE_ONLY=bingo works too)
 # The four test:e2e:* flows below are parked (D-066): run them only when asked.
 npm run test:e2e:emulator  # full browser flows against running emulators + dev server (see the script header)
 npm run test:e2e:mock-week # the Phase 1 gate: 12 players, payments, results, winner, payout (needs the Functions emulator)
@@ -121,9 +125,9 @@ Deployment targets (see `DECISIONS.md` D-015):
 6. Update docs, then update `ACTIVE_CYCLE.md` with status and anything learned.
 7. Use subagents for parallelizable work (for example: rules tests, UI components, function stubs). Review diffs before merging.
 
-**Definition of done:** typechecks clean, tests pass, rules tests cover new paths, the functions' integration tests cover new callables, docs updated, and the smoke run passes with the changed screens looked at (375px).
+**Definition of done:** typechecks clean, tests pass, rules tests cover new paths, the functions' integration tests cover new callables, docs updated (the in-app guide too, when a screen it covers changed), and the smoke run passes with the changed screens looked at (375px).
 
-**Browser check: one quick smoke run (D-082).** At the end of a task that adds or changes a screen, run `npm run test:smoke` once. It seeds a small season into the emulators, serves the built site, opens each screen at 375px, checks it loads, fits (also at the largest text size), passes the WCAG 2.2 AA rules, and throws no script error, and saves screenshots to `test-results/smoke/`. It takes about a minute. Look at the screenshots of the screens you touched, and add a `visit(...)` line for any new screen. If it fails, fix what it found; if a page crashes for no reason in the code, say so and move on rather than debugging the machine.
+**Browser check: one quick smoke run (D-082).** At the end of a task that adds or changes a screen, run `npm run test:smoke` once. It seeds a small season into the emulators, serves the built site, opens each screen at 375px, checks it loads, fits (also at the largest text size), passes the WCAG 2.2 AA rules, and throws no script error, and saves screenshots to `test-results/smoke/`. It takes about a minute. Look at the screenshots of the screens you touched, and add a `visit(...)` line for any new screen. When the change shows on a screen the guide uses, run `npm run guide:shots` instead (the same run, also saving the guide's WebP shots); the build copies `public/` before the run, so a page shows a new shot only from the next build. If it fails, fix what it found; if a page crashes for no reason in the code, say so and move on rather than debugging the machine.
 
 The four long `test:e2e:*` flows stay parked (D-066): do not write new ones or run them as part of finishing a task. They need a dev server and many pages at once, which the Codespace cannot hold. Run one only when Ryan asks.
 

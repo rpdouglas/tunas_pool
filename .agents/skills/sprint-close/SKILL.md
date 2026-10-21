@@ -33,6 +33,11 @@ npm run test:smoke      # about a minute, 375px, a11y + large text
 - Add a `visit(...)` line in `scripts/e2e-smoke.ts` for any new screen.
 - For a new UI component, confirm it has a `/styleguide` entry showing all states, and
   run `npm run test:a11y` if the styleguide changed.
+- **The in-app guide (D-136):** run `npm run guide:check`. If a changed screen is in a guide
+  page's `covers:`, check its words against the screen and update `reviewed:`; if the screen
+  looks different, run `npm run guide:shots` (the smoke run, saving WebP to `public/guide/shots/`)
+  and look at the shots it changed. A new screen players or staff use gets a guide page (or a line
+  in ACTIVE_CYCLE saying why not), its screens in `screens:`, and a `visit(...)` for each.
 - If it fails, fix what it found. If a page crashes for no reason in the code, report that
   and move on. **Do not run or write `test:e2e:*` flows** unless Ryan asks (D-066, D-082).
 

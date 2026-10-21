@@ -1,9 +1,23 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import mdx from '@mdx-js/rollup';
+import remarkFrontmatter from 'remark-frontmatter';
+import remarkGfm from 'remark-gfm';
+import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
 import path from 'node:path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    // The in-app guide (D-136): .mdx pages under src/features/help/pages, frontmatter as an export.
+    {
+      enforce: 'pre',
+      ...mdx({
+        providerImportSource: '@mdx-js/react',
+        remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter, remarkGfm],
+      }),
+    },
+    react({ include: /\.(mdx|tsx?|jsx?)$/ }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),

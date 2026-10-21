@@ -63,6 +63,16 @@ List collections in rules with no matrix row.
   numbers are contiguous and unique.
 - Decisions marked Provisional appear under "Waiting on the commissioner".
 
+**G. The in-app guide (D-136).** `npm run guide:check` passes (every shot present and used,
+every `screens:` name a smoke `visit`, links and `covers:` paths real). List guide pages whose
+`covers:` paths changed in `git log` after the page's `reviewed:` date (Medium: stale guide):
+```bash
+for f in $(find src/features/help/pages -name '*.mdx'); do
+  d=$(sed -n 's/^reviewed: //p' $f); c=$(sed -n 's/^covers: \[\(.*\)\]/\1/p' $f | tr -d ' ' | tr ',' ' ')
+  [ -n "$(git log --since="$d 23:59" --format=%h -- $c | head -1)" ] && echo "stale: $f"
+done
+```
+
 **F. Parked scope.** Anything built that CLAUDE.md §10 lists as out of scope for v1.
 
 ## Step 3: Report

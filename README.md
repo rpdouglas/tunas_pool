@@ -27,6 +27,8 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 
 `npm run test:smoke` is the quick browser check (D-082): it opens every screen once at 375px against the emulators and saves screenshots to `test-results/smoke/`, in about a minute. The four longer `test:e2e:*` flows are parked (D-066): they need more memory than a Codespace reliably has. Run them only when wanted.
 
+The user guide is in the app at `/help` (Back Office: More, Help; the counter: Help). Its pages are Markdown (MDX) files in `src/features/help/pages/`, one folder per audience; edit the words there.
+
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Vite dev server |
@@ -37,6 +39,8 @@ npm run dev            # http://localhost:5173 (forwarded automatically in Codes
 | `npm run test:rules` | Firestore rules tests and the functions' integration tests in the emulator (needs Java 21+) |
 | `npm run test:a11y` | Axe, font, and no-horizontal-scroll checks on a production build (Playwright) |
 | `npm run test:smoke` | Every screen once in a real browser at 375px: loads, fits, no script errors, screenshots saved (builds the site and starts the emulators itself; see `scripts/e2e-smoke.ts`) |
+| `npm run guide:check` | The in-app guide's check (D-136): every screenshot present and used, every screen a smoke run name, links and `covers:` paths real |
+| `npm run guide:shots` | The smoke run, also saving the screens the guide uses as WebP in `public/guide/shots/` (`SMOKE_ONLY=bingo` for the bingo ones when memory runs short) |
 | `npm run test:e2e:emulator` | Browser run of the sign-in, week-setup, and entry flows against running emulators (steps in `scripts/e2e-emulator.mjs`) |
 | `npm run test:e2e:mock-week` | The Phase 1 gate in a browser: 12 players, payments, results, winner, payout (needs the Functions emulator; see `scripts/e2e-mock-week.mjs`) |
 | `npm run test:e2e:paper-entry` | Sprint 4 in a browser: roster, a full paper sheet with a photo, blanks, edit, remove, and a late entry (needs the Functions and Storage emulators; see `scripts/e2e-paper-entry.mjs`) |

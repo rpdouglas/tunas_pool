@@ -53,5 +53,8 @@ working models; when a persona and a real player disagree, the real player wins.
 - **Border / Welcome / Responsible-Play (or Bingo Check) / Privacy:** ...
 ```
 
+7. Name the guide page (D-136) the feature needs in `src/features/help/pages/<audience>/`, or say
+   why none. Write it in the persona's words: Rosalie reads it at Extra large text, one task a page.
+
 If any test fails, say what to redesign and stop: do not start building until it passes
 or Ryan accepts the trade-off (record that in `docs/DECISIONS.md`).

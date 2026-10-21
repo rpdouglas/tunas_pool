@@ -259,6 +259,7 @@ All eleven sprints are built and released. What that does and does not mean:
 17. ~~**A shorter By game card**~~ Built (D-107): Who picked what beside the line, and the line only for an upset or a tie.
 18. ~~**Hall of Fame**~~ Built (D-108), from the parked list.
 19. **Tunas 649 Bingo** (proposed, Phase 6): `docs/BINGO_PLAN.md`. Starts with Sprint 11 (docs only) and the legal gate, G0.
+20. ~~**An in-app user guide**~~ Built (D-136): `/help`, `/admin/help`, `/counter/help`, written in MDX with screenshots from the smoke run. Next: more pages as screens are added, and Ryan's read of the wording.
 
 ## 8. Parked (post-v1 ideas)
 

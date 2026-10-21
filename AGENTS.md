@@ -17,7 +17,7 @@ read it as you. What follows only maps the Claude workflow onto Antigravity.
 
 | Kind | What | Enforces (CLAUDE.md) |
 |---|---|---|
-| Hooks | `.agents/hooks.json` | §6 deploy rules, §8 never-list, §3 docs-as-code, §4.10 / §5 style |
+| Hooks | `.agents/hooks.json` | §6 deploy rules, §8 never-list, §3 docs-as-code (including the in-app guide's `covers:`, D-136), §4.10 / §5 style |
 | Skill | `tunas-governance-audit` | §3 docs hierarchy: code and docs must agree |
 | Skill | `persona-check` | §7 step 2 (Persona Check before building) |
 | Skill | `sprint-close` | §7 steps 5-6 and the Definition of done |
