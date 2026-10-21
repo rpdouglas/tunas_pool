@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   PICK_MARK_TEXT,
@@ -24,19 +24,22 @@ import { ShareBar } from '../../components/ui/ShareBar';
 import { TiebreakerPanel } from '../../components/ui/TiebreakerPanel';
 import { WinnerBanner } from '../../components/ui/WinnerBanner';
 import type { WeekView } from '../../lib/weekModel';
-import { useGuestSession } from '../auth/useAuth';
+import { useAuth, useGuestSession } from '../auth/useAuth';
 import { BoardSection } from '../board/BoardSection';
-import { useBoardUnread } from '../board/boardData';
+import { EarlierBoards } from '../board/EarlierBoards';
+import { useBoardStanding } from '../board/boardData';
 import { useMyProfile } from '../claims/claimsData';
-import { useRevealEntries, useRevealWeek, useWeekScores } from './revealData';
+import { BeforeLock } from './BeforeLock';
+import { useRevealEntries, useRevealWeek, useWeekEntrants, useWeekScores } from './revealData';
 import { useSeasonWeekList } from './standingsData';
-
-type View = 'standings' | 'games' | 'board';
+import { useWeekTab } from './useWeekTab';
+import { WeekTabs } from './WeekTabs';
 
 /**
  * The week, once picks are locked (PROJECT_PLAN Sprint 6): the winner and how it was decided, the
- * leaderboard, and everyone's picks, by player and by game. Before the lock it shows nothing but
- * when picks open up (CLAUDE.md §4.3, D-021).
+ * leaderboard, and everyone's picks, by player and by game. Before the lock, paid players and the
+ * staff see who's in, the games, and the board, but no picks (D-139, CLAUDE.md §4.3, D-021); anyone
+ * else sees when picks open up.
  */
 export default function WeekPage() {
   const { year = '', weekId = '' } = useParams();
@@ -46,6 +49,20 @@ export default function WeekPage() {
   const entries = useRevealEntries(year, weekId, revealed && Boolean(session.user));
   const profile = useMyProfile(session.user?.uid);
   const scores = useWeekScores(year, week.data);
+  const { isAdmin, isCounter } = useAuth();
+  const staff = isAdmin || isCounter;
+  const myPlayerId = profile.data?.playerId;
+  // Before the lock, the full page is for paid players and the staff (D-139).
+  const standing = useBoardStanding(
+    year,
+    weekId,
+    week.data && !revealed && !staff ? (myPlayerId ?? null) : null,
+  );
+  const paid = standing.data?.paid === true;
+  const fullBeforeLock = Boolean(week.data) && !revealed && (staff || paid);
+  const entrants = useWeekEntrants(year, weekId, fullBeforeLock);
+  const deciding =
+    week.data && !revealed && !staff && (profile.isPending || (myPlayerId && standing.isPending));
 
   const title = week.data ? `Week ${week.data.weekNumber}` : 'This week';
   const navigate = useNavigate();
@@ -93,7 +110,7 @@ export default function WeekPage() {
       </GameDayPage>
     );
   }
-  if (!session.user || week.isPending || (revealed && entries.isPending)) {
+  if (!session.user || week.isPending || (revealed && entries.isPending) || deciding) {
     return (
       <GameDayPage title={title}>
         <Panel>
@@ -115,7 +132,17 @@ export default function WeekPage() {
       </GameDayPage>
     );
   }
+  if (fullBeforeLock) {
+    return (
+      <GameDayPage title={title}>
+        {picker}
+        <BeforeLock week={week.data} entrants={entrants.data} myPlayerId={myPlayerId} />
+        {back}
+      </GameDayPage>
+    );
+  }
   if (!revealed) {
+    const entered = standing.data?.entered === true;
     return (
       <GameDayPage title={title}>
         {picker}
@@ -130,9 +157,14 @@ export default function WeekPage() {
               {week.data.entryCount} {week.data.entryCount === 1 ? 'player is' : 'players are'} in
               so far.
             </p>
+            {entered && (
+              <p className="rounded-md bg-surface-muted p-3 text-body">
+                Once the pool confirms your payment, you'll see who's in and the board here.
+              </p>
+            )}
           </div>
         </Panel>
-        <BoardSection year={year} week={week.data} />
+        {!entered && <BoardSection year={year} week={week.data} />}
         {back}
       </GameDayPage>
     );
@@ -143,7 +175,7 @@ export default function WeekPage() {
       <Revealed
         week={week.data}
         entries={entries.data ?? []}
-        myPlayerId={profile.data?.playerId}
+        myPlayerId={myPlayerId}
         feed={{
           scores: scores.data ?? [],
           checkedAtMs: scores.dataUpdatedAt || null,
@@ -183,13 +215,7 @@ function Revealed({
   myPlayerId: string | undefined;
   feed: Feed;
 }) {
-  const [view, setView] = useState<View>('standings');
-  const unread = useBoardUnread(week.year, week);
-  const { markSeen } = unread;
-  // Open on the board: everything on it is seen, including posts that arrive while it is open.
-  useEffect(() => {
-    if (view === 'board') markSeen();
-  }, [view, markSeen]);
+  const { view, setView, unreadCount } = useWeekTab(week);
   const games = [...week.games].sort((a, b) => a.order - b.order);
   const gameIds = games.map((g) => g.id);
   // A final week is the commissioner's results only; a locked one also counts ESPN's finals.
@@ -323,31 +349,13 @@ function Revealed({
         </p>
       )}
 
-      <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
-        {(
-          [
-            ['standings', 'Standings'],
-            ['games', 'By game'],
-            ['board', 'Board'],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={view === value}
-            onClick={() => setView(value)}
-            className="min-h-touch min-w-[6rem] flex-1 rounded-pill border-2 border-white bg-black/30 px-3 font-heading text-h3 text-ink-inverse aria-pressed:bg-white aria-pressed:text-purple-700"
-          >
-            {label}
-            {value === 'board' && view !== 'board' && unread.count > 0 && (
-              <span className="badge badge-pending ml-2 align-middle">{unread.count} new</span>
-            )}
-          </button>
-        ))}
-      </div>
+      <WeekTabs view={view} setView={setView} unreadCount={unreadCount} />
 
       {view === 'board' ? (
-        <BoardSection year={week.year} week={week} />
+        <>
+          <BoardSection year={week.year} week={week} />
+          <EarlierBoards year={week.year} week={week} />
+        </>
       ) : entries.length === 0 ? (
         <Panel>
           <p className="text-body">Nobody entered this week.</p>

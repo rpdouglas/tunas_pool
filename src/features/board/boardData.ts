@@ -75,6 +75,23 @@ export function useBoardStanding(year: string, weekId: string, playerId: string 
   });
 }
 
+/**
+ * Which of these weeks this player entered, for the earlier boards (D-139): the rules let you read
+ * a week's board only if you did. One public entry document per week.
+ */
+export function useMyEnteredWeeks(year: string, playerId: string | null, weekIds: string[]) {
+  return useQuery({
+    queryKey: ['boardEnteredWeeks', year, playerId ?? '', weekIds.join(',')],
+    enabled: Boolean(playerId) && weekIds.length > 0,
+    queryFn: async () => {
+      const snaps = await Promise.all(
+        weekIds.map((id) => getDoc(doc(db, `${weekPath(year, id)}/entries/${playerId}`))),
+      );
+      return weekIds.filter((_, i) => snaps[i].exists());
+    },
+  });
+}
+
 /** The week's posts, oldest first, live while `enabled`. */
 export function useBoardMessages(year: string, weekId: string, enabled: boolean) {
   const [state, setState] = useState<{
