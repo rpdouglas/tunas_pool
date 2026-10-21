@@ -29,10 +29,13 @@ export interface MyProfile {
 
 export function useMyProfile(uid: string | undefined) {
   return useQuery({
+    // The same cache entry as the menu's profile (entryData), so it holds that shape; `select`
+    // reshapes it here. A queryFn of its own under this key would fight the menu's for the cache.
     queryKey: claimKeys.profile(uid ?? ''),
     enabled: Boolean(uid),
-    queryFn: async (): Promise<MyProfile | null> => {
-      const found = await findMyProfile(uid!);
+    staleTime: 60_000,
+    queryFn: () => findMyProfile(uid!),
+    select: (found): MyProfile | null => {
       if (!found) return null;
       const data: Player = found.data;
       return {

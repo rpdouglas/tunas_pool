@@ -79,7 +79,8 @@ Firestore database (`db-tunaspool`, location `nam5`). Both are pinned in `fireba
    `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 npm run admin:claim -- <uid>`.
 
 **Deploys are automatic.** Every push to `main` that passes CI deploys Hosting, Firestore rules, and Firestore
-indexes (the `deploy` job in `.github/workflows/ci.yml`). It authenticates with the `FIREBASE_SERVICE_ACCOUNT`
+indexes (the `deploy` job in `.github/workflows/ci.yml`). A push that changes only `docs/`, `.agents/`, `CLAUDE.md`,
+`AGENTS.md`, or `README.md` runs no CI and deploys nothing (D-138). The deploy authenticates with the `FIREBASE_SERVICE_ACCOUNT`
 repo secret (a service-account key) and builds with web config fetched by `scripts/write-web-env.mjs`, so no env
 file is committed. Indexes on `db-tunaspool` that are not in `firestore.indexes.json` are deleted. Storage is
 still deployed by hand.

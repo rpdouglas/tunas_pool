@@ -217,6 +217,16 @@ await seedEntry(db, 'jen', {
   weekId: 'wk03',
   phone: '+13155550199',
 });
+// Dale is in and paid before the lock (D-139); he signs in with email below.
+await seedEntry(db, 'dale', { name: 'Dale D.', wins: 8, payment: 'paid', weekId: 'wk03' });
+// A post on week 2's board, for the earlier boards under week 3's.
+await db.doc(`seasons/${YEAR}/weeks/wk02/board/smoke1`).set({
+  playerId: 'jen',
+  displayName: 'Jen K.',
+  text: 'Told you the Jags would cover.',
+  createdAt: Timestamp.now(),
+  hidden: false,
+});
 for (const id of ['rosalie']) await db.doc(`players/${id}`).update(roster);
 await db.doc('players/jen').update({ phone: '+13155550199' });
 await recomputeStandings(db, YEAR, async (uids) => new Set(uids));
@@ -315,6 +325,44 @@ try {
     (await player.getByRole('link', { name: /bingo/i }).count()) === 0,
   );
   await playerCtx.close();
+
+  // ---- 3b. A paid player before the lock (D-139): who's in, the games, and the boards ----
+  const paidCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+  const dale = await paidCtx.newPage();
+  dale.on('pageerror', (e) => errors.push(`dale: ${e.message}`));
+  const DALE_EMAIL = 'dale@tunas.test';
+  await dale.goto(`${APP}/account`);
+  await dale.getByLabel('Email').fill(DALE_EMAIL);
+  await dale.getByRole('button', { name: 'Email me a link' }).click();
+  await dale.getByText('Check your email').waitFor();
+  const daleOob = (
+    await (await fetch(`${AUTH}/emulator/v1/projects/${PROJECT}/oobCodes`)).json()
+  ).oobCodes
+    .filter((c: { email: string }) => c.email === DALE_EMAIL)
+    .pop();
+  await dale.goto(
+    `${APP}/auth/finish?next=%2F&apiKey=demo-api-key&oobCode=${daleOob.oobCode}&mode=signIn&lang=en`,
+  );
+  await dale.getByRole('link', { name: 'Continue' }).waitFor();
+  const daleUid = (
+    await (
+      await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:query`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnUserInfo: true }),
+      })
+    ).json()
+  ).userInfo.find((u: { email?: string }) => u.email === DALE_EMAIL).localId;
+  // His login linked to his profile, as an approved claim would leave it.
+  await db.doc('players/dale').update({ claimedByUid: daleUid, email: DALE_EMAIL });
+  await visit(dale, 'home-paid-open', '/', "Who's in and the board");
+  await visit(dale, 'week-open-paid', `/week/${YEAR}/wk03`, "Who's in so far");
+  await dale.getByRole('button', { name: 'By game' }).click();
+  await checkScreen(dale, 'week-open-paid-by-game', 'Who picked what shows here once picks lock.');
+  await dale.getByRole('button', { name: /Board/ }).click();
+  await dale.getByRole('button', { name: 'Week 2 board' }).click();
+  await checkScreen(dale, 'week-open-paid-board', 'Told you the Jags would cover.');
+  await paidCtx.close();
 
   // SMOKE_ONLY=bingo skips the commissioner and the counter, for when the Codespace runs short of
   // memory partway through ("Target crashed").
