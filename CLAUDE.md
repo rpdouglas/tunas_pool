@@ -110,7 +110,7 @@ Deployment targets (see `DECISIONS.md` D-015):
 | Storage bucket | `tunaspool-paper-sheets` (deploy target `paperSheets`, D-058). Never the default bucket. |
 | Local and CI | `demo-tunas-pool` (emulator only, the `.firebaserc` default) |
 
-- **Merging to `main` deploys to production.** After CI passes, the `deploy` job in `.github/workflows/ci.yml` releases Hosting, Firestore rules, and Firestore indexes (`DECISIONS.md` D-019). Treat every merge, and every rules change in particular, as a release. Functions deploy after the site deploy when `functions/`, `shared/`, or `firebase.json` changed (`DECISIONS.md` D-041), and can be re-run with the manual **Deploy functions** workflow (D-035). Storage is not automated.
+- **Merging to `main` deploys to production.** After CI passes, the `deploy` job in `.github/workflows/ci.yml` releases Hosting, Firestore rules, and Firestore indexes (`DECISIONS.md` D-019). Treat every merge, and every rules change in particular, as a release. The one exception: a merge that changes only `docs/`, `.agents/`, `CLAUDE.md`, `AGENTS.md`, or `README.md` runs no CI and deploys nothing (D-138). Functions deploy after the site deploy when `functions/`, `shared/`, or `firebase.json` changed (`DECISIONS.md` D-041), and can be re-run with the manual **Deploy functions** workflow (D-035). Storage is not automated.
 - For a manual deploy, always pass `--project prod` and an explicit `--only` list. Never run a bare `firebase deploy`.
 - Never deploy `storage` or anything targeting the `(default)` database without asking Ryan: those are shared with other apps in the project.
 - Get every Firestore handle with `FIRESTORE_DATABASE_ID` from `shared/config.ts`.
