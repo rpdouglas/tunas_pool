@@ -1,8 +1,30 @@
 name: CI
+# A change to docs only (these paths and nothing else) runs nothing and deploys nothing (D-138).
+# Any other file in the change, including the guide's pages in src/, runs everything as before.
+# If `verify` is ever made a required check on main, docs-only PRs would wait for it forever:
+# move this filter into the job then.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '.agents/**'
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
+      - 'README.md'
   pull_request:
+    paths-ignore: # the same list
+      - 'docs/**'
+      - '.agents/**'
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
+      - 'README.md'
+
+# A newer push to the same PR stops the older run. Each run on main is its own group, so none is
+# ever cancelled or dropped while waiting (the deploy job queues on its own, below).
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
@@ -26,7 +48,8 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run test:rules
-      - run: npm run build
+      # `npm run build` would typecheck again; the typecheck step above already did.
+      - run: npx vite build
       # axe (WCAG 2.2 AA), brand fonts, and no horizontal scroll on /styleguide at 375px and desktop.
       - run: npx playwright install --with-deps chromium
       - run: npm run test:a11y
@@ -56,14 +79,13 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
       - run: npm ci
-      # The web build typechecks the functions' tests too (tsconfig.json), so it needs their dependencies.
-      - run: npm --prefix functions ci
       - run: node scripts/write-web-env.mjs prod "$FIREBASE_WEB_APP_ID"
       # Team logos for the By game view (D-103), fetched fresh, never committed. Never blocks a
       # release: a logo that can't be fetched shows as the team badge.
       - run: npx tsx scripts/fetch-team-logos.ts
         continue-on-error: true
-      - run: npm run build
+      # Only the Vite build: `verify` typechecked this same commit, so `npm run build` would repeat it.
+      - run: npx vite build
       - run: npx firebase deploy --project prod --only hosting,firestore:rules,firestore:indexes --non-interactive --force
 
       # Functions follow the site, and only when this push changed them (DECISIONS.md D-041). Only the
@@ -76,5 +98,8 @@ jobs:
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+      # The functions' predeploy builds them, so their dependencies are installed only when deploying.
+      - if: steps.functions-changed.outputs.changed == 'true'
+        run: npm --prefix functions ci
       - if: steps.functions-changed.outputs.changed == 'true'
         run: npx firebase deploy --project prod --only functions:tunaspool --non-interactive --force
