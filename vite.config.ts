@@ -28,6 +28,7 @@ export default defineConfig({
   server: { host: true, port: 5173 },
   test: {
     environment: 'jsdom',
+    pool: 'vmThreads',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}', 'shared/**/*.test.ts', 'functions/src/**/*.test.ts'],

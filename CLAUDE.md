@@ -118,14 +118,14 @@ Deployment targets (see `DECISIONS.md` D-015):
 ## 7. Workflow (Recursive Build Methodology)
 
 1. Read `docs/ACTIVE_CYCLE.md` for the current sprint goal and task list.
-2. **Run the Persona Check** (`docs/PERSONAS.md` §0) on every feature before building: name the primary persona, apply their UX constraints as acceptance criteria, and run the Rosalie, Dale, Gerald, Commissioner, Border, Welcome, and Responsible-Play tests.
+2. **Run the Persona Check** (`docs/PERSONAS.md` §0) on every feature before building (skip it only for work nobody sees: refactors, dev tooling, tests, and docs with no change to a screen, its words, accessibility, money, or who can see what, D-137): name the primary persona, apply their UX constraints as acceptance criteria, and run the Rosalie, Dale, Gerald, Commissioner, Border, Welcome, and Responsible-Play tests.
 3. Implement only what is in scope for the sprint. Log scope creep in `PROJECT_PLAN.md` under *Parked*.
 4. Write rules tests **before** or alongside any rules change.
-5. Run `typecheck`, `test`, and `test:rules` before declaring a task done.
+5. Run checks before declaring a task done: `typecheck`, `lint`, and `test` every time (D-137). Run `test:rules` when `firestore.rules`, `storage.rules`, `functions/`, or `shared/` changed, and when closing a sprint. Run `test:smoke` once only if a screen was added or changed. CI runs `typecheck`, `lint`, `test`, and `test:rules` on every PR either way.
 6. Update docs, then update `ACTIVE_CYCLE.md` with status and anything learned.
 7. Use subagents for parallelizable work (for example: rules tests, UI components, function stubs). Review diffs before merging.
 
-**Definition of done:** typechecks clean, tests pass, rules tests cover new paths, the functions' integration tests cover new callables, docs updated (the in-app guide too, when a screen it covers changed), and the smoke run passes with the changed screens looked at (375px).
+**Definition of done:** typechecks clean, lint clean, unit tests pass, rules tests cover new paths and functions integration tests cover new callables (when rules, `functions/`, or `shared/` changed), docs updated (the in-app guide too, when a screen it covers changed), and the smoke run passes with the changed screens looked at (375px, only when a screen was added or changed).
 
 **Browser check: one quick smoke run (D-082).** At the end of a task that adds or changes a screen, run `npm run test:smoke` once. It seeds a small season into the emulators, serves the built site, opens each screen at 375px, checks it loads, fits (also at the largest text size), passes the WCAG 2.2 AA rules, and throws no script error, and saves screenshots to `test-results/smoke/`. It takes about a minute. Look at the screenshots of the screens you touched, and add a `visit(...)` line for any new screen. When the change shows on a screen the guide uses, run `npm run guide:shots` instead (the same run, also saving the guide's WebP shots); the build copies `public/` before the run, so a page shows a new shot only from the next build. If it fails, fix what it found; if a page crashes for no reason in the code, say so and move on rather than debugging the machine.
 

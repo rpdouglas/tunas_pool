@@ -11,8 +11,14 @@ description: >-
 
 # Persona Check
 
-CLAUDE.md §7 step 2: run this on **every** feature before building. Personas are
+CLAUDE.md §7 step 2: run this on **every user-facing feature** before building. Personas are
 working models; when a persona and a real player disagree, the real player wins.
+
+> [!NOTE]
+> Skip it only for work nobody sees: internal refactors, dev tooling, tests, and docs with no
+> change to a screen, its words, accessibility, money, or who can see what (D-137). Wording
+> changes and bug fixes that change what someone sees still get the check: plain words are what
+> the Welcome and Rosalie tests are about.
 
 ## Steps
 
