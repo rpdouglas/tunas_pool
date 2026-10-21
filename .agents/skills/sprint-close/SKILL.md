@@ -12,19 +12,24 @@ description: >-
 
 From CLAUDE.md §7. Run in this order and stop at the first failure; fix, then rerun.
 
-## 1. Fast checks
+## 1. Fast checks (every time)
 
 ```bash
 npm run typecheck
 npm run lint
-npm run test
-npm run test:rules      # rules tests + functions integration tests (Firestore emulator)
+npm run test           # Vitest, vmThreads pool (D-137)
+```
+
+## 2. Rules and integration tests (when `firestore.rules`, `storage.rules`, `functions/`, or `shared/` changed, or closing a sprint)
+
+```bash
+npm run test:rules     # rules tests + functions integration tests (Firestore emulator)
 ```
 If `test:rules` prints no "Tests" line, a stray emulator may hold port 8080: check the
 port, never start emulators as a bare background command (use `firebase emulators:exec`).
 If rules changed, tests were written before or alongside the change (§7 step 4).
 
-## 2. One browser check (only if a screen was added or changed)
+## 3. One browser check (only if a screen was added or changed)
 
 ```bash
 npm run test:smoke      # about a minute, 375px, a11y + large text
@@ -41,7 +46,7 @@ npm run test:smoke      # about a minute, 375px, a11y + large text
 - If it fails, fix what it found. If a page crashes for no reason in the code, report that
   and move on. **Do not run or write `test:e2e:*` flows** unless Ryan asks (D-066, D-082).
 
-## 3. Docs (same commit as the code)
+## 4. Docs (same commit as the code)
 
 - Schema change: `docs/DATA_MODEL.md`. Rules change: `firestore.rules` is the source;
   sync the code block and test matrix row in `docs/FIRESTORE_RULES.md`. Function contract:
@@ -52,11 +57,11 @@ npm run test:smoke      # about a minute, 375px, a11y + large text
   was **not** run, and why).
 - Scope creep goes to `docs/PROJECT_PLAN.md` under *Parked*, not into the build.
 
-## 4. Governance check
+## 5. Governance check
 
 Run the `tunas-governance-audit` skill (rules/doc diff at minimum). Fix Critical items first.
 
-## 5. Report
+## 6. Report
 
 State plainly: each command and its result, which screens were looked at, what was not run,
 and which docs changed. Remember that merging to `main` deploys to production (§6): treat the
