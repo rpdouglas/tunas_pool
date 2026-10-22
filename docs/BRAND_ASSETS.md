@@ -68,6 +68,8 @@ The originals are flattened RGB PNGs with the grey-and-white checkerboard painte
 | `src/assets/brand/pawn-shop-helmet.webp` | BA-03 | 640×510, ~60 KB | `PawnShopHelmet`: Home footer, styleguide |
 | `public/favicon-32.png`, `favicon-64.png` | BA-02 | round badge | browser tab icon |
 | `public/apple-touch-icon.png` | BA-02 | 180×180 on purple | iPhone home-screen icon |
+| `public/icon-192.png`, `icon-512.png` | BA-02 | 192×192 and 512×512 on purple | installed-app icon (`manifest.webmanifest`, D-141) |
+| `public/icon-maskable-512.png` | BA-02 | 512×512, badge inside the 80% safe zone | Android's shaped icons (D-141) |
 | `public/og-image.png` | BA-01 + BA-02 | 1200×630 | link previews (`og:image` in `index.html`) |
 
 All of these are imported through Vite (hashed, cacheable) except the `public/` ones, which must keep their fixed names. Components live in `src/components/ui/BrandArt.tsx`. Every one has an entry in `/styleguide`.

@@ -20,6 +20,7 @@ import { AuthProvider } from './features/auth/AuthProvider';
 import { ToastProvider } from './components/ui/ToastProvider';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { reportError, watchForErrors } from './lib/errorReporting';
+import { AppUpdates } from './features/pwa/AppUpdates';
 
 watchForErrors();
 
@@ -28,6 +29,7 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ToastProvider>
+          <AppUpdates />
           <BrowserRouter>
             <ErrorBoundary onError={reportError}>
               <App />

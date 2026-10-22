@@ -41,6 +41,7 @@ import type { HallList } from '@shared/hallOfFame';
 import { ShareBar } from '../components/ui/ShareBar';
 import { ShareCard } from '../components/ui/ShareCard';
 import { TextSizeControl } from '../components/ui/TextSizeControl';
+import { AppStatusBar } from '../components/ui/AppStatusBar';
 import type { ClaimRow, EntryRow } from '@shared/adminTypes';
 import type { WeekWinner } from '@shared/types';
 import { Field } from '../components/ui/Field';
@@ -1369,6 +1370,17 @@ export default function Styleguide() {
             <div className="rounded-lg bg-purple-800 p-4">
               <TextSizeControl onDark />
             </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-appstatus">
+          <h2 id="sg-appstatus" className="mb-3 font-heading text-h2 italic">
+            App status strip (D-141)
+          </h2>
+          <div className="flex flex-col gap-4">
+            <AppStatusBar offline updateReady={false} onRefresh={() => {}} onLater={() => {}} />
+            <AppStatusBar offline={false} updateReady onRefresh={() => {}} onLater={() => {}} />
+            <AppStatusBar offline updateReady onRefresh={() => {}} onLater={() => {}} />
           </div>
         </section>
 

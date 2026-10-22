@@ -83,6 +83,12 @@ started (nobody is entering picks). About two hours.
 7. **Forward the old address.** Deploy a one-page site to `tunaspool` in the old project with a
    `firebase.json` holding a single redirect (`"source": "**"`, to `https://tunaspool.ca`, type 301),
    `--project lilypad-strategy-design --only hosting:tunaspool`. Keep it forever; it's free.
+   **The installed app (D-141):** phones that added the pool to their home screen open it from
+   their own copy and never reach the redirect. So the forwarding site also serves
+   `scripts/pwa/remove-sw.js` as `/sw.js` (Hosting serves a real file before a redirect), with a
+   `Cache-Control: no-cache` header on it. Each phone's next check fetches it, the old copy removes
+   itself, and the page reloads into the redirect. Players then add `tunaspool.ca` to their home
+   screen again; say so in step 1's message.
 8. **Try it.** Ryan signs in on `tunaspool.ca` (Google, then the Yahoo email link) and sees the Back
    Office. Run `npm run admin:claim` against `tunas-pool` for anyone missing a claim.
 

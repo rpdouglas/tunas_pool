@@ -40,6 +40,9 @@ const APP = 'http://127.0.0.1:4174';
 const AUTH = 'http://127.0.0.1:9099';
 const PROJECT = 'demo-tunas-pool';
 const SHOTS = 'test-results/smoke';
+// Service workers off except in the install check: one tab caching the whole site per context
+// would only add memory to a run that's already short of it (D-141).
+const PHONE = { viewport: { width: 375, height: 812 }, serviceWorkers: 'block' as const };
 const ADMIN_EMAIL = 'ryan@tunas.test';
 mkdirSync(SHOTS, { recursive: true });
 
@@ -277,8 +280,39 @@ const browser = await chromium.launch({
 });
 
 try {
+  // ---- The installable app (D-141): the manifest is served, and the worker starts ----
+  {
+    const ctx = await browser.newContext({ viewport: PHONE.viewport });
+    const page = await ctx.newPage();
+    page.on('pageerror', (e) => errors.push(`install: ${e.message}`));
+    await page.goto(`${APP}/`).catch(() => undefined);
+    const manifest = await page
+      .evaluate(async () => {
+        const href = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')?.href;
+        return href
+          ? ((await (await fetch(href)).json()) as { name?: string; icons?: unknown[] })
+          : null;
+      })
+      .catch(() => null);
+    check(
+      'install: manifest',
+      Boolean(manifest?.name && manifest.icons?.length),
+      manifest?.name ?? 'none',
+    );
+    const worker = await page
+      .evaluate(() =>
+        Promise.race([
+          navigator.serviceWorker.ready.then((r) => Boolean(r.active)),
+          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 20_000)),
+        ]),
+      )
+      .catch(() => false);
+    check('install: service worker', worker);
+    await ctx.close();
+  }
+
   // ---- 3. A player (guest) ----
-  const playerCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+  const playerCtx = await browser.newContext(PHONE);
   const player = await playerCtx.newPage();
   player.on('pageerror', (e) => errors.push(`player: ${e.message}`));
   await visit(player, 'home', '/', 'Tied for the season lead');
@@ -327,7 +361,7 @@ try {
   await playerCtx.close();
 
   // ---- 3b. A paid player before the lock (D-139): who's in, the games, and the boards ----
-  const paidCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+  const paidCtx = await browser.newContext(PHONE);
   const dale = await paidCtx.newPage();
   dale.on('pageerror', (e) => errors.push(`dale: ${e.message}`));
   const DALE_EMAIL = 'dale@tunas.test';
@@ -368,7 +402,7 @@ try {
   // memory partway through ("Target crashed").
   if (!SMOKE_ONLY) {
     // ---- 4. The commissioner ----
-    const adminCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    const adminCtx = await browser.newContext(PHONE);
     const admin = await adminCtx.newPage();
     admin.on('pageerror', (e) => errors.push(`admin: ${e.message}`));
     await admin.goto(`${APP}/admin`);
@@ -586,7 +620,7 @@ try {
     await adminCtx.close();
 
     // ---- 5. Devon, the counter role (D-095) ----
-    const counterCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    const counterCtx = await browser.newContext(PHONE);
     const counter = await counterCtx.newPage();
     counter.on('pageerror', (e) => errors.push(`counter: ${e.message}`));
     const COUNTER_EMAIL = 'devon@tunas.test';
@@ -723,7 +757,7 @@ try {
     config: { ...BINGO_CONFIG, enabled: true },
     now: new Date(),
   });
-  const bingoCtx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+  const bingoCtx = await browser.newContext(PHONE);
   const member = await bingoCtx.newPage();
   member.on('pageerror', (e) => errors.push(`bingo: ${e.message}`));
   const MEMBER_EMAIL = 'kayla@tunas.test';
@@ -782,7 +816,7 @@ try {
     now: new Date(Date.now() - 8 * 24 * 3_600_000),
   });
   const signInStaff = async (email: string, role: 'admin' | 'counter', next: string) => {
-    const ctx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    const ctx = await browser.newContext(PHONE);
     const page = await ctx.newPage();
     page.on('pageerror', (e) => errors.push(`${role}: ${e.message}`));
     await page.goto(`${APP}${next}`);
