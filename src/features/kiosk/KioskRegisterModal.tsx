@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Field } from '../../components/ui/Field';
 import { friendlyError } from '../../lib/errors';
@@ -7,18 +7,34 @@ import { useRegisterKioskPlayer } from './kioskData';
 
 interface KioskRegisterModalProps {
   isOpen: boolean;
+  initialName?: string;
   onClose: () => void;
   onRegistered: (playerId: string, displayName: string, pin: string) => void;
 }
 
-export function KioskRegisterModal({ isOpen, onClose, onRegistered }: KioskRegisterModalProps) {
-  const [name, setName] = useState('');
+export function KioskRegisterModal({
+  isOpen,
+  initialName = '',
+  onClose,
+  onRegistered,
+}: KioskRegisterModalProps) {
+  const [name, setName] = useState(initialName);
   const [contact, setContact] = useState('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const register = useRegisterKioskPlayer();
+
+  useEffect(() => {
+    if (isOpen) {
+      setName(initialName || '');
+      setContact('');
+      setPin('');
+      setConfirmPin('');
+      setError(null);
+    }
+  }, [isOpen, initialName]);
 
   if (!isOpen) return null;
 
@@ -76,58 +92,52 @@ export function KioskRegisterModal({ isOpen, onClose, onRegistered }: KioskRegis
         </p>
 
         <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
-          <Field label="Your Name (First & Last Initial)">
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Big Dave"
-              maxLength={60}
-              className="input-field"
-              required
-              autoFocus
-            />
-          </Field>
+          <Field
+            label="Your Name (First & Last Initial)"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Big Dave"
+            maxLength={60}
+            required
+            autoFocus
+          />
 
-          <Field label="Mobile Phone or Email">
-            <input
-              type="text"
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
-              placeholder="613-555-0123 or dave@email.com"
-              className="input-field"
-              required
-            />
-          </Field>
+          <Field
+            label="Mobile Phone or Email"
+            type="text"
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            placeholder="613-555-0123 or dave@email.com"
+            required
+          />
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Choose 4-Digit PIN">
-              <input
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={4}
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                placeholder="••••"
-                className="input-field text-center font-mono text-xl tracking-widest"
-                required
-              />
-            </Field>
+            <Field
+              label="Choose 4-Digit PIN"
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+              placeholder="••••"
+              className="text-center font-mono text-xl tracking-widest"
+              required
+            />
 
-            <Field label="Confirm PIN">
-              <input
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={4}
-                value={confirmPin}
-                onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
-                placeholder="••••"
-                className="input-field text-center font-mono text-xl tracking-widest"
-                required
-              />
-            </Field>
+            <Field
+              label="Confirm PIN"
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              value={confirmPin}
+              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+              placeholder="••••"
+              className="text-center font-mono text-xl tracking-widest"
+              required
+            />
           </div>
 
           {error && (
