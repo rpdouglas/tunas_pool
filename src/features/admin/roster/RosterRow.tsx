@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom';
 import { SOURCE_LABELS } from '@shared/paperEntry';
 import { formatPhone } from '@shared/phone';
+import { ROLE_LABELS, type StaffRole } from '@shared/roles';
 import type { EntrySource } from '@shared/types';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import type { RosterRow as Row } from './roster';
 
 export interface RosterRowProps {
   row: Row;
+  /** Their staff role, when they have one (D-140). */
+  staffRole?: StaffRole;
   /** Where "Enter picks" goes. Null when no week can take entries right now. */
   enterHref: string | null;
   /** True once picks are locked: the button says "Late entry". */
@@ -24,6 +27,7 @@ export interface RosterRowProps {
  */
 export function RosterRow({
   row,
+  staffRole,
   enterHref,
   late,
   showStatus,
@@ -44,6 +48,7 @@ export function RosterRow({
             {row.claimed && row.origin === 'admin' && (
               <span className="badge badge-open">Linked</span>
             )}
+            {staffRole && <span className="badge badge-pending">{ROLE_LABELS[staffRole]}</span>}
           </p>
           {showStatus && (
             <p className="flex flex-wrap items-center gap-2 text-body">

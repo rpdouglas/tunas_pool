@@ -22,6 +22,7 @@ import {
 } from './roster';
 import { useRoster } from './rosterData';
 import { RosterRow } from './RosterRow';
+import { useStaffRoles } from './staffRolesData';
 
 const FILTERS = Object.keys(ROSTER_FILTER_LABELS) as RosterFilter[];
 
@@ -32,6 +33,7 @@ const FILTERS = Object.keys(ROSTER_FILTER_LABELS) as RosterFilter[];
 export default function RosterPage() {
   const sel = useAdminWeek();
   const roster = useRoster();
+  const staffRoles = useStaffRoles();
   const week = sel.week;
   const entries = useEntriesList(sel.year, week?.id);
   const { showToast } = useToast();
@@ -65,6 +67,12 @@ export default function RosterPage() {
   const canEnter = window !== null && window.mode !== 'closed';
   const showStatus = Boolean(week) && entries.isSuccess;
   const filters = week ? FILTERS : (['all', 'inactive'] as RosterFilter[]);
+  const roleOf = (playerId: string) =>
+    staffRoles.isError
+      ? null
+      : staffRoles.data
+        ? (staffRoles.data.roles[playerId] ?? 'none')
+        : undefined;
 
   function onSaved(_playerId: string, name: string, added: boolean) {
     setEditing(null);
@@ -197,12 +205,14 @@ export default function RosterPage() {
                   setEditing(null);
                   showToast({ message });
                 }}
+                staffRole={roleOf(row.playerId)}
               />
             </li>
           ) : (
             <RosterRow
               key={row.playerId}
               row={row}
+              staffRole={staffRoles.data?.roles[row.playerId]}
               showStatus={showStatus}
               late={window?.mode === 'late'}
               enterHref={

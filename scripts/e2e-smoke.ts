@@ -441,6 +441,61 @@ try {
       'and offers no delete button for them',
       (await admin.getByRole('button', { name: /^Delete Rosalie/ }).count()) === 0,
     );
+    // A staff role from the roster (D-140): Dale has a saved login, so he can be made a counter.
+    await admin.getByRole('button', { name: /Details for Dale/ }).click();
+    const roleSelect = admin.getByLabel('Staff role');
+    const roleLoaded = await admin
+      .getByRole('option', { name: 'Player (now)' })
+      .waitFor({ state: 'attached', timeout: 45_000 })
+      .then(() => roleSelect.isEnabled())
+      .catch(() => false);
+    check('the staff role loads for a linked player', roleLoaded);
+    await roleSelect.selectOption('counter').catch(() => undefined);
+    await admin.screenshot({ path: `${SHOTS}/admin-roster-role.png`, fullPage: true });
+    await admin
+      .getByRole('button', { name: 'Make them a counter' })
+      .click()
+      .catch(() => undefined);
+    const granted = await admin
+      .getByText(/Dale .*now has the counter role/)
+      .first()
+      .waitFor({ timeout: 30_000 })
+      .then(() => true)
+      .catch(() => false);
+    const daleClaims = await (
+      await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:lookup`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ localId: [daleUid] }),
+      })
+    )
+      .json()
+      .then((r: { users?: { customAttributes?: string }[] }) => r.users?.[0]?.customAttributes)
+      .catch(() => undefined);
+    check(
+      'the roster makes him a counter, on his login',
+      granted && JSON.parse(daleClaims ?? '{}').counter === true,
+      daleClaims ?? 'no claims',
+    );
+    // And back, so the rest of the run sees Dale as a player.
+    await admin.getByRole('button', { name: /Details for Dale/ }).click();
+    await admin
+      .getByLabel('Staff role')
+      .selectOption('none')
+      .catch(() => undefined);
+    await admin
+      .getByRole('button', { name: 'Take the role away' })
+      .click()
+      .catch(() => undefined);
+    check(
+      'and takes it away again',
+      await admin
+        .getByText(/Dale .*is a player again/)
+        .first()
+        .waitFor({ timeout: 30_000 })
+        .then(() => true)
+        .catch(() => false),
+    );
     await visit(admin, 'admin-enter', '/admin/enter/rosalie?week=wk03', 'The sheet, top to bottom');
     // Import picks from a spreadsheet (D-096): Jen is already in and is kept, a new name is added.
     await visit(admin, 'admin-import', '/admin/import?week=wk03', 'Spreadsheet (CSV file)');

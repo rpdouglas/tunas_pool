@@ -20,6 +20,7 @@ import { FIRESTORE_DATABASE_ID, FUNCTIONS_REGION } from '../../shared/config';
 import type { Game, WeekStatus } from '../../shared/types';
 import { deleteEntry, upsertEntry } from './adminEntries';
 import { deletePlayer, inspectPlayerDelete } from './players';
+import { listStaffRoles, setStaffRole } from './staffRoles';
 import { hideMessage, joinBoard, setMute } from './board';
 import { loadCounterOverview, saveCounterPlayer } from './counter';
 import { startCycle } from './bingo/cycle';
@@ -35,7 +36,7 @@ import { approveDraw, correctDraw, enterDraw, skipDraw } from './bingo/draws';
 import { bingoStatus as bingoStatusFor } from './bingo/status';
 import { bingoRoster as bingoRosterFor } from './bingo/roster';
 import { cardRequest } from './bingo/callers';
-import { staffRoleOf, type StaffRole } from '../../shared/roles';
+import { parseRoleChoice, staffRoleOf, type StaffRole } from '../../shared/roles';
 import { createRateLimit, tidyClientError } from './clientErrors';
 import { auditInTransaction } from './audit';
 import {
@@ -290,6 +291,24 @@ export const adminDeletePlayer = onCall(async (req) => {
   return deletePlayer(db, {
     playerId,
     reason: req.data?.reason,
+    actorUid: req.auth!.uid,
+  });
+});
+
+// ---- adminListStaffRoles / adminSetStaffRole (D-140): the roster's role switch ----
+// The role is a custom claim on the player's login, set here with the Admin SDK (CLAUDE.md §4.7).
+export const adminListStaffRoles = onCall(async (req) => {
+  requireAdmin(req);
+  return listStaffRoles(db, getAuth(app));
+});
+
+export const adminSetStaffRole = onCall(async (req) => {
+  requireAdmin(req);
+  const role = parseRoleChoice(req.data?.role);
+  if (!role) throw new HttpsError('invalid-argument', 'Choose Player, Counter, or Admin.');
+  return setStaffRole(db, getAuth(app), {
+    playerId: requireId(req.data?.playerId, 'playerId'),
+    role,
     actorUid: req.auth!.uid,
   });
 });

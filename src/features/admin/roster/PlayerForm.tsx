@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { DUPLICATE_REASON_TEXT } from '@shared/duplicates';
 import { formatPhone, normalizePhone } from '@shared/phone';
+import type { RoleChoice } from '@shared/roles';
 import type { PaymentMethod } from '@shared/types';
 import { Button } from '../../../components/ui/Button';
 import { Checkbox } from '../../../components/ui/Checkbox';
@@ -16,6 +17,7 @@ import {
 } from './roster';
 import { PlayerDeleteTools } from './PlayerDeleteTools';
 import { PlayerLinkTools } from './PlayerLinkTools';
+import { PlayerRoleTools } from './PlayerRoleTools';
 import { useSavePlayer } from './rosterData';
 
 const METHODS: { value: PaymentMethod; label: string }[] = [
@@ -34,6 +36,8 @@ export interface PlayerFormProps {
   onCancel: () => void;
   /** After an unlink or a merge, with the message to show. Omit to leave those tools out. */
   onLinkChange?: (message: string) => void;
+  /** Their staff role (D-140): undefined while it loads, null when it couldn't be checked. */
+  staffRole?: RoleChoice | null;
 }
 
 /** Add or edit a roster player. Only a name is needed: no email, no account (PERSONAS: Rosalie). */
@@ -44,6 +48,7 @@ export function PlayerForm({
   onSaved,
   onCancel,
   onLinkChange,
+  staffRole,
 }: PlayerFormProps) {
   const [values, setValues] = useState<PlayerFormValues>({
     displayName: player?.displayName ?? startName,
@@ -169,6 +174,9 @@ export function PlayerForm({
       </div>
       {player && onLinkChange && (
         <PlayerLinkTools player={player} roster={roster} onDone={onLinkChange} />
+      )}
+      {player && onLinkChange && (
+        <PlayerRoleTools player={player} role={staffRole} onDone={onLinkChange} />
       )}
       {player && onLinkChange && <PlayerDeleteTools player={player} onDone={onLinkChange} />}
     </form>

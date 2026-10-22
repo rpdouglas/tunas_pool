@@ -10,10 +10,13 @@ import type {
   MergeResult,
   PlayerDeleteCheck,
   PublishedWinner,
+  SetStaffRoleResult,
+  StaffRolesList,
   WeekPreview,
 } from '@shared/adminTypes';
 import type { AdminEntry } from '@shared/paperEntry';
 import type { SeasonReport } from '@shared/reports';
+import type { RoleChoice } from '@shared/roles';
 import type { GameResult, PaymentMethod } from '@shared/types';
 import { functions } from './firebase';
 
@@ -112,5 +115,10 @@ export const adminApi = {
   ),
   deletePlayer: callable<{ playerId: string; reason: string }, { deleted: true }>(
     'adminDeletePlayer',
+  ),
+  /** Who on the roster is a counter or an admin (D-140). */
+  listStaffRoles: callable<Record<string, never>, StaffRolesList>('adminListStaffRoles'),
+  setStaffRole: callable<{ playerId: string; role: RoleChoice }, SetStaffRoleResult>(
+    'adminSetStaffRole',
   ),
 };
