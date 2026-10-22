@@ -222,6 +222,7 @@ All use semantic tokens. Build in `src/components/ui/`, each shown in the dev-on
 | **Text size control** | Three pill buttons: Normal, Large, Extra large. Sets `data-text-size` on `<html>` and remembers it on the device. Lives in the player menu, so it works on every screen. In a light and an on-dark version. | normal · large · extra large |
 | **Error screen** | Game Day backdrop, a panel titled "Something went wrong", one sentence, Reload the page, and Back to this week. | n/a |
 | **Toast** | Bottom, `shadow-raised`. Same verb as the button. | success · error |
+| **App status strip** | Top of every screen, in the page (never over a button), `bg-surface`, `shadow-raised`. *You're offline* with what's kept, or *A new version of the pool is ready* with **Refresh** (primary) and **Later**. Icon and words, never color alone (D-141). | offline · update ready · both |
 | **Empty state** | `.icon-badge` + one sentence + one action | n/a |
 
 ---

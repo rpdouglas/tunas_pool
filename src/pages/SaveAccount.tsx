@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { GameDayPage } from '../components/layout/GameDayPage';
 import { Panel } from '../components/ui/Panel';
 import { EmailLinkForm } from '../features/auth/EmailLinkForm';
@@ -33,6 +34,14 @@ export default function SaveAccount() {
             <GoogleSignInButton next="/" />
           </div>
         )}
+      </Panel>
+      <Panel>
+        <Link
+          to="/help/home-screen"
+          className="inline-flex min-h-touch items-center text-body text-ink-emphasis underline"
+        >
+          Put the pool on your home screen
+        </Link>
       </Panel>
     </GameDayPage>
   );

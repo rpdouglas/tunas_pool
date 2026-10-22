@@ -18,6 +18,10 @@ B="$tmp/badge-tuna-mascot-weekly-pool.png"
 convert "$B" -trim +repage -resize 32x32 public/favicon-32.png
 convert "$B" -trim +repage -resize 64x64 public/favicon-64.png
 convert "$B" -trim +repage -resize 150x150 -background '#241773' -gravity center -extent 180x180 -flatten public/apple-touch-icon.png
+# Installed-app icons (D-141): the badge on purple, and a maskable one inside the 80% safe zone.
+convert "$B" -trim +repage -resize 160x160 -background '#241773' -gravity center -extent 192x192 -flatten public/icon-192.png
+convert "$B" -trim +repage -resize 426x426 -background '#241773' -gravity center -extent 512x512 -flatten public/icon-512.png
+convert "$B" -trim +repage -resize 310x310 -background '#241773' -gravity center -extent 512x512 -flatten public/icon-maskable-512.png
 # Share image 1200x630: wordmark left, badge right, on the purple-to-black backdrop (#241773 family).
 convert -size 1200x630 gradient:'#3b2aa0-#0d0a22' "$tmp/bg.png"
 convert "$tmp/wordmark-tunas-pick-em.png" -trim +repage -resize 640x "$tmp/wm.png"
