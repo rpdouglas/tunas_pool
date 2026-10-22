@@ -160,3 +160,14 @@ export interface CorrectionResult {
   winnerChanged: boolean;
   winner: PublishedWinner | null;
 }
+
+/** Who on the roster has a staff role (D-140), by player ID. Players with no role are left out. */
+export interface StaffRolesList {
+  roles: Record<string, 'admin' | 'counter'>;
+}
+
+export interface SetStaffRoleResult {
+  role: 'admin' | 'counter' | 'none';
+  /** False when the player already had that role: nothing was written. */
+  changed: boolean;
+}

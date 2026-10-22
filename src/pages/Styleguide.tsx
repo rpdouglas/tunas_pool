@@ -23,6 +23,7 @@ import { useToast } from '../components/ui/toastContext';
 import { PaymentRow } from '../features/admin/payments/PaymentRow';
 import { ClaimCard } from '../features/admin/claims/ClaimCard';
 import { RosterRow } from '../features/admin/roster/RosterRow';
+import { PlayerRoleTools } from '../features/admin/roster/PlayerRoleTools';
 import { ImportRowCard } from '../features/admin/entries/ImportRowCard';
 import type { SheetRow } from '@shared/picksImport';
 import type { RosterRow as RosterRowData } from '../features/admin/roster/roster';
@@ -917,6 +918,14 @@ export default function Styleguide() {
               onEdit={() => undefined}
             />
             <RosterRow
+              row={{ ...SAMPLE_ROSTER, playerId: 'r6', displayName: 'Devon', claimed: true }}
+              staffRole="counter"
+              enterHref="#sg-roster"
+              late={false}
+              showStatus
+              onEdit={() => undefined}
+            />
+            <RosterRow
               row={{ ...SAMPLE_ROSTER, playerId: 'r4', displayName: 'Old Timer', active: false }}
               enterHref={null}
               late={false}
@@ -924,6 +933,37 @@ export default function Styleguide() {
               onEdit={() => undefined}
             />
           </ul>
+          <h3 className="mb-2 mt-4 font-heading text-h3">Staff role (player details, D-140)</h3>
+          <div className="flex max-w-player flex-col gap-4">
+            <PlayerRoleTools player={SAMPLE_ROSTER} role="none" onDone={() => undefined} />
+            <PlayerRoleTools
+              player={{ ...SAMPLE_ROSTER, playerId: 'sr1', displayName: 'Devon', claimed: true }}
+              role={undefined}
+              onDone={() => undefined}
+            />
+            <PlayerRoleTools
+              player={{ ...SAMPLE_ROSTER, playerId: 'sr2', displayName: 'Devon', claimed: true }}
+              role="counter"
+              onDone={() => undefined}
+            />
+            <PlayerRoleTools
+              player={{ ...SAMPLE_ROSTER, playerId: 'sr3', displayName: 'Devon', claimed: true }}
+              role="counter"
+              startChoice="admin"
+              onDone={() => undefined}
+            />
+            <PlayerRoleTools
+              player={{ ...SAMPLE_ROSTER, playerId: 'sr4', displayName: 'Gord M.', claimed: true }}
+              role="none"
+              startChoice="counter"
+              onDone={() => undefined}
+            />
+            <PlayerRoleTools
+              player={{ ...SAMPLE_ROSTER, playerId: 'sr5', displayName: 'Devon', claimed: true }}
+              role={null}
+              onDone={() => undefined}
+            />
+          </div>
         </section>
 
         <section aria-labelledby="sg-import">

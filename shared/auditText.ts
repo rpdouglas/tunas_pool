@@ -160,6 +160,16 @@ export function describeAudit(record: AuditRecord, names: Names, myUid?: string)
     case 'player.delete':
       what = `Deleted ${player} from the roster`;
       break;
+    case 'player.role': {
+      const role = text(after, 'role');
+      what =
+        role === 'admin'
+          ? `Made ${player} an admin`
+          : role === 'counter'
+            ? `Gave ${player} the counter role`
+            : `Took ${player}'s staff role away`;
+      break;
+    }
     case 'player.guestMoved':
       what = `Moved ${player}'s guest picks to their account`;
       break;

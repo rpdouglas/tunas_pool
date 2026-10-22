@@ -159,13 +159,19 @@ entry may also have a photo of the sheet (open the player's picks from the Roste
 
 ### The counter role: letting Devon cover the counter (D-095)
 
-Devon signs in at **/counter** with his own email (so everything he does is under his name), then you give him the role:
+Devon signs in with his own email (so everything he does is under his name), then you give him the role. **From the Roster (D-140), the usual way:**
+
+1. He saves his account on the website (Google or the email link) and asks to link his roster profile; you approve it under **Claims**.
+2. Back Office, **Roster**, tap **Details** on him, **Staff role**, choose **Counter**, and confirm. The same switch makes someone an **Admin** or takes a role away (**Player**). It won't change your own role, or give one to a guest login or a profile with no login.
+3. He taps **Check again** on `/counter` (or signs out and back in). Every change is in the Audit log.
+
+**With the script**, for a login that isn't linked to a roster profile (and for the very first admin):
 
 1. Have him open `/counter` and sign in with the email link. That creates his login.
 2. Run `npm run admin:claim -- <his email> counter` with the same project and credentials as the admin step (his uid from Firebase console, Authentication, works too).
 3. He taps **Check again** on the page.
 
-Devon can enter a **new** sheet while the week is open, mark **cash** received (and undo it), and add or fix a roster player. He can't see phone numbers, emails, notes, or anyone's picks, can't change a sheet that is already in, can't touch anything after the lock, and can't confirm an e-Transfer: those say "Ask the commissioner." His work shows in the Audit log as "Counter (his email)". Take the role away with `npm run admin:claim -- <his email> none`.
+Devon can enter a **new** sheet while the week is open, mark **cash** received (and undo it), and add or fix a roster player. He can't see phone numbers, emails, notes, or anyone's picks, can't change a sheet that is already in, can't touch anything after the lock, and can't confirm an e-Transfer: those say "Ask the commissioner." His work shows in the Audit log as "Counter (his email)". Take the role away on the Roster (**Staff role**, **Player**) or with `npm run admin:claim -- <his email> none`. Taking a role away reaches a login that is already signed in within the hour.
 
 The Storage rule that lets him add a sheet photo is not deployed by CI (and the pool's Storage is shared, so it waits for you): `firebase deploy --project prod --only storage:paperSheets`.
 

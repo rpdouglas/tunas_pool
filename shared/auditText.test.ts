@@ -263,3 +263,20 @@ describe('describeAudit: Tunas 649 Bingo', () => {
     expect(cycle(null)).toBe('Removed a bingo game that a correction took the win from');
   });
 });
+
+describe('a staff role from the roster (D-140)', () => {
+  it('says what role the player was given', () => {
+    const base: AuditRecord = {
+      actorUid: 'ryan-uid',
+      action: 'player.role',
+      target: 'players/devon',
+      before: { displayName: 'Devon', role: 'none' },
+      after: { displayName: 'Devon', role: 'counter' },
+    };
+    const what = (role: string) =>
+      describeAudit({ ...base, after: { displayName: 'Devon', role } }, () => undefined).what;
+    expect(what('counter')).toBe('Gave Devon the counter role');
+    expect(what('admin')).toBe('Made Devon an admin');
+    expect(what('none')).toBe("Took Devon's staff role away");
+  });
+});

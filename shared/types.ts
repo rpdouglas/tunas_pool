@@ -40,6 +40,7 @@ export type AuditAction =
   | 'player.delete'
   | 'player.saved'
   | 'player.guestMoved'
+  | 'player.role'
   | 'season.status'
   | 'board.hidden'
   | 'board.mute'
