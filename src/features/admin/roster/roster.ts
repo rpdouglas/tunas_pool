@@ -12,8 +12,8 @@ export interface RosterPlayer {
   usualPayment: PaymentMethod | null;
   notes: string | null;
   active: boolean;
-  /** Added by the admin (paper, text, and phone players) or made by the player on the website. */
-  origin: 'self' | 'admin';
+  /** Added by the admin (paper, text, and phone players), made on the website, or made at the shop kiosk. */
+  origin: 'self' | 'admin' | 'kiosk';
   /** Linked to a login. */
   claimed: boolean;
 }

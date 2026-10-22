@@ -20,6 +20,7 @@ import {
   type CounterFilter,
 } from './counter';
 import { useCashPayment, useCounterOverview } from './counterData';
+import { useResetKioskPin } from '../kiosk/kioskData';
 
 const FILTERS = Object.keys(COUNTER_FILTER_LABELS) as CounterFilter[];
 
@@ -34,6 +35,7 @@ export default function CounterPage() {
   const week = current.data ?? null;
   const overview = useCounterOverview(year, week?.id);
   const cash = useCashPayment(year, week?.id ?? '');
+  const resetPin = useResetKioskPin();
   const { showToast } = useToast();
   const [filter, setFilter] = useState<CounterFilter>('all');
   const [query, setQuery] = useState('');
@@ -78,6 +80,22 @@ export default function CounterPage() {
     }
   }
 
+  async function handleResetKioskPin(row: CounterRow) {
+    if (
+      !window.confirm(
+        `Reset the 4-digit Kiosk PIN for ${row.displayName}? They will choose a new PIN next time they use the shop tablet.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await resetPin.mutateAsync({ playerId: row.playerId });
+      showToast({ message: `${row.displayName}: kiosk PIN reset` });
+    } catch (err) {
+      showToast({ message: friendlyError(err), tone: 'error' });
+    }
+  }
+
   function onDone(message: string) {
     setEditing(null);
     setQuery('');
@@ -87,8 +105,17 @@ export default function CounterPage() {
   return (
     <div className="flex max-w-player flex-col gap-4 pb-24">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-heading text-h2">Counter</h1>
-        <StatusBadge status={open ? 'open' : week.status === 'final' ? 'final' : 'locked'} />
+        <div className="flex items-center gap-3">
+          <h1 className="font-heading text-h2">Counter</h1>
+          <StatusBadge status={open ? 'open' : week.status === 'final' ? 'final' : 'locked'} />
+        </div>
+        <Link
+          to="/kiosk"
+          className="btn btn-secondary flex items-center gap-1.5"
+          aria-label="Launch Shop Tablet Kiosk mode"
+        >
+          Launch Shop Kiosk →
+        </Link>
       </div>
       <p className="text-body text-ink-muted">
         Week {week.weekNumber}. {counts.entered} in, {counts.not_yet} not yet. Picks{' '}
@@ -229,8 +256,8 @@ export default function CounterPage() {
                   </Button>
                 )}
               </div>
-              {actions.fix && (
-                <div>
+              <div className="flex flex-wrap gap-4">
+                {actions.fix && (
                   <button
                     type="button"
                     className="min-h-touch text-body text-ink-emphasis underline"
@@ -239,8 +266,16 @@ export default function CounterPage() {
                   >
                     Fix a detail
                   </button>
-                </div>
-              )}
+                )}
+                <button
+                  type="button"
+                  className="min-h-touch text-body text-ink-emphasis underline"
+                  onClick={() => handleResetKioskPin(row)}
+                  aria-label={`Reset Kiosk PIN for ${row.displayName}`}
+                >
+                  Reset Kiosk PIN
+                </button>
+              </div>
             </li>
           );
         })}

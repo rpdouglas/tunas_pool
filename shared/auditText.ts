@@ -182,6 +182,18 @@ export function describeAudit(record: AuditRecord, names: Names, myUid?: string)
           ? `Muted ${player} on the board`
           : `Let ${player} post on the board again`;
       break;
+    case 'kiosk.entrySubmit':
+      what = `Submitted picks for ${player} at the shop kiosk`;
+      break;
+    case 'kiosk.setPin':
+      what = `Set a kiosk PIN for ${player}`;
+      break;
+    case 'kiosk.resetPin':
+      what = `Reset the kiosk PIN for ${player}`;
+      break;
+    case 'player.kioskRegister':
+      what = `Registered ${player} at the shop kiosk`;
+      break;
     case 'bingo.memberJoined':
       what = `${player} joined bingo with the invite code`;
       break;

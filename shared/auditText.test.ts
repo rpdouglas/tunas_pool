@@ -12,6 +12,49 @@ const entry = (overrides: Partial<AuditRecord>): AuditRecord => ({
 });
 
 describe('describeAudit', () => {
+  it('says what was done at the kiosk (D-142), by name', () => {
+    expect(
+      describeAudit(
+        entry({
+          action: 'kiosk.entrySubmit',
+          target: 'seasons/2026/weeks/wk05/entries/dale',
+          after: { displayName: 'Dale D.' },
+        }),
+        names,
+      ).what,
+    ).toBe('Submitted picks for Dale D. at the shop kiosk');
+    expect(
+      describeAudit(
+        entry({
+          action: 'kiosk.setPin',
+          target: 'players/dale',
+          after: { displayName: 'Dale D.' },
+        }),
+        names,
+      ).what,
+    ).toBe('Set a kiosk PIN for Dale D.');
+    expect(
+      describeAudit(
+        entry({
+          action: 'kiosk.resetPin',
+          target: 'players/dale',
+          after: { displayName: 'Dale D.' },
+        }),
+        names,
+      ).what,
+    ).toBe('Reset the kiosk PIN for Dale D.');
+    expect(
+      describeAudit(
+        entry({
+          action: 'player.kioskRegister',
+          target: 'players/dale',
+          after: { displayName: 'Dale D.' },
+        }),
+        names,
+      ).what,
+    ).toBe('Registered Dale D. at the shop kiosk');
+  });
+
   it('says what was done on the board (D-102), by name', () => {
     const hidden = entry({
       action: 'board.hidden',
