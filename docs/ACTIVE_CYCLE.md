@@ -19,6 +19,14 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
 - [x] **The pool's first download:** 305.26 KB, unchanged this sprint (no bingo code in it)
 - [x] **README:** "Tunas 649 Bingo": setting it up, a bingo week, settling a bingo dispute, and the dry-run checklist
 - [x] Docs: DECISIONS D-134, PROJECT_PLAN §8, BINGO_PLAN status
+- [ ] **The pool as an installable web app (D-141, Ryan asked, 2026-10-22):**
+  - [ ] Manifest and icons (192, 512, maskable 512) from BA-02 via `scripts/brand/build-assets.sh`; BRAND_ASSETS catalog
+  - [ ] `vite-plugin-pwa` worker: app shell only, `/__/` excluded, no Firebase traffic cached, Firestore offline cache off
+  - [ ] The update bar (*A new version of the pool is ready*, **Refresh**) and the offline note; styleguide states
+  - [ ] `firebase.json`: `no-cache` for `sw.js`, `index.html`, and the manifest; the self-destroying worker ready as a kill switch
+  - [ ] Guide page *Put the pool on your home screen* (iPhone and Android), linked from Account
+  - [ ] MIGRATION.md: remove the worker from `tunaspool.web.app` before it forwards
+  - [ ] Smoke run: the manifest is served and the worker registers; the first-download size check counts the shell only
 - [ ] **The dry run** (Ryan, with real people and real Wednesdays): the README checklist
 - [ ] **One full smoke run on a machine with enough memory**
 - [ ] **G2** (Ryan): the dry run paid out correctly, the launch price and operator % set, the support numbers checked, then "Bingo is on"
