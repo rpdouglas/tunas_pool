@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, UserPlus, HelpCircle, Check, ArrowLeft } from 'lucide-react';
+import { Search, UserPlus, HelpCircle, Check, ArrowLeft, X } from 'lucide-react';
 import { GameCard } from '../../components/ui/GameCard';
 import { Button } from '../../components/ui/Button';
 import { Panel } from '../../components/ui/Panel';
@@ -32,6 +32,7 @@ export default function KioskHomePage() {
   const submitEntry = useSubmitKioskEntry();
 
   const [search, setSearch] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [selectedPlayer, setSelectedPlayer] = useState<KioskRosterPlayer | null>(null);
   const [activePlayer, setActivePlayer] = useState<{
     playerId: string;
@@ -42,6 +43,7 @@ export default function KioskHomePage() {
   const [stage, setStage] = useState<KioskStage>('select');
   const [pinError, setPinError] = useState<string | null>(null);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [registerInitialName, setRegisterInitialName] = useState('');
   const [showForgotPinDialog, setShowForgotPinDialog] = useState(false);
 
   const [existingEntry, setExistingEntry] = useState<KioskExistingEntry | null>(null);
@@ -52,15 +54,19 @@ export default function KioskHomePage() {
 
   const isOpen = Boolean(week && week.status === 'open' && Date.now() < week.lockAtMs);
 
-  // Filter roster
+  // Filter roster: Option A (only when text is entered)
+  const trimmedSearch = search.trim();
   const filteredRoster = useMemo(() => {
+    if (!trimmedSearch) return [];
     const list = rosterQuery.data ?? [];
-    const query = search.trim().toLowerCase();
-    if (!query) return list;
+    const query = trimmedSearch.toLowerCase();
     return list.filter((p) => p.displayName.toLowerCase().includes(query));
-  }, [rosterQuery.data, search]);
+  }, [rosterQuery.data, trimmedSearch]);
 
   function resetSession() {
+    setSearch('');
+    setHighlightedIndex(-1);
+    setRegisterInitialName('');
     setSelectedPlayer(null);
     setActivePlayer(null);
     setExistingEntry(null);
@@ -72,6 +78,11 @@ export default function KioskHomePage() {
     setStage('select');
   }
 
+  function handleOpenRegister(name = '') {
+    setRegisterInitialName(name);
+    setShowRegisterModal(true);
+  }
+
   function handleSelectPlayer(player: KioskRosterPlayer) {
     setSelectedPlayer(player);
     setPinError(null);
@@ -79,6 +90,37 @@ export default function KioskHomePage() {
       setStage('setup_pin');
     } else {
       setStage('pin');
+    }
+  }
+
+  function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!trimmedSearch) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => {
+        const next = prev + 1;
+        return next >= filteredRoster.length ? 0 : next;
+      });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => {
+        const next = prev - 1;
+        return next < 0 ? Math.max(0, filteredRoster.length - 1) : next;
+      });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && highlightedIndex < filteredRoster.length) {
+        handleSelectPlayer(filteredRoster[highlightedIndex]);
+      } else if (filteredRoster.length === 1) {
+        handleSelectPlayer(filteredRoster[0]);
+      } else if (filteredRoster.length === 0) {
+        handleOpenRegister(trimmedSearch);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setSearch('');
+      setHighlightedIndex(-1);
     }
   }
 
@@ -160,6 +202,7 @@ export default function KioskHomePage() {
 
   function handleRegistered(playerId: string, displayName: string, pin: string) {
     setShowRegisterModal(false);
+    setRegisterInitialName('');
     setActivePlayer({ playerId, displayName, pin });
     setPicks({});
     setTiebreaker('');
@@ -244,68 +287,183 @@ export default function KioskHomePage() {
       {/* STAGE 1: PLAYER SELECTION */}
       {stage === 'select' && (
         <div className="flex flex-col gap-6">
-          <div className="rounded-2xl bg-surface p-6 shadow-md">
+          <div className="rounded-2xl bg-surface p-6 shadow-panel">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="font-heading text-h2 text-ink">Make Your Picks</h1>
                 <p className="mt-1 text-body text-ink-muted">
-                  Tap your name on the roster below, or register if you're new!
+                  Search for your name to enter your PIN and make this week's picks.
                 </p>
               </div>
 
               <Button
                 variant="primary"
-                onClick={() => setShowRegisterModal(true)}
-                className="flex items-center gap-2 self-start sm:self-auto"
+                onClick={() => handleOpenRegister('')}
+                className="flex items-center gap-2 self-start sm:self-auto min-h-[48px]"
               >
                 <UserPlus className="h-5 w-5" />
                 I'm New to the Pool
               </Button>
             </div>
 
-            {/* Search Input */}
-            <div className="mt-5 relative">
-              <Search className="absolute left-4 top-3.5 h-5 w-5 text-ink-muted" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Type your name to find yourself quickly…"
-                className="input-field pl-12 text-lg h-12"
-              />
-            </div>
-
-            {/* Roster Names Grid */}
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 max-h-[460px] overflow-y-auto p-1">
-              {filteredRoster.map((player) => (
-                <button
-                  key={player.playerId}
-                  type="button"
-                  onClick={() => handleSelectPlayer(player)}
-                  className="flex min-h-[56px] items-center justify-between rounded-xl border border-ink/10 bg-surface-muted px-4 py-3 text-left font-semibold text-ink shadow-sm transition active:scale-95 hover:border-brand-gold hover:bg-surface-sunken focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-gold"
-                >
-                  <span className="truncate text-base">{player.displayName}</span>
-                  {!player.hasPin && (
-                    <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
-                      New
-                    </span>
-                  )}
-                </button>
-              ))}
-
-              {filteredRoster.length === 0 && (
-                <div className="col-span-full py-8 text-center text-ink-muted">
-                  <p>No player found matching "{search}".</p>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowRegisterModal(true)}
-                    className="mt-2 text-brand-ravens"
+            {/* Search Input Container */}
+            <div className="mt-6">
+              <label htmlFor="kiosk-search-input" className="sr-only">
+                Type your name
+              </label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-muted" />
+                <input
+                  id="kiosk-search-input"
+                  type="text"
+                  role="combobox"
+                  aria-expanded={trimmedSearch.length > 0}
+                  aria-controls="kiosk-dropdown-results"
+                  aria-autocomplete="list"
+                  autoComplete="off"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setHighlightedIndex(-1);
+                  }}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="Type your name to find yourself (e.g. Dale)…"
+                  className="input-field h-14 pl-12 pr-12 text-lg"
+                  autoFocus
+                />
+                {search.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearch('');
+                      setHighlightedIndex(-1);
+                    }}
+                    aria-label="Clear search"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full text-ink-muted hover:bg-surface-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-500"
                   >
-                    Click here to register as a new player
-                  </Button>
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+
+              {/* DROPDOWN / RESULTS WHEN SEARCH HAS TEXT (Option A) */}
+              {trimmedSearch.length > 0 && (
+                <div
+                  id="kiosk-dropdown-results"
+                  role="listbox"
+                  className="mt-2 overflow-hidden rounded-xl border border-line-subtle bg-surface shadow-raised"
+                >
+                  {filteredRoster.length > 0 ? (
+                    <div className="max-h-80 overflow-y-auto divide-y divide-line-subtle">
+                      {filteredRoster.map((player, index) => {
+                        const isHighlighted = index === highlightedIndex;
+                        return (
+                          <button
+                            key={player.playerId}
+                            type="button"
+                            role="option"
+                            aria-selected={isHighlighted}
+                            onClick={() => handleSelectPlayer(player)}
+                            onMouseEnter={() => setHighlightedIndex(index)}
+                            className={`flex w-full min-h-[56px] items-center justify-between px-5 py-3 text-left transition ${
+                              isHighlighted
+                                ? 'bg-surface-tint text-ink'
+                                : 'bg-surface text-ink hover:bg-surface-muted'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="truncate text-lg font-semibold">
+                                {player.displayName}
+                              </span>
+                              {!player.hasPin && (
+                                <span className="shrink-0 rounded bg-gold-100 px-2 py-0.5 text-xs font-bold text-gold-800">
+                                  First visit · Set PIN
+                                </span>
+                              )}
+                            </div>
+                            <span className="ml-3 shrink-0 text-sm font-bold text-purple-700">
+                              Select →
+                            </span>
+                          </button>
+                        );
+                      })}
+                      <div className="bg-surface-muted px-5 py-3 flex items-center justify-between text-sm text-ink-muted">
+                        <span>Not seeing your name?</span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenRegister(trimmedSearch)}
+                          className="font-bold text-purple-700 hover:underline"
+                        >
+                          Register "{trimmedSearch}"
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* NOT FOUND: Offer to register */
+                    <div className="flex flex-col items-center p-8 text-center">
+                      <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-surface-muted text-ink-muted">
+                        <UserPlus className="h-7 w-7" />
+                      </div>
+                      <p className="font-heading text-h3 text-ink">
+                        No player found matching "{trimmedSearch}"
+                      </p>
+                      <p className="mt-1.5 text-body text-ink-muted max-w-sm">
+                        Never played in Tunas Pool before? You can register right now on this tablet in 30 seconds!
+                      </p>
+                      <Button
+                        variant="primary"
+                        onClick={() => handleOpenRegister(trimmedSearch)}
+                        className="mt-5 flex items-center gap-2 py-3 px-6 text-base font-bold min-h-[48px]"
+                      >
+                        <UserPlus className="h-5 w-5" />
+                        Register "{trimmedSearch}" as a New Player
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* IDLE GUIDE (When nothing typed yet - protects counter privacy) */}
+            {trimmedSearch.length === 0 && (
+              <div className="mt-6 rounded-xl border border-dashed border-line-subtle bg-surface-muted p-6 text-center">
+                <p className="font-heading text-h3 text-ink">
+                  Ready to make this week's picks?
+                </p>
+                <p className="mt-1 text-body text-ink-muted">
+                  Type your name in the search box above to get started.
+                </p>
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                  <div className="rounded-lg bg-surface p-4 border border-line-subtle">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-700 text-white text-xs font-bold mb-2">
+                      1
+                    </span>
+                    <p className="font-semibold text-ink text-sm">Find your profile</p>
+                    <p className="text-xs text-ink-muted mt-0.5">
+                      Type 2 or 3 letters of your name.
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-surface p-4 border border-line-subtle">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-700 text-white text-xs font-bold mb-2">
+                      2
+                    </span>
+                    <p className="font-semibold text-ink text-sm">Enter 4-digit PIN</p>
+                    <p className="text-xs text-ink-muted mt-0.5">
+                      Keeps your picks secure at the counter.
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-surface p-4 border border-line-subtle">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-700 text-white text-xs font-bold mb-2">
+                      3
+                    </span>
+                    <p className="font-semibold text-ink text-sm">Submit & get receipt</p>
+                    <p className="text-xs text-ink-muted mt-0.5">
+                      Scan the QR code to keep picks on your phone.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -527,7 +685,11 @@ export default function KioskHomePage() {
       {/* REGISTRATION MODAL */}
       <KioskRegisterModal
         isOpen={showRegisterModal}
-        onClose={() => setShowRegisterModal(false)}
+        initialName={registerInitialName}
+        onClose={() => {
+          setShowRegisterModal(false);
+          setRegisterInitialName('');
+        }}
         onRegistered={handleRegistered}
       />
 
