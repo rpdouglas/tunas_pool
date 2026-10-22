@@ -48,6 +48,7 @@ import { Field } from '../components/ui/Field';
 import { GameCard } from '../components/ui/GameCard';
 import { Panel } from '../components/ui/Panel';
 import { SectionBar } from '../components/ui/SectionBar';
+import { KioskPinPad } from '../features/kiosk/KioskPinPad';
 import { StatusBadge, type BadgeStatus } from '../components/ui/StatusBadge';
 import { TextAreaField } from '../components/ui/TextAreaField';
 import { Shot, Steps, Tip } from '../features/help/GuideBlocks';
@@ -1462,6 +1463,31 @@ export default function Styleguide() {
               error="Line 1: Did you mean Commanders?"
               rows={2}
             />
+          </div>
+        </section>
+
+        <section aria-labelledby="sg-kiosk">
+          <h2 id="sg-kiosk" className="mb-3 font-heading text-h2 italic">
+            Shop Tablet Kiosk (D-142)
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+            <div className="rounded-2xl border border-ink/10 bg-surface p-4 shadow-sm">
+              <p className="mb-2 text-xs font-bold uppercase text-ink-muted">Normal State</p>
+              <KioskPinPad
+                label="Enter your 4-digit PIN"
+                sublabel="Dale D."
+                onComplete={() => undefined}
+              />
+            </div>
+            <div className="rounded-2xl border border-ink/10 bg-surface p-4 shadow-sm">
+              <p className="mb-2 text-xs font-bold uppercase text-ink-muted">Error State</p>
+              <KioskPinPad
+                label="Enter your 4-digit PIN"
+                sublabel="Dale D."
+                error="Incorrect PIN. 3 attempts remaining."
+                onComplete={() => undefined}
+              />
+            </div>
           </div>
         </section>
       </main>

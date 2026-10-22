@@ -109,6 +109,17 @@ describe('CounterPage', () => {
     expect(document.body.textContent).not.toMatch(/\+1\d{10}|@|\d{3}-\d{3}-\d{4}/);
   });
 
+  it('offers Launch Shop Kiosk and Reset Kiosk PIN button for players', async () => {
+    show();
+    expect(
+      await screen.findByRole('link', { name: /Launch Shop Tablet Kiosk mode/ }),
+    ).toHaveAttribute('href', '/kiosk');
+    await screen.findByText('Dale D.');
+    expect(
+      item('Dale D.').getByRole('button', { name: /Reset Kiosk PIN for Dale D\./ }),
+    ).toBeInTheDocument();
+  });
+
   it('offers Enter picks for someone not in, Paid cash for someone unpaid, and Undo for cash', async () => {
     show();
     await screen.findByText('Dale D.');

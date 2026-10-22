@@ -352,6 +352,8 @@ try {
   await visit(player, 'help-bingo-hidden', '/help/bingo-how-to-play', 'Page not found');
   // Bingo is off: to a guest it's an ordinary missing page (D-128).
   await visit(player, 'bingo-off', '/b', 'Page not found');
+  // Shop Tablet Kiosk (D-142): dedicated customer-facing tablet picks at the shop.
+  await visit(player, 'kiosk', '/kiosk', 'Make Your Picks');
   await player.goto(`${APP}/`);
   await player.getByRole('button', { name: 'Menu' }).click();
   check(

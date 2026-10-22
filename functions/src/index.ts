@@ -23,6 +23,14 @@ import { deletePlayer, inspectPlayerDelete } from './players';
 import { listStaffRoles, setStaffRole } from './staffRoles';
 import { hideMessage, joinBoard, setMute } from './board';
 import { loadCounterOverview, saveCounterPlayer } from './counter';
+import {
+  listKioskRoster,
+  registerKioskPlayer,
+  resetKioskPinByStaff,
+  setKioskPin,
+  submitKioskEntry,
+  verifyKioskPin,
+} from './kiosk';
 import { startCycle } from './bingo/cycle';
 import { addMember, redeemCode, setCode, setConfig, setLimit } from './bingo/members';
 import { createCard, retireCard } from './bingo/cards';
@@ -356,6 +364,72 @@ export const counterSavePlayer = onCall(async (req) => {
     actorUid: req.auth!.uid,
     actorEmail: (req.auth?.token.email as string | undefined) ?? null,
   });
+});
+
+// ---- Kiosk callables (D-142) ----
+export const kioskRoster = onCall(async () => {
+  return listKioskRoster(db);
+});
+
+export const kioskVerifyPin = onCall(async (req) => {
+  const playerId = requireId(req.data?.playerId, 'playerId');
+  const pin = typeof req.data?.pin === 'string' ? req.data.pin : '';
+  const year = typeof req.data?.year === 'string' ? req.data.year : undefined;
+  const weekId = typeof req.data?.weekId === 'string' ? req.data.weekId : undefined;
+  return verifyKioskPin(db, { playerId, pin, year, weekId });
+});
+
+export const kioskSetPin = onCall(async (req) => {
+  const playerId = requireId(req.data?.playerId, 'playerId');
+  const currentPin = typeof req.data?.currentPin === 'string' ? req.data.currentPin : null;
+  const newPin = typeof req.data?.newPin === 'string' ? req.data.newPin : '';
+  const actorUid = req.auth?.uid || 'kiosk:unauthenticated';
+  await setKioskPin(db, { playerId, currentPin, newPin, actorUid });
+  return { success: true };
+});
+
+export const kioskRegisterPlayer = onCall(async (req) => {
+  const displayName = typeof req.data?.displayName === 'string' ? req.data.displayName : '';
+  const phoneOrEmail = typeof req.data?.phoneOrEmail === 'string' ? req.data.phoneOrEmail : '';
+  const pin = typeof req.data?.pin === 'string' ? req.data.pin : '';
+  const actorUid = req.auth?.uid || 'kiosk:unauthenticated';
+  return registerKioskPlayer(db, { displayName, phoneOrEmail, pin, actorUid });
+});
+
+export const kioskSubmitEntry = onCall(async (req) => {
+  const year = requireId(req.data?.year, 'year');
+  const weekId = requireId(req.data?.weekId, 'weekId');
+  const playerId = requireId(req.data?.playerId, 'playerId');
+  const pin = typeof req.data?.pin === 'string' ? req.data.pin : '';
+  const picks = req.data?.picks && typeof req.data.picks === 'object' ? req.data.picks : {};
+  const tiebreakerTotal = Number(req.data?.tiebreakerTotal);
+  const paymentMethod = req.data?.paymentMethod === 'etransfer' ? 'etransfer' : 'cash';
+  const paymentIntent = req.data?.paymentIntent === 'already_did' ? 'already_did' : 'will_do';
+  const actorUid = req.auth?.uid || 'kiosk:unauthenticated';
+
+  return submitKioskEntry(db, {
+    year,
+    weekId,
+    playerId,
+    pin,
+    picks,
+    tiebreakerTotal,
+    paymentMethod,
+    paymentIntent,
+    actorUid,
+  });
+});
+
+export const counterResetPlayerPin = onCall(async (req) => {
+  const role = requireStaff(req);
+  const playerId = requireId(req.data?.playerId, 'playerId');
+  await resetKioskPinByStaff(db, {
+    playerId,
+    actorUid: req.auth!.uid,
+    actorRole: role,
+    actorEmail: (req.auth?.token.email as string | undefined) ?? null,
+  });
+  return { success: true };
 });
 
 // ---- the weekly board (D-102) ---------------------------------------------------

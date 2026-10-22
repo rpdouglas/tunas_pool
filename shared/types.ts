@@ -16,11 +16,11 @@ export type PaymentMethod = 'cash' | 'etransfer';
 export type PaymentIntent = 'will_do' | 'already_did';
 export type PaymentStatus = 'unpaid' | 'paid';
 export type WeekStatus = 'draft' | 'open' | 'locked' | 'final';
-export type EntrySource = 'web' | 'paper' | 'text' | 'phone';
+export type EntrySource = 'web' | 'paper' | 'text' | 'phone' | 'kiosk';
 export type ClaimStatus = 'pending' | 'approved' | 'rejected';
 export type Pick = 'home' | 'away';
 export type GameResult = 'home' | 'away' | 'tie';
-export type PlayerOrigin = 'self' | 'admin';
+export type PlayerOrigin = 'self' | 'admin' | 'kiosk';
 export type GameSlot = 'sunday' | 'mnf';
 
 export type AuditAction =
@@ -44,6 +44,10 @@ export type AuditAction =
   | 'season.status'
   | 'board.hidden'
   | 'board.mute'
+  | 'kiosk.entrySubmit'
+  | 'kiosk.setPin'
+  | 'kiosk.resetPin'
+  | 'player.kioskRegister'
   | 'bingo.memberJoined'
   | 'bingo.memberAdded'
   | 'bingo.code'

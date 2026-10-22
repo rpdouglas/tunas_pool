@@ -71,6 +71,11 @@ Storage: `paperSheets/{year}/{weekId}/{playerId}.jpg`, admin only.
 | `usualPayment` | `PaymentMethod \| null` | Roster convenience for admin entry, and the form's default. |
 | `ageAttestedAt` | Timestamp \| null | Server time the player confirmed "I'm 18 or older" (D-037). Asked once. |
 | `notes` | string \| null | Admin-only notes. Never shown to players. |
+| `kioskPinHash` | string \| null | Salted scrypt hash of the 4-digit PIN for shop tablet kiosk access (D-142). Server-only, never readable by client. |
+| `kioskPinSalt` | string \| null | 16-byte random salt in hex. Server-only. |
+| `kioskPinSetAt` | Timestamp \| null | When the kiosk PIN was set. Server-only. |
+| `kioskFailedAttempts` | number | Consecutive failed PIN attempts. Server-only. |
+| `kioskLockedUntil` | Timestamp \| null | Set to 5 minutes after 5 consecutive failed PIN attempts. Server-only. |
 | `mergedInto` | string \| null | Set if this profile was merged into another. |
 | `active` | boolean | Carries across seasons. |
 | `createdAt` / `updatedAt` | Timestamp | |
@@ -285,6 +290,17 @@ type GameResult = 'home' | 'away' | 'tie';
 | `boardHide(year, weekId, messageId, reason)` | Admin **or counter**. Hides a board post: sets `hidden`, `hiddenAt`, `hiddenBy`, and empties `text`. `reason` 5 to 300 characters. Hiding twice changes nothing. Audit logged as `board.hidden` with the words in `before`. |
 | `boardMute(year, weekId, playerId, muted, reason)` | Admin **or counter**. Mutes a player on one week's board (`boardMutes/{playerId}`) or lifts it. `reason` required both ways. No change when already in that state. Audit logged as `board.mute`. |
 | `reportClientError(message, stack, path, userAgent, release)` | Any signed-in login, guests included. Writes an uncaught script error from the web app to the functions' log (D-086). Text is cut to length and the path loses its query string. Limited per instance. Never fails the caller. |
+
+**Shop Tablet Kiosk (D-142)**
+
+| Function | Purpose |
+|---|---|
+| `kioskRoster()` | Active players on the roster for the tablet dropdown (`playerId`, `displayName`, `hasPin`). Names only; no phone, email, notes, or picks. |
+| `kioskVerifyPin(playerId, pin, year?, weekId?)` | Verifies the 4-digit PIN using salted constant-time comparison. Rate-limits with 5-minute lockout after 5 failed attempts. If valid and `year`/`weekId` provided, returns existing picks and payment intent. |
+| `kioskSetPin(playerId, currentPin, newPin)` | Sets or updates 4-digit PIN. Requires `currentPin` if already set. Audit logged as `kiosk.setPin`. |
+| `kioskRegisterPlayer(displayName, phoneOrEmail, pin)` | Registers a walk-in player from the tablet (`origin: 'kiosk'`). Normalizes phone/email. Audit logged as `player.kioskRegister`. |
+| `kioskSubmitEntry(year, weekId, playerId, pin, picks, tiebreakerTotal, paymentMethod, paymentIntent)` | Submits picks from tablet. Server strictly verifies week is open (`now < week.lockAt`), PIN is valid, saves entry (`source: 'kiosk'`, `enteredBy: 'kiosk'`), private picks, and payment intent. Audit logged as `kiosk.entrySubmit`. |
+| `counterResetPlayerPin(playerId)` | Staff callable (counter or admin). Clears PIN and lockout counters so player can set a fresh PIN at kiosk. Audit logged as `kiosk.resetPin`. |
 
 **Triggers and schedules**
 

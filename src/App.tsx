@@ -18,6 +18,8 @@ const BingoRoutes = lazy(() => import('./features/bingo/BingoRoutes'));
 const BingoStaffRoutes = lazy(() => import('./features/bingo/staff/BingoStaffRoutes'));
 // The guide (D-136): its own chunk, for players, the commissioner, and the counter.
 const HelpRoutes = lazy(() => import('./features/help/HelpRoutes'));
+// Shop Tablet Kiosk (D-142): dedicated kiosk pick tablet at the shop.
+const KioskHomePage = lazy(() => import('./features/kiosk/KioskHomePage'));
 import NotFound from './pages/NotFound';
 import { AdminLayout } from './features/admin/AdminLayout';
 import { CounterLayout } from './features/counter/CounterLayout';
@@ -67,6 +69,7 @@ export default function App() {
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/auth/finish" element={<FinishSignIn />} />
         <Route path="/help/*" element={<HelpRoutes shell="player" />} />
+        <Route path="/kiosk" element={<KioskHomePage />} />
         <Route path="/b/*" element={<BingoRoutes />} />
         <Route
           path="/admin"

@@ -5,13 +5,14 @@
  */
 import type { EntrySource, PaymentMethod, Pick } from './types';
 
-export const ENTRY_SOURCES: EntrySource[] = ['paper', 'text', 'phone', 'web'];
+export const ENTRY_SOURCES: EntrySource[] = ['paper', 'text', 'phone', 'web', 'kiosk'];
 
 export const SOURCE_LABELS: Record<EntrySource, string> = {
   paper: 'Paper',
   text: 'Text',
   phone: 'Phone',
   web: 'Website',
+  kiosk: 'Shop Kiosk',
 };
 
 export const MAX_TIEBREAKER = 200;
