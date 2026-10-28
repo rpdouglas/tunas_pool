@@ -13,6 +13,7 @@ import {
   type FinishResult,
 } from '../features/auth/emailLink';
 import { useAuth } from '../features/auth/useAuth';
+import { isInAppBrowser } from '../lib/inAppBrowser';
 
 type Phase =
   | { kind: 'working' }
@@ -38,7 +39,19 @@ export default function FinishSignIn() {
   const [phase, setPhase] = useState<Phase>({ kind: 'working' });
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | undefined>();
+  const [copied, setCopied] = useState(false);
+  const inApp = isInAppBrowser();
   const started = useRef(false);
+
+  async function onCopyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 4000);
+    } catch {
+      // Clipboard write failed or blocked
+    }
+  }
 
   async function run(address: string) {
     setPhase({ kind: 'working' });
@@ -80,6 +93,28 @@ export default function FinishSignIn() {
   return (
     <GameDayPage title="Signing in">
       <Panel>
+        {inApp && (
+          <div
+            role="note"
+            className="mb-4 flex flex-col gap-2 rounded-md border-2 border-gold-400 bg-gold-50 p-3 text-ink"
+          >
+            <p className="font-heading text-h3 text-gold-700">Opened inside your email app</p>
+            <p className="text-body">
+              To stay signed in next week, open this link in <strong>Safari</strong> or{' '}
+              <strong>Chrome</strong>. Tap your email app&apos;s menu (••• or Share) and choose{' '}
+              <em>Open in Safari</em> (or Chrome).
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCopyLink}
+              className="self-start"
+            >
+              {copied ? 'Link copied! Paste into Safari or Chrome' : 'Copy sign-in link'}
+            </Button>
+          </div>
+        )}
+
         {phase.kind === 'working' && (
           <p role="status" className="text-body">
             Finishing sign-in…
