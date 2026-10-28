@@ -46,6 +46,7 @@ import { bingoRoster as bingoRosterFor } from './bingo/roster';
 import { cardRequest } from './bingo/callers';
 import { parseRoleChoice, staffRoleOf, type StaffRole } from '../../shared/roles';
 import { createRateLimit, tidyClientError } from './clientErrors';
+import { checkEmailStatus } from './accountStatus';
 import { auditInTransaction } from './audit';
 import {
   approveClaim,
@@ -873,6 +874,16 @@ export const reportClientError = onCall(async (req) => {
     guest: req.auth!.token.firebase?.sign_in_provider === 'anonymous',
   });
   return { logged: true };
+});
+
+/**
+ * checkEmailAccountStatus (D-141). Checks if an email is registered in Firebase Auth so the client
+ * can generate a direct sign-in link (?mode=signin) rather than attempting linkWithCredential,
+ * which burns the one-time action code if the email already belongs to an existing account.
+ */
+export const checkEmailAccountStatus = onCall(async (req) => {
+  requireSignedIn(req);
+  return checkEmailStatus(getAuth(app), req.data?.email);
 });
 
 // ---- Firestore triggers (Sprint 3) -------------------------------------------

@@ -44,6 +44,12 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
   - [x] Writes `player.delete` audit entries documenting the maintenance cleanup
   - [x] Safe dry-run table preview by default; requires `--confirm` flag to delete
   - [x] Added `admin:delete-sample-players` npm script; 3 integration tests (217 rules/int total)
+- [x] **Magic link improvements & session persistence (D-144, Ryan asked, 2026-10-28):**
+  - [x] `checkEmailAccountStatus` callable pre-tags links with `&mode=signin` or `&mode=link` to eliminate the action code burn on returning players
+  - [x] `FinishSignIn` handles direct sign-in for returning accounts, skipping `linkWithCredential` and calling `adoptGuestProfile` if guest picks exist
+  - [x] In-app webview detector (`isInAppBrowser`) with "Open in Safari / Chrome" guidance card and one-tap "Copy sign-in link" button on `/auth/finish`
+  - [x] `/account` status clarity: displays active guest picks on phone and clarifies that regular weekly play does not require re-logging in
+  - [x] Unit tests for `checkEmailStatus` and `isInAppBrowser`
 - [ ] **The dry run** (Ryan, with real people and real Wednesdays): the README checklist
 - [ ] **One full smoke run on a machine with enough memory**
 - [ ] **G2** (Ryan): the dry run paid out correctly, the launch price and operator % set, the support numbers checked, then "Bingo is on"

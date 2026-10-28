@@ -53,8 +53,34 @@ export function safeNext(next: string | null): string {
   return next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
 }
 
-export async function sendSignInLink(email: string, next = '/'): Promise<void> {
-  const url = `${window.location.origin}/auth/finish?next=${encodeURIComponent(safeNext(next))}`;
+/**
+ * Checks whether this email already has a saved account in Firebase Auth (D-141).
+ * If the check fails (e.g. offline/network issue), returns null so caller can fall back.
+ */
+export async function checkEmailAccountStatus(email: string): Promise<boolean | null> {
+  try {
+    const fn = httpsCallable<{ email: string }, { exists: boolean }>(
+      functions,
+      'checkEmailAccountStatus',
+    );
+    const { data } = await fn({ email: email.trim() });
+    return Boolean(data?.exists);
+  } catch {
+    return null;
+  }
+}
+
+export async function sendSignInLink(
+  email: string,
+  next = '/',
+  forcedMode?: 'signin' | 'link',
+): Promise<void> {
+  let mode = forcedMode;
+  if (!mode) {
+    const exists = await checkEmailAccountStatus(email);
+    mode = exists ? 'signin' : 'link';
+  }
+  const url = `${window.location.origin}/auth/finish?mode=${mode}&next=${encodeURIComponent(safeNext(next))}`;
   await sendSignInLinkToEmail(auth, email.trim(), { url, handleCodeInApp: true });
   write(EMAIL_KEY, email.trim());
 }
@@ -88,9 +114,27 @@ export async function finishSignIn(email: string, href: string): Promise<FinishR
   const current = auth.currentUser;
   let result: FinishResult;
 
+  let mode: string | null = null;
+  try {
+    const parsed = new URL(href);
+    mode = parsed.searchParams.get('mode');
+  } catch {
+    mode = null;
+  }
+
   const pendingGuestToken = read(GUEST_TOKEN_KEY);
   if (current?.isAnonymous && pendingGuestToken) {
     result = await signInAndMove(email, href, pendingGuestToken);
+  } else if (mode === 'signin') {
+    // We know this email already has an account (D-141).
+    // Sign in directly so we NEVER burn the single-use action code with linkWithCredential.
+    if (current?.isAnonymous) {
+      const guestToken = await current.getIdToken();
+      result = await signInAndMove(email, href, guestToken);
+    } else {
+      await signInWithEmailLink(auth, email, href);
+      result = { kind: 'signed_in' };
+    }
   } else if (current?.isAnonymous) {
     try {
       await linkWithCredential(current, EmailAuthProvider.credentialWithLink(email, href));
@@ -105,7 +149,7 @@ export async function finishSignIn(email: string, href: string): Promise<FinishR
           throw signInErr;
         // The failed link used up the one-time code. Send a fresh link that goes straight to sign-in.
         write(GUEST_TOKEN_KEY, guestToken);
-        await sendSignInLink(email, new URL(href).searchParams.get('next') ?? '/');
+        await sendSignInLink(email, new URL(href).searchParams.get('next') ?? '/', 'signin');
         return { kind: 'resent' };
       }
     }
