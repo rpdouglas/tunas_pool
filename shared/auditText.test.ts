@@ -124,6 +124,9 @@ describe('describeAudit', () => {
     expect(week('week.status', { before: null, after: { status: 'locked' } })).toMatch(
       /backfilled/,
     );
+    expect(week('week.reopen', { before: { status: 'locked' }, after: { status: 'open' } })).toBe(
+      "Reopened picks with a new lock time, and hid everyone's picks again",
+    );
     expect(
       week('week.winnerPublished', { after: { winner: { displayNames: ['Dale D.', 'Jen K.'] } } }),
     ).toBe('Published the winner: Dale D. & Jen K.');

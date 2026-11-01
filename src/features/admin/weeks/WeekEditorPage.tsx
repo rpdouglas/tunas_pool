@@ -29,6 +29,7 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { TextAreaField } from '../../../components/ui/TextAreaField';
 import { friendlyError } from '../../../lib/errors';
 import { currentSeason, upcomingSunday } from '../../../lib/season';
+import { ReopenPicks } from './ReopenPicks';
 import { useWeekSchedule } from './scheduleData';
 import {
   useSaveDraftWeek,
@@ -271,6 +272,13 @@ function WeekEditor({ year, week, previous, message, setMessage }: WeekEditorPro
   const sundayGames = games.filter((g) => g.slot === 'sunday');
   const mnfGame = games.find((g) => g.slot === 'mnf');
   const busy = save.isPending || setStatus.isPending || schedule.isPending;
+  // Reopen picks (D-145): a locked week with no results yet. The server checks it all again.
+  const canReopen =
+    status === 'locked' &&
+    Boolean(week) &&
+    !week!.backfilled &&
+    Object.keys(week!.results).length === 0 &&
+    week!.mnfTotal === null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -322,6 +330,7 @@ function WeekEditor({ year, week, previous, message, setMessage }: WeekEditorPro
             <p className="rounded-md bg-surface-tint p-3 text-body">
               This week is {status}, so the games and lock time can't change.
               {status === 'open' && ' Put it back to draft first (only while nobody has entered).'}
+              {canReopen && ' To let players back in before the first game, use Reopen picks.'}
             </p>
           )}
           <div className="grid grid-cols-2 gap-3">
@@ -514,6 +523,8 @@ function WeekEditor({ year, week, previous, message, setMessage }: WeekEditorPro
               )}
             </div>
           </Panel>
+
+          {canReopen && week && <ReopenPicks week={week} onDone={setMessage} />}
 
           <Button variant="ghost" onClick={() => setPreview((p) => !p)} aria-expanded={preview}>
             {preview ? 'Hide player preview' : 'Preview as a player'}

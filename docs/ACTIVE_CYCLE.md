@@ -50,6 +50,11 @@ Reuses the whole-feature check from Sprint 11. For this sprint:
   - [x] In-app webview detector (`isInAppBrowser`) with "Open in Safari / Chrome" guidance card and one-tap "Copy sign-in link" button on `/auth/finish`
   - [x] `/account` status clarity: displays active guest picks on phone and clarifies that regular weekly play does not require re-logging in
   - [x] Unit tests for `checkEmailStatus` and `isInAppBrowser`
+- [x] **Reopen picks (D-145, Ryan asked, 2026-11-01):**
+  - [x] `adminReopenWeek` callable: a locked week with no results goes back to open with a new lock time (before the first kickoff, by the server clock) and a reason; picks hidden again; `week.reopen` in the audit log
+  - [x] **Reopen picks** panel on a locked week in the week editor (new lock, reason, second tap); styleguide states; guide page *Set up a week*
+  - [x] 3 unit tests for `planReopen`, 2 component tests, 1 audit-text check; 3 integration tests (reopen, entry, relock; refusals); smoke step for the panel
+  - [ ] Smoke run not run here: the Functions emulator couldn't register its Firestore triggers through this container's proxy. `test:a11y` passed (18 of 18) with the panel in the styleguide
 - [ ] **The dry run** (Ryan, with real people and real Wednesdays): the README checklist
 - [ ] **One full smoke run on a machine with enough memory**
 - [ ] **G2** (Ryan): the dry run paid out correctly, the launch price and operator % set, the support numbers checked, then "Bingo is on"

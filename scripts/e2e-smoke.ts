@@ -591,6 +591,38 @@ try {
     await visit(admin, 'admin-seasons', '/admin/seasons', 'This season');
     await visit(admin, 'admin-help', '/admin/help', 'Running the pool');
     await visit(admin, 'admin-help-page', '/admin/help/payments', 'The Payments screen');
+    // Reopen picks on a week that locked an hour ago, before its first game (D-145).
+    await seedWeek(db, { weekId: 'wk04', lockInHours: -1 });
+    await admin.goto(`${APP}/admin/weeks/${YEAR}/wk04`).catch(() => undefined);
+    await admin
+      .getByRole('button', { name: 'Reopen picks' })
+      .click()
+      .catch(() => undefined);
+    await admin
+      .getByLabel('Reason')
+      .fill('Locked too early')
+      .catch(() => undefined);
+    await checkScreen(admin, 'admin-week-reopen', 'New lock (Toronto time)');
+    await admin
+      .getByRole('button', { name: 'Reopen picks' })
+      .last()
+      .click()
+      .catch(() => undefined);
+    await admin
+      .getByRole('button', { name: 'Yes, reopen picks' })
+      .click()
+      .catch(() => undefined);
+    await admin
+      .getByText('Picks are open again')
+      .first()
+      .waitFor({ timeout: 45_000 })
+      .catch(() => undefined);
+    const reopened = (await db.doc(`seasons/${YEAR}/weeks/wk04`).get()).data();
+    check(
+      'a locked week is reopened through the screen, with its picks hidden',
+      reopened?.status === 'open' && reopened?.revealed === false,
+    );
+    await db.doc(`seasons/${YEAR}/weeks/wk04`).delete(); // keep the later screens as they were
     // A player added by mistake can be deleted through the screen, with a reason in the audit log (D-094).
     await db.doc('players/typo').set({
       displayName: 'Typo T.',

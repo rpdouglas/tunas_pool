@@ -227,7 +227,7 @@ The Board tab's "3 new" count is kept per viewer in their own browser (`localSto
 
 Counter actions carry `actorRole: 'counter'` and `actorEmail`, so the Audit log says "Counter (devon@…)" (D-095).
 
-Actions: `payment.set`, `entry.adminUpsert`, `entry.lateOverride`, `entry.delete`, `week.status`, `week.results`, `week.winnerPublished`, `week.payout`, `week.correction`, `claim.approved`, `claim.rejected`, `claim.unlinked`, `player.merged`, `player.delete`, `player.saved`, `player.guestMoved`, `player.role`, `season.status`, `board.hidden`, `board.mute`. Bingo's actions (planned) are listed in §11.5.
+Actions: `payment.set`, `entry.adminUpsert`, `entry.lateOverride`, `entry.delete`, `week.status`, `week.reopen`, `week.results`, `week.winnerPublished`, `week.payout`, `week.correction`, `claim.approved`, `claim.rejected`, `claim.unlinked`, `player.merged`, `player.delete`, `player.saved`, `player.guestMoved`, `player.role`, `season.status`, `board.hidden`, `board.mute`. Bingo's actions (planned) are listed in §11.5.
 
 The Back Office shows the log in plain words (`shared/auditText.ts`), newest first, with the stored before and after under each entry. Entries written by a one-off script carry an actor that starts `script:`.
 
@@ -265,6 +265,7 @@ type GameResult = 'home' | 'away' | 'tie';
 | `counterOverview(year, weekId)` | **Staff (admin or counter).** This week's roster for the counter screen: each non-merged player's name, active, origin, whether they are in, source, late, and payment status and method. **No phone, email, note, or pick.** A counter is refused a draft week. |
 | `counterSavePlayer(playerId?, displayName, phone?, usualPayment?, force?)` | **Staff.** Add a roster player (`origin: 'admin'`, no email or note), or fix a name, a new phone, or the usual payment. Only what is sent changes, so a blank phone keeps the stored one. A possible double (same name or phone) comes back as `{ saved: false, matches }` for the person to decide; `force: true` adds anyway. Refuses a player who signed up on the website. Audit logged as `player.saved` with names only, never the phone. |
 | `adminSetWeekStatus(year, weekId, status)` | `draft → open` (only when `weekProblems` in `shared/weeks.ts` is empty, judged by the server clock), `open → draft` (only while the week has no entries), `open → locked` (lock early; also sets `revealed: true`). Audit logged as `week.status` with before and after. `final` is reached through results and the winner, not this callable. |
+| `adminReopenWeek(year, weekId, lockAtMs, reason)` | Reopen picks on a week that locked too early (D-145): `locked → open` with a new lock time, before any game is played. Only a `locked` week that is not backfilled, with no results, no Monday night total, and no winner; not in an archived season. The new lock must pass `weekProblems` (in the future and before the first kickoff, by the server clock). `reason` is required, 5 to 300 characters. Sets `status: 'open'`, `revealed: false`, and the new `lockAt`, so picks are private again and players (and the admin, the counter, and the kiosk) can enter and change picks until the new lock, when `lockWeeks` locks and reveals the week as usual. Entries are untouched, including any late-entry badge. Audit logged as `week.reopen` with the status, `revealed`, and `lockAt` before and after, and the reason. |
 | `adminEnterResults(year, weekId, results, mnfTotal)` | Replace the week's results (home, away, or tie per game) and the Monday night total. Only while the week is `locked`; refused once `final` (D-047, corrections arrive in Sprint 6). Unchanged input writes nothing. Audit logged as `week.results`. The records are written by `onResultsWritten`. The Results screen can fill the form from the public scores feed first (`shared/schedule.ts` `suggestResults`, D-085); that is client-side and saves nothing. |
 | `adminCorrectResults(year, weekId, results, mnfTotal, reason)` | Fix a result after the winner is published. Only for a `final` week, with every result, the Monday night total, and a typed reason (5 to 300 characters). Scores the week again with the same code that published it, from the entries' own picks and payments at that moment. Replaces `winner` if it changed (keeping the original `publishedAt`), sets `correctedAt`, rewrites every entry's `record`, and **clears `payoutSent` when the winner changes** (D-068). Unchanged results write nothing. Refused if no paid entry could win. The week stays `final`. Audit logged as `week.correction` with results and winner before and after, and the reason. |
 | `adminPreviewWinner(year, weekId)` | Read-only: standings, the pot, and the winner "if the games ended now" with a plain-words explanation, from the entries' own picks and payments (`shared/scoring.ts`). The same code publishes the winner. |
@@ -319,15 +320,15 @@ type GameResult = 'home' | 'away' | 'tie';
 
 ```
 draft --(admin opens)--> open --(lockAt, automatic, or admin locks early)--> locked --(results + publish)--> final
-  ^                        |
-  +--(admin, no entries)---+
+  ^                        |  ^                                                  |
+  +--(admin, no entries)---+  +--(admin reopens: new lock, reason, no results)---+
 ```
 
 - **Setting up a draft:** the admin pastes one game per line (`shared/weeks.ts` `parseMatchups`), or fills the box from ESPN's schedule feed and checks it (`shared/schedule.ts`, D-051). No day or time means Sunday 1:00 PM; the last line is Monday night, 8:15 PM by default. The default lock is Saturday 11:59 PM Toronto time. A week opens only with 1 to 14 Sunday games (D-050), one Monday night game as the tiebreaker, no team twice, and a lock that is in the future and before the first kickoff.
 
 - **draft:** visible to admin only. Games and lock time are editable.
 - **open:** players can create and edit entries until `lockAt`.
-- **locked:** entries are read-only for players. `revealed=true`. Picks visible to all.
+- **locked:** entries are read-only for players. `revealed=true`. Picks visible to all. Until a result is in, the admin can reopen picks with a new lock time and a reason (`adminReopenWeek`, D-145), which hides the picks again.
 - **final:** results entered and the winner published. A wrong result is fixed with `adminCorrectResults`, which re-scores the week, is audit logged with a reason, and leaves a public "Result corrected" note. Entries cannot be added, changed, or removed in a final week (D-054).
 
 ---

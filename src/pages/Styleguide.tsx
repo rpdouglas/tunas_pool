@@ -25,6 +25,8 @@ import { ClaimCard } from '../features/admin/claims/ClaimCard';
 import { RosterRow } from '../features/admin/roster/RosterRow';
 import { PlayerRoleTools } from '../features/admin/roster/PlayerRoleTools';
 import { ImportRowCard } from '../features/admin/entries/ImportRowCard';
+import { ReopenPicks } from '../features/admin/weeks/ReopenPicks';
+import type { WeekView } from '../lib/weekModel';
 import type { SheetRow } from '@shared/picksImport';
 import type { RosterRow as RosterRowData } from '../features/admin/roster/roster';
 import { PhotoField } from '../components/ui/PhotoField';
@@ -78,6 +80,46 @@ const SAMPLE_SHEET_ROW: SheetRow = {
   blankGameIds: [],
   tiebreakerTotal: 44,
   problems: [],
+};
+
+// The reopen panel checks the lock against the real clock, so this sample is relative to now.
+const REOPEN_NOW = Date.now();
+/** A week that locked an hour ago, before its first game (the reopen panel, D-145). */
+const SAMPLE_LOCKED_WEEK: WeekView = {
+  id: 'wk08',
+  year: '2026',
+  weekNumber: 8,
+  status: 'locked',
+  lockAtMs: REOPEN_NOW - 60 * 60_000,
+  revealed: true,
+  games: [
+    {
+      id: 'g01',
+      order: 1,
+      away: 'Bills',
+      home: 'Dolphins',
+      slot: 'sunday',
+      kickoffMs: REOPEN_NOW + 20 * 60 * 60_000,
+    },
+    {
+      id: 'mnf',
+      order: 2,
+      away: 'Ravens',
+      home: 'Steelers',
+      slot: 'mnf',
+      kickoffMs: REOPEN_NOW + 44 * 60 * 60_000,
+    },
+  ],
+  mnfGameId: 'mnf',
+  entryFeeCents: 2000,
+  entryCount: 12,
+  paidCount: 10,
+  results: {},
+  mnfTotal: null,
+  winner: null,
+  payoutSent: false,
+  backfilled: false,
+  correctedAtMs: null,
 };
 
 const SAMPLE_ROSTER: RosterRowData = {
@@ -935,6 +977,11 @@ export default function Styleguide() {
               onEdit={() => undefined}
             />
           </ul>
+          <h3 className="mb-2 mt-4 font-heading text-h3">Reopen picks (week editor, D-145)</h3>
+          <div className="flex max-w-player flex-col gap-4">
+            <ReopenPicks week={SAMPLE_LOCKED_WEEK} onDone={() => undefined} />
+            <ReopenPicks week={SAMPLE_LOCKED_WEEK} startOpen onDone={() => undefined} />
+          </div>
           <h3 className="mb-2 mt-4 font-heading text-h3">Staff role (player details, D-140)</h3>
           <div className="flex max-w-player flex-col gap-4">
             <PlayerRoleTools player={SAMPLE_ROSTER} role="none" onDone={() => undefined} />
