@@ -74,6 +74,7 @@ import {
   setPayment,
 } from './weekActions';
 import { planStatusChange, toGameDraft } from './weekStatus';
+import { reopenWeek } from './weekReopen';
 
 const app = initializeApp();
 const db = getFirestore(app, FIRESTORE_DATABASE_ID);
@@ -247,6 +248,18 @@ export const adminSetWeekStatus = onCall(async (req) => {
   });
   if (to === 'locked') await recountWeek(db, year, weekId); // reconcile once no more entries can arrive
   return update;
+});
+
+// ---- adminReopenWeek (D-145): locked -> open with a new lock time and a reason ----
+export const adminReopenWeek = onCall(async (req) => {
+  requireAdmin(req);
+  return reopenWeek(db, {
+    year: requireId(req.data?.year, 'year'),
+    weekId: requireId(req.data?.weekId, 'weekId'),
+    lockAtMs: req.data?.lockAtMs,
+    reason: req.data?.reason,
+    actorUid: req.auth!.uid,
+  });
 });
 
 // ---- adminUpsertEntry (Sprint 4): enter or edit someone's picks while the week is open ----

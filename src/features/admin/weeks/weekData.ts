@@ -126,3 +126,14 @@ export function useSetWeekStatus() {
     onSuccess: (_, input) => client.invalidateQueries({ queryKey: weekKeys.season(input.year) }),
   });
 }
+
+/** Reopen picks on a locked week, with a new lock time and a reason (D-145). */
+export function useReopenWeek() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { year: string; weekId: string; lockAtMs: number; reason: string }) =>
+      (await httpsCallable(functions, 'adminReopenWeek')(input)).data,
+    // The season key is a prefix of each week's key, so this refreshes this week too.
+    onSuccess: (_, input) => client.invalidateQueries({ queryKey: weekKeys.season(input.year) }),
+  });
+}

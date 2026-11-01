@@ -115,6 +115,9 @@ export function describeAudit(record: AuditRecord, names: Names, myUid?: string)
               : `Changed the week to ${to ?? 'a new status'}`;
       break;
     }
+    case 'week.reopen':
+      what = "Reopened picks with a new lock time, and hid everyone's picks again";
+      break;
     case 'week.results':
       what = 'Entered or changed the results';
       break;

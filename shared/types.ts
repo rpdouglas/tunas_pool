@@ -29,6 +29,7 @@ export type AuditAction =
   | 'entry.lateOverride'
   | 'entry.delete'
   | 'week.status'
+  | 'week.reopen'
   | 'week.results'
   | 'week.winnerPublished'
   | 'week.payout'
